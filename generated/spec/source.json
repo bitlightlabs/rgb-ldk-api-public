@@ -1,0 +1,7 @@
+{
+  "api_version": "v1",
+  "generated_at_utc": "2026-03-19T13:44:37Z",
+  "node_commit": "f2db4e6221cf7bb2d3245c22c6f4954f0741598e",
+  "node_package_version": "0.7.0+git",
+  "node_repo": "rgb-ldk-node"
+}

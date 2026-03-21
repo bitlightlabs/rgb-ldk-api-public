@@ -1,0 +1,2861 @@
+{
+  "components": {
+    "schemas": {
+      "BalancesDto": {
+        "properties": {
+          "btc": {
+            "$ref": "#/components/schemas/BtcBalancesDto"
+          },
+          "rgb": {
+            "$ref": "#/components/schemas/RgbBalancesDto"
+          }
+        },
+        "required": [
+          "btc",
+          "rgb"
+        ],
+        "type": "object"
+      },
+      "Bolt11ClaimForHashRequest": {
+        "properties": {
+          "claimable_amount_msat": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "payment_hash": {
+            "type": "string"
+          },
+          "preimage": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "claimable_amount_msat",
+          "payment_hash",
+          "preimage"
+        ],
+        "type": "object"
+      },
+      "Bolt11DecodeRequest": {
+        "properties": {
+          "invoice": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "invoice"
+        ],
+        "type": "object"
+      },
+      "Bolt11DecodeResponse": {
+        "properties": {
+          "amount_msat": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "destination": {
+            "type": "string"
+          },
+          "expiry_secs": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "payment_hash": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "destination",
+          "expiry_secs",
+          "payment_hash"
+        ],
+        "type": "object"
+      },
+      "Bolt11FailForHashRequest": {
+        "properties": {
+          "payment_hash": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "payment_hash"
+        ],
+        "type": "object"
+      },
+      "Bolt11PayRequest": {
+        "properties": {
+          "amount_msat": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "invoice": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "invoice"
+        ],
+        "type": "object"
+      },
+      "Bolt11PayResponse": {
+        "properties": {
+          "amount_sats": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "destination": {
+            "type": "string"
+          },
+          "fee_paid_msat": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "payment_id": {
+            "type": "string"
+          },
+          "preimage": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount_sats",
+          "destination",
+          "payment_id",
+          "preimage"
+        ],
+        "type": "object"
+      },
+      "Bolt11ReceiveForHashRequest": {
+        "properties": {
+          "amount_msat": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "expiry_secs": {
+            "type": "integer"
+          },
+          "payment_hash": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount_msat",
+          "description",
+          "expiry_secs",
+          "payment_hash"
+        ],
+        "type": "object"
+      },
+      "Bolt11ReceiveRequest": {
+        "properties": {
+          "amount_msat": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "expiry_secs": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "amount_msat",
+          "description",
+          "expiry_secs"
+        ],
+        "type": "object"
+      },
+      "Bolt11ReceiveResponse": {
+        "properties": {
+          "invoice": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "invoice"
+        ],
+        "type": "object"
+      },
+      "Bolt11ReceiveVarRequest": {
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "expiry_secs": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "description",
+          "expiry_secs"
+        ],
+        "type": "object"
+      },
+      "Bolt11SendRequest": {
+        "properties": {
+          "invoice": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "invoice"
+        ],
+        "type": "object"
+      },
+      "Bolt11SendUsingAmountRequest": {
+        "properties": {
+          "amount_msat": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "invoice": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount_msat",
+          "invoice"
+        ],
+        "type": "object"
+      },
+      "Bolt12OfferDecodeRequest": {
+        "properties": {
+          "offer": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "offer"
+        ],
+        "type": "object"
+      },
+      "Bolt12OfferDecodeResponse": {
+        "properties": {
+          "absolute_expiry_unix_secs": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "amount_msat": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "chain_hashes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "description": {
+            "type": "string"
+          },
+          "expects_quantity": {
+            "type": "boolean"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "offer_id": {
+            "type": "string"
+          },
+          "paths_count": {
+            "type": "integer"
+          },
+          "signing_pubkey": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "expects_quantity",
+          "offer_id",
+          "paths_count"
+        ],
+        "type": "object"
+      },
+      "Bolt12OfferReceiveRequest": {
+        "properties": {
+          "amount_msat": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "expiry_secs": {
+            "type": "integer"
+          },
+          "quantity": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount_msat",
+          "description"
+        ],
+        "type": "object"
+      },
+      "Bolt12OfferReceiveVarRequest": {
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "expiry_secs": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "description"
+        ],
+        "type": "object"
+      },
+      "Bolt12OfferResponse": {
+        "properties": {
+          "offer": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "offer"
+        ],
+        "type": "object"
+      },
+      "Bolt12OfferSendRequest": {
+        "properties": {
+          "amount_msat": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "offer": {
+            "type": "string"
+          },
+          "payer_note": {
+            "type": "string"
+          },
+          "quantity": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "offer"
+        ],
+        "type": "object"
+      },
+      "Bolt12RefundDecodeRequest": {
+        "properties": {
+          "refund": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "refund"
+        ],
+        "type": "object"
+      },
+      "Bolt12RefundDecodeResponse": {
+        "properties": {
+          "absolute_expiry_unix_secs": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "amount_msat": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "chain_hash": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "issuer": {
+            "type": "string"
+          },
+          "paths_count": {
+            "type": "integer"
+          },
+          "payer_note": {
+            "type": "string"
+          },
+          "payer_signing_pubkey": {
+            "type": "string"
+          },
+          "quantity": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount_msat",
+          "chain_hash",
+          "description",
+          "paths_count",
+          "payer_signing_pubkey"
+        ],
+        "type": "object"
+      },
+      "Bolt12RefundInitiateRequest": {
+        "properties": {
+          "amount_msat": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "expiry_secs": {
+            "type": "integer"
+          },
+          "payer_note": {
+            "type": "string"
+          },
+          "quantity": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount_msat",
+          "expiry_secs"
+        ],
+        "type": "object"
+      },
+      "Bolt12RefundInitiateResponse": {
+        "properties": {
+          "payment_id": {
+            "type": "string"
+          },
+          "refund": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "payment_id",
+          "refund"
+        ],
+        "type": "object"
+      },
+      "Bolt12RefundRequestPaymentRequest": {
+        "properties": {
+          "refund": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "refund"
+        ],
+        "type": "object"
+      },
+      "Bolt12RefundRequestPaymentResponse": {
+        "properties": {
+          "invoice": {
+            "type": "string"
+          },
+          "invoice_hex": {
+            "type": "string"
+          },
+          "payment_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "invoice",
+          "invoice_hex",
+          "payment_id"
+        ],
+        "type": "object"
+      },
+      "BtcBalancesDto": {
+        "properties": {
+          "anchor_channels_reserve_sats": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "lightning_total_sats": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "onchain_spendable_sats": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "onchain_total_sats": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "anchor_channels_reserve_sats",
+          "lightning_total_sats",
+          "onchain_spendable_sats",
+          "onchain_total_sats"
+        ],
+        "type": "object"
+      },
+      "ChannelDetailsExtendedDto": {
+        "properties": {
+          "channel_id": {
+            "type": "string"
+          },
+          "channel_point": {
+            "type": "string"
+          },
+          "channel_value_sats": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "counterparty_node_id": {
+            "type": "string"
+          },
+          "inbound_capacity_msat": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "is_announced": {
+            "type": "boolean"
+          },
+          "is_channel_ready": {
+            "type": "boolean"
+          },
+          "is_usable": {
+            "type": "boolean"
+          },
+          "local_balance_msat": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "local_unspendable_punishment_reserve_sats": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "outbound_capacity_msat": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "remote_balance_msat": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "remote_unspendable_punishment_reserve_sats": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "rgb_balance": {
+            "$ref": "#/components/schemas/RgbChannelBalanceDto"
+          },
+          "user_channel_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel_id",
+          "channel_value_sats",
+          "counterparty_node_id",
+          "inbound_capacity_msat",
+          "is_announced",
+          "is_channel_ready",
+          "is_usable",
+          "outbound_capacity_msat",
+          "remote_unspendable_punishment_reserve_sats",
+          "user_channel_id"
+        ],
+        "type": "object"
+      },
+      "CloseChannelRequest": {
+        "properties": {
+          "counterparty_node_id": {
+            "type": "string"
+          },
+          "user_channel_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "counterparty_node_id",
+          "user_channel_id"
+        ],
+        "type": "object"
+      },
+      "ControlLockRequest": {
+        "properties": {
+          "force": {
+            "type": "boolean"
+          },
+          "yes": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "yes"
+        ],
+        "type": "object"
+      },
+      "ControlStatusDto": {
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/HealthCheckDto"
+            },
+            "type": "array"
+          },
+          "lockable": {
+            "type": "boolean"
+          },
+          "locked": {
+            "type": "boolean"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "running": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "locked",
+          "ok",
+          "running"
+        ],
+        "type": "object"
+      },
+      "ControlUnlockRequest": {
+        "properties": {
+          "passphrase": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ControlVersionDto": {
+        "properties": {
+          "daemon": {
+            "type": "string"
+          },
+          "daemon_version": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "protocol": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "daemon",
+          "daemon_version",
+          "ok",
+          "protocol"
+        ],
+        "type": "object"
+      },
+      "CustomTlvDto": {
+        "properties": {
+          "type": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "value_hex": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "value_hex"
+        ],
+        "type": "object"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/HealthCheckDto"
+            },
+            "type": "array"
+          },
+          "error": {
+            "type": "string"
+          },
+          "hint": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "error",
+          "ok"
+        ],
+        "type": "object"
+      },
+      "EventDto": {
+        "oneOf": [
+          {
+            "properties": {
+              "data": {
+                "properties": {
+                  "fee_paid_msat": {
+                    "pattern": "^[0-9]+$",
+                    "type": "string"
+                  },
+                  "payment_id": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "type": {
+                "const": "PaymentSuccessful"
+              }
+            },
+            "required": [
+              "type",
+              "data"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "data": {
+                "properties": {
+                  "payment_id": {
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "type": {
+                "const": "PaymentFailed"
+              }
+            },
+            "required": [
+              "type",
+              "data"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "data": {
+                "properties": {
+                  "amount_msat": {
+                    "pattern": "^[0-9]+$",
+                    "type": "string"
+                  },
+                  "custom_records": {
+                    "items": {
+                      "$ref": "#/components/schemas/CustomTlvDto"
+                    },
+                    "type": "array"
+                  },
+                  "payment_hash": {
+                    "type": "string"
+                  },
+                  "payment_id": {
+                    "type": "string"
+                  },
+                  "rgb": {
+                    "$ref": "#/components/schemas/RgbPaymentContextDto"
+                  }
+                },
+                "required": [
+                  "amount_msat",
+                  "payment_hash"
+                ],
+                "type": "object"
+              },
+              "type": {
+                "const": "PaymentReceived"
+              }
+            },
+            "required": [
+              "type",
+              "data"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "data": {
+                "properties": {
+                  "funding_txo": {
+                    "$ref": "#/components/schemas/OutPointDto"
+                  }
+                },
+                "required": [
+                  "funding_txo"
+                ],
+                "type": "object"
+              },
+              "type": {
+                "const": "ChannelPending"
+              }
+            },
+            "required": [
+              "type",
+              "data"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "data": {
+                "properties": {
+                  "user_channel_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "user_channel_id"
+                ],
+                "type": "object"
+              },
+              "type": {
+                "const": "ChannelReady"
+              }
+            },
+            "required": [
+              "type",
+              "data"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "data": {
+                "properties": {
+                  "channel_id": {
+                    "type": "string"
+                  },
+                  "counterparty_node_id": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "user_channel_id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "channel_id",
+                  "user_channel_id"
+                ],
+                "type": "object"
+              },
+              "type": {
+                "const": "ChannelClosed"
+              }
+            },
+            "required": [
+              "type",
+              "data"
+            ],
+            "type": "object"
+          },
+          {
+            "properties": {
+              "data": {
+                "properties": {
+                  "kind": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "type": "object"
+              },
+              "type": {
+                "const": "Other"
+              }
+            },
+            "required": [
+              "type",
+              "data"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "HealthCheckDto": {
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "hint": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "ok"
+        ],
+        "type": "object"
+      },
+      "ListeningAddressesResponse": {
+        "properties": {
+          "addresses": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "addresses"
+        ],
+        "type": "object"
+      },
+      "LockedStatusDto": {
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/HealthCheckDto"
+            },
+            "type": "array"
+          },
+          "locked": {
+            "type": "boolean"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "running": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "locked",
+          "ok",
+          "running"
+        ],
+        "type": "object"
+      },
+      "MainStatusResponse": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/StatusDto"
+          },
+          {
+            "$ref": "#/components/schemas/LockedStatusDto"
+          }
+        ]
+      },
+      "NodeIdResponse": {
+        "properties": {
+          "node_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "node_id"
+        ],
+        "type": "object"
+      },
+      "OkResponse": {
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/HealthCheckDto"
+            },
+            "type": "array"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "type": "object"
+      },
+      "OpenChannelRequest": {
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "announce": {
+            "type": "boolean"
+          },
+          "channel_amount_sats": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "node_id": {
+            "type": "string"
+          },
+          "push_to_counterparty_msat": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "rgb": {
+            "$ref": "#/components/schemas/RgbOpenChannelRequest"
+          }
+        },
+        "required": [
+          "address",
+          "channel_amount_sats",
+          "node_id"
+        ],
+        "type": "object"
+      },
+      "OpenChannelResponse": {
+        "properties": {
+          "user_channel_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_channel_id"
+        ],
+        "type": "object"
+      },
+      "OutPointDto": {
+        "properties": {
+          "txid": {
+            "type": "string"
+          },
+          "vout": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "txid",
+          "vout"
+        ],
+        "type": "object"
+      },
+      "PaymentDetailsDto": {
+        "properties": {
+          "amount_msat": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "direction": {
+            "type": "string"
+          },
+          "fee_paid_msat": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "kind_details": {},
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "direction",
+          "id",
+          "kind",
+          "status"
+        ],
+        "type": "object"
+      },
+      "PaymentWaitRequest": {
+        "properties": {
+          "timeout_secs": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "PaymentWaitResponse": {
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/HealthCheckDto"
+            },
+            "type": "array"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "payment": {
+            "$ref": "#/components/schemas/PaymentDetailsDto"
+          }
+        },
+        "required": [
+          "ok",
+          "payment"
+        ],
+        "type": "object"
+      },
+      "PeerConnectRequest": {
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "node_id": {
+            "type": "string"
+          },
+          "persist": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "address",
+          "node_id"
+        ],
+        "type": "object"
+      },
+      "PeerDetailsDto": {
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "is_connected": {
+            "type": "boolean"
+          },
+          "is_persisted": {
+            "type": "boolean"
+          },
+          "node_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "address",
+          "is_connected",
+          "is_persisted",
+          "node_id"
+        ],
+        "type": "object"
+      },
+      "PeerDisconnectRequest": {
+        "properties": {
+          "node_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "node_id"
+        ],
+        "type": "object"
+      },
+      "RgbBalancesDto": {
+        "properties": {
+          "l1": {
+            "items": {
+              "$ref": "#/components/schemas/RgbL1BalanceDto"
+            },
+            "type": "array"
+          },
+          "l2": {
+            "items": {
+              "$ref": "#/components/schemas/RgbL2BalanceDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "l1",
+          "l2"
+        ],
+        "type": "object"
+      },
+      "RgbChannelBalanceDto": {
+        "properties": {
+          "asset_id": {
+            "type": "string"
+          },
+          "local_amount": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "remote_amount": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "asset_id",
+          "local_amount",
+          "remote_amount"
+        ],
+        "type": "object"
+      },
+      "RgbContractBalanceDto": {
+        "properties": {
+          "archived": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "mined": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "offchain": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "tentative": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "total": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "archived",
+          "mined",
+          "offchain",
+          "tentative",
+          "total"
+        ],
+        "type": "object"
+      },
+      "RgbContractBalanceResponse": {
+        "properties": {
+          "balance": {
+            "$ref": "#/components/schemas/RgbContractBalanceDto"
+          },
+          "contract_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "balance",
+          "contract_id"
+        ],
+        "type": "object"
+      },
+      "RgbContractDto": {
+        "properties": {
+          "asset_id": {
+            "type": "string"
+          },
+          "contract_id": {
+            "type": "string"
+          },
+          "details": {
+            "type": "string"
+          },
+          "issued_supply": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "precision": {
+            "type": "integer"
+          },
+          "ticker": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "asset_id",
+          "contract_id"
+        ],
+        "type": "object"
+      },
+      "RgbContractKnownResponse": {
+        "properties": {
+          "contract_id": {
+            "type": "string"
+          },
+          "known": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "contract_id",
+          "known"
+        ],
+        "type": "object"
+      },
+      "RgbContractsExportRequest": {
+        "properties": {
+          "contract_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "contract_id"
+        ],
+        "type": "object"
+      },
+      "RgbContractsExportResponse": {
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/HealthCheckDto"
+            },
+            "type": "array"
+          },
+          "consignment_key": {
+            "type": "string"
+          },
+          "contract_id": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "consignment_key",
+          "contract_id",
+          "ok"
+        ],
+        "type": "object"
+      },
+      "RgbContractsImportResponse": {
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/HealthCheckDto"
+            },
+            "type": "array"
+          },
+          "consignment_key": {
+            "type": "string"
+          },
+          "contract_id": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "consignment_key",
+          "contract_id",
+          "ok"
+        ],
+        "type": "object"
+      },
+      "RgbContractsIssueRequest": {
+        "properties": {
+          "contract_name": {
+            "type": "string"
+          },
+          "issued_supply": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "issuer_name": {
+            "type": "string"
+          },
+          "precision": {
+            "type": "integer"
+          },
+          "ticker": {
+            "type": "string"
+          },
+          "utxo": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "contract_name",
+          "issued_supply",
+          "issuer_name"
+        ],
+        "type": "object"
+      },
+      "RgbContractsIssueResponse": {
+        "properties": {
+          "asset_id": {
+            "type": "string"
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/HealthCheckDto"
+            },
+            "type": "array"
+          },
+          "contract_id": {
+            "type": "string"
+          },
+          "issued_supply": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "asset_id",
+          "contract_id",
+          "issued_supply",
+          "ok"
+        ],
+        "type": "object"
+      },
+      "RgbContractsResponse": {
+        "properties": {
+          "contracts": {
+            "items": {
+              "$ref": "#/components/schemas/RgbContractDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "contracts"
+        ],
+        "type": "object"
+      },
+      "RgbInvalidIssuerDto": {
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error",
+          "name"
+        ],
+        "type": "object"
+      },
+      "RgbIssuersImportResponse": {
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/HealthCheckDto"
+            },
+            "type": "array"
+          },
+          "issuer_name": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "issuer_name",
+          "ok"
+        ],
+        "type": "object"
+      },
+      "RgbIssuersResponse": {
+        "properties": {
+          "invalid_issuers": {
+            "items": {
+              "$ref": "#/components/schemas/RgbInvalidIssuerDto"
+            },
+            "type": "array"
+          },
+          "issuers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "issuers"
+        ],
+        "type": "object"
+      },
+      "RgbL1BalanceDto": {
+        "properties": {
+          "archived": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "asset_id": {
+            "type": "string"
+          },
+          "contract_id": {
+            "type": "string"
+          },
+          "mined": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "offchain": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "tentative": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "total": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "archived",
+          "asset_id",
+          "contract_id",
+          "mined",
+          "offchain",
+          "tentative",
+          "total"
+        ],
+        "type": "object"
+      },
+      "RgbL2BalanceDto": {
+        "properties": {
+          "asset_id": {
+            "type": "string"
+          },
+          "channel_id": {
+            "type": "string"
+          },
+          "local_amount": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "remote_amount": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "asset_id",
+          "channel_id",
+          "local_amount",
+          "remote_amount"
+        ],
+        "type": "object"
+      },
+      "RgbLnInvoiceCreateForHashRequest": {
+        "properties": {
+          "asset_amount": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "asset_id": {
+            "type": "string"
+          },
+          "btc_carrier_amount_msat": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "expiry_secs": {
+            "type": "integer"
+          },
+          "payment_hash": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "asset_amount",
+          "asset_id",
+          "btc_carrier_amount_msat",
+          "description",
+          "payment_hash"
+        ],
+        "type": "object"
+      },
+      "RgbLnInvoiceCreateRequest": {
+        "properties": {
+          "asset_amount": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "asset_id": {
+            "type": "string"
+          },
+          "btc_carrier_amount_msat": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "expiry_secs": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "asset_amount",
+          "asset_id",
+          "btc_carrier_amount_msat",
+          "description"
+        ],
+        "type": "object"
+      },
+      "RgbLnInvoiceDecodeRequest": {
+        "properties": {
+          "invoice": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "invoice"
+        ],
+        "type": "object"
+      },
+      "RgbLnInvoiceDecodeResponse": {
+        "properties": {
+          "asset_amount": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "asset_id": {
+            "type": "string"
+          },
+          "carrier_amount_msat": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "destination": {
+            "type": "string"
+          },
+          "expiry_secs": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "payment_hash": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "destination",
+          "expiry_secs",
+          "payment_hash"
+        ],
+        "type": "object"
+      },
+      "RgbLnInvoiceResponse": {
+        "properties": {
+          "invoice": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "invoice"
+        ],
+        "type": "object"
+      },
+      "RgbLnPayRequest": {
+        "properties": {
+          "asset_amount": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "asset_id": {
+            "type": "string"
+          },
+          "invoice": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "invoice"
+        ],
+        "type": "object"
+      },
+      "RgbNewAddressResponse": {
+        "properties": {
+          "address": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "address"
+        ],
+        "type": "object"
+      },
+      "RgbOnchainInvoiceCreateRequest": {
+        "properties": {
+          "amount": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "blinding_utxo": {
+            "type": "string"
+          },
+          "contract_id": {
+            "type": "string"
+          },
+          "expiry_secs": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "nonce": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "use_witness_utxo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "amount",
+          "contract_id"
+        ],
+        "type": "object"
+      },
+      "RgbOnchainInvoiceDecodeRequest": {
+        "properties": {
+          "invoice": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "invoice"
+        ],
+        "type": "object"
+      },
+      "RgbOnchainInvoiceDecodeResponse": {
+        "properties": {
+          "amount": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "beneficiary": {
+            "type": "string"
+          },
+          "contract_id": {
+            "type": "string"
+          },
+          "expiry_unix_secs": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "use_witness_utxo": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "amount",
+          "beneficiary",
+          "contract_id",
+          "use_witness_utxo"
+        ],
+        "type": "object"
+      },
+      "RgbOnchainInvoiceResponse": {
+        "properties": {
+          "blinding_utxo_used": {
+            "type": "string"
+          },
+          "invoice": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "invoice"
+        ],
+        "type": "object"
+      },
+      "RgbOnchainPaymentDto": {
+        "properties": {
+          "amount": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "asset_id": {
+            "type": "string"
+          },
+          "consignment_download_path": {
+            "type": "string"
+          },
+          "consignment_key": {
+            "type": "string"
+          },
+          "contract_id": {
+            "type": "string"
+          },
+          "created_at_unix_secs": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "expires_at_unix_secs": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "invoice": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "latest_update_timestamp": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "txid": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at_unix_secs",
+          "id",
+          "kind",
+          "latest_update_timestamp",
+          "status"
+        ],
+        "type": "object"
+      },
+      "RgbOnchainPaymentsResponse": {
+        "properties": {
+          "payments": {
+            "items": {
+              "$ref": "#/components/schemas/RgbOnchainPaymentDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "payments"
+        ],
+        "type": "object"
+      },
+      "RgbOnchainReceiveRequest": {
+        "properties": {
+          "consignment_key": {
+            "type": "string"
+          },
+          "invoice": {
+            "type": "string"
+          },
+          "payment_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "consignment_key"
+        ],
+        "type": "object"
+      },
+      "RgbOnchainReceiveResponse": {
+        "properties": {
+          "amount": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "asset_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount",
+          "asset_id"
+        ],
+        "type": "object"
+      },
+      "RgbOnchainSendRequest": {
+        "properties": {
+          "fee_rate_sats_per_vb": {
+            "type": "number"
+          },
+          "invoice": {
+            "type": "string"
+          },
+          "sats_for_fee_and_outputs": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fee_rate_sats_per_vb",
+          "invoice"
+        ],
+        "type": "object"
+      },
+      "RgbOnchainSendResponse": {
+        "properties": {
+          "consignment_key": {
+            "type": "string"
+          },
+          "txid": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "consignment_key",
+          "txid"
+        ],
+        "type": "object"
+      },
+      "RgbOpenChannelRequest": {
+        "properties": {
+          "asset_amount": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "asset_id": {
+            "type": "string"
+          },
+          "color_context_data": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "asset_amount",
+          "asset_id",
+          "color_context_data"
+        ],
+        "type": "object"
+      },
+      "RgbPaymentContextDto": {
+        "properties": {
+          "asset_amount": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "asset_id": {
+            "type": "string"
+          },
+          "direction": {
+            "type": "string"
+          },
+          "is_swap": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "asset_amount",
+          "asset_id",
+          "direction",
+          "is_swap"
+        ],
+        "type": "object"
+      },
+      "RgbUtxoAssetAllocationDto": {
+        "properties": {
+          "amount": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "contract_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "amount",
+          "contract_id"
+        ],
+        "type": "object"
+      },
+      "RgbUtxoSummaryDto": {
+        "properties": {
+          "assets": {
+            "items": {
+              "$ref": "#/components/schemas/RgbUtxoAssetAllocationDto"
+            },
+            "type": "array"
+          },
+          "confirmed_height": {
+            "type": "integer"
+          },
+          "outpoint": {
+            "type": "string"
+          },
+          "reserved": {
+            "type": "boolean"
+          },
+          "reserved_until_unix_secs": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "value_sats": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "outpoint",
+          "reserved"
+        ],
+        "type": "object"
+      },
+      "RgbUtxosReleaseRequest": {
+        "properties": {
+          "outpoint": {
+            "type": "string"
+          },
+          "reservation_id": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "RgbUtxosReleaseResponse": {
+        "properties": {
+          "released": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "released"
+        ],
+        "type": "object"
+      },
+      "RgbUtxosReserveRequest": {
+        "properties": {
+          "outpoint": {
+            "type": "string"
+          },
+          "ttl_secs": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "RgbUtxosReserveResponse": {
+        "properties": {
+          "outpoint": {
+            "type": "string"
+          },
+          "reservation_id": {
+            "type": "string"
+          },
+          "reserved_until_unix_secs": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "outpoint",
+          "reservation_id",
+          "reserved_until_unix_secs"
+        ],
+        "type": "object"
+      },
+      "RgbUtxosResponse": {
+        "properties": {
+          "utxos": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "utxos"
+        ],
+        "type": "object"
+      },
+      "RgbUtxosSummaryResponse": {
+        "properties": {
+          "utxos": {
+            "items": {
+              "$ref": "#/components/schemas/RgbUtxoSummaryDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "utxos"
+        ],
+        "type": "object"
+      },
+      "SendResponse": {
+        "properties": {
+          "payment_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "payment_id"
+        ],
+        "type": "object"
+      },
+      "SpontaneousSendRequest": {
+        "properties": {
+          "amount_msat": {
+            "pattern": "^[0-9]+$",
+            "type": "string"
+          },
+          "counterparty_node_id": {
+            "type": "string"
+          },
+          "custom_tlvs": {
+            "items": {
+              "$ref": "#/components/schemas/CustomTlvDto"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "amount_msat",
+          "counterparty_node_id"
+        ],
+        "type": "object"
+      },
+      "StatusDto": {
+        "properties": {
+          "best_block_height": {
+            "type": "integer"
+          },
+          "is_listening": {
+            "type": "boolean"
+          },
+          "is_running": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "best_block_height",
+          "is_listening",
+          "is_running"
+        ],
+        "type": "object"
+      },
+      "VersionResponse": {
+        "properties": {
+          "api_crate_version": {
+            "type": "string"
+          },
+          "api_version": {
+            "type": "string"
+          },
+          "core_crate_version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "api_crate_version",
+          "api_version",
+          "core_crate_version"
+        ],
+        "type": "object"
+      },
+      "WalletNewAddressResponse": {
+        "properties": {
+          "address": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "address"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "rgbldk node api",
+    "version": "v1"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/balances": {
+      "get": {
+        "operationId": "GET__api_v1_balances",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/bolt11/claim_for_hash": {
+      "post": {
+        "operationId": "POST__api_v1_bolt11_claim_for_hash",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/bolt11/decode": {
+      "post": {
+        "operationId": "POST__api_v1_bolt11_decode",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/bolt11/fail_for_hash": {
+      "post": {
+        "operationId": "POST__api_v1_bolt11_fail_for_hash",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/bolt11/pay": {
+      "post": {
+        "operationId": "POST__api_v1_bolt11_pay",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/bolt11/receive": {
+      "post": {
+        "operationId": "POST__api_v1_bolt11_receive",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/bolt11/receive_for_hash": {
+      "post": {
+        "operationId": "POST__api_v1_bolt11_receive_for_hash",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/bolt11/receive_var": {
+      "post": {
+        "operationId": "POST__api_v1_bolt11_receive_var",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/bolt11/send": {
+      "post": {
+        "operationId": "POST__api_v1_bolt11_send",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/bolt11/send_using_amount": {
+      "post": {
+        "operationId": "POST__api_v1_bolt11_send_using_amount",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/bolt12/offer/decode": {
+      "post": {
+        "operationId": "POST__api_v1_bolt12_offer_decode",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/bolt12/offer/receive": {
+      "post": {
+        "operationId": "POST__api_v1_bolt12_offer_receive",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/bolt12/offer/receive_var": {
+      "post": {
+        "operationId": "POST__api_v1_bolt12_offer_receive_var",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/bolt12/offer/send": {
+      "post": {
+        "operationId": "POST__api_v1_bolt12_offer_send",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/bolt12/refund/decode": {
+      "post": {
+        "operationId": "POST__api_v1_bolt12_refund_decode",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/bolt12/refund/initiate": {
+      "post": {
+        "operationId": "POST__api_v1_bolt12_refund_initiate",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/bolt12/refund/request_payment": {
+      "post": {
+        "operationId": "POST__api_v1_bolt12_refund_request_payment",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/channel/close": {
+      "post": {
+        "operationId": "POST__api_v1_channel_close",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/channel/force_close": {
+      "post": {
+        "operationId": "POST__api_v1_channel_force_close",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/channel/open": {
+      "post": {
+        "operationId": "POST__api_v1_channel_open",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/channels": {
+      "get": {
+        "operationId": "GET__api_v1_channels",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/events/handled": {
+      "post": {
+        "operationId": "POST__api_v1_events_handled",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/events/wait_next": {
+      "post": {
+        "operationId": "POST__api_v1_events_wait_next",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/healthz": {
+      "get": {
+        "operationId": "GET__api_v1_healthz",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/listening_addresses": {
+      "get": {
+        "operationId": "GET__api_v1_listening_addresses",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/node_id": {
+      "get": {
+        "operationId": "GET__api_v1_node_id",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payment/{payment_id}": {
+      "get": {
+        "operationId": "GET__api_v1_payment_payment_id",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "payment_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payment/{payment_id}/abandon": {
+      "post": {
+        "operationId": "POST__api_v1_payment_payment_id_abandon",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "payment_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payment/{payment_id}/wait": {
+      "post": {
+        "operationId": "POST__api_v1_payment_payment_id_wait",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "payment_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/payments": {
+      "get": {
+        "operationId": "GET__api_v1_payments",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/peers": {
+      "get": {
+        "operationId": "GET__api_v1_peers",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/peers/connect": {
+      "post": {
+        "operationId": "POST__api_v1_peers_connect",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/peers/disconnect": {
+      "post": {
+        "operationId": "POST__api_v1_peers_disconnect",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/readyz": {
+      "get": {
+        "operationId": "GET__api_v1_readyz",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/rgb/consignments/{consignment_key}": {
+      "get": {
+        "operationId": "GET__api_v1_rgb_consignments_consignment_key",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "consignment_key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/rgb/contract/{contract_id}/balance": {
+      "get": {
+        "operationId": "GET__api_v1_rgb_contract_contract_id_balance",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contract_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/rgb/contract/{contract_id}/known": {
+      "get": {
+        "operationId": "GET__api_v1_rgb_contract_contract_id_known",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contract_id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/rgb/contracts": {
+      "get": {
+        "operationId": "GET__api_v1_rgb_contracts",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/rgb/contracts/export": {
+      "post": {
+        "operationId": "POST__api_v1_rgb_contracts_export",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/rgb/contracts/import": {
+      "post": {
+        "operationId": "POST__api_v1_rgb_contracts_import",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/rgb/contracts/issue": {
+      "post": {
+        "operationId": "POST__api_v1_rgb_contracts_issue",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/rgb/issuers": {
+      "get": {
+        "operationId": "GET__api_v1_rgb_issuers",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/rgb/issuers/import": {
+      "post": {
+        "operationId": "POST__api_v1_rgb_issuers_import",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/rgb/ln/invoice/create": {
+      "post": {
+        "operationId": "POST__api_v1_rgb_ln_invoice_create",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/rgb/ln/invoice/create_for_hash": {
+      "post": {
+        "operationId": "POST__api_v1_rgb_ln_invoice_create_for_hash",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/rgb/ln/invoice/decode": {
+      "post": {
+        "operationId": "POST__api_v1_rgb_ln_invoice_decode",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/rgb/ln/pay": {
+      "post": {
+        "operationId": "POST__api_v1_rgb_ln_pay",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/rgb/new_address": {
+      "post": {
+        "operationId": "POST__api_v1_rgb_new_address",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/rgb/onchain/invoice/create": {
+      "post": {
+        "operationId": "POST__api_v1_rgb_onchain_invoice_create",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/rgb/onchain/invoice/decode": {
+      "post": {
+        "operationId": "POST__api_v1_rgb_onchain_invoice_decode",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/rgb/onchain/payments": {
+      "get": {
+        "operationId": "GET__api_v1_rgb_onchain_payments",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/rgb/onchain/receive": {
+      "post": {
+        "operationId": "POST__api_v1_rgb_onchain_receive",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/rgb/onchain/send": {
+      "post": {
+        "operationId": "POST__api_v1_rgb_onchain_send",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/rgb/sync": {
+      "post": {
+        "operationId": "POST__api_v1_rgb_sync",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/rgb/utxos": {
+      "get": {
+        "operationId": "GET__api_v1_rgb_utxos",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/rgb/utxos/release": {
+      "post": {
+        "operationId": "POST__api_v1_rgb_utxos_release",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/rgb/utxos/reserve": {
+      "post": {
+        "operationId": "POST__api_v1_rgb_utxos_reserve",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/rgb/utxos/summary": {
+      "get": {
+        "operationId": "GET__api_v1_rgb_utxos_summary",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/spontaneous/send": {
+      "post": {
+        "operationId": "POST__api_v1_spontaneous_send",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/status": {
+      "get": {
+        "operationId": "GET__api_v1_status",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/version": {
+      "get": {
+        "operationId": "GET__api_v1_version",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/wallet/new_address": {
+      "post": {
+        "operationId": "POST__api_v1_wallet_new_address",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/wallet/sync": {
+      "post": {
+        "operationId": "POST__api_v1_wallet_sync",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8500"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "name": "rgb-ldk-api",
+  "private": true,
+  "packageManager": "pnpm@9",
+  "scripts": {
+    "gen": "python3 scripts/rgb-ldk-api.py gen",
+    "typecheck": "pnpm -r typecheck"
+  }
+}
+
