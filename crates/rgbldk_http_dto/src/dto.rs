@@ -7,9 +7,10 @@
 #![allow(missing_docs)]
 
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 /// A single readiness/health sub-check.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct HealthCheckDto {
 	pub name: String,
 	pub ok: bool,
@@ -20,7 +21,7 @@ pub struct HealthCheckDto {
 }
 
 /// Generic OK response (optionally with sub-checks).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct OkResponse {
 	pub ok: bool,
 	#[serde(skip_serializing_if = "Vec::is_empty", default)]
@@ -28,7 +29,7 @@ pub struct OkResponse {
 }
 
 /// Version metadata.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct VersionResponse {
 	pub api_version: String,
 	pub api_crate_version: String,
@@ -36,25 +37,25 @@ pub struct VersionResponse {
 }
 
 /// Response containing the node's public key.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct NodeIdResponse {
 	pub node_id: String,
 }
 
 /// Response containing the node's listening addresses.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ListeningAddressesResponse {
 	pub addresses: Vec<String>,
 }
 
 /// Response containing a newly-generated on-chain address.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct WalletNewAddressResponse {
 	pub address: String,
 }
 
 /// Node status response.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct StatusDto {
 	/// Whether the node runtime is running.
 	pub is_running: bool,
@@ -133,14 +134,14 @@ pub struct ControlVersionDto {
 }
 
 /// Wallet and channel balance overview (BTC + RGB).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct BalancesDto {
 	pub btc: BtcBalancesDto,
 	pub rgb: RgbBalancesDto,
 }
 
 /// Bitcoin (BTC) balance overview.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct BtcBalancesDto {
 	/// Total confirmed on-chain balance in satoshis.
 	#[serde(with = "serde_u64_decimal_string")]
@@ -157,7 +158,7 @@ pub struct BtcBalancesDto {
 }
 
 /// RGB balance overview, split by asset location.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbBalancesDto {
 	/// L1 (on-chain) RGB balances by contract.
 	pub l1: Vec<RgbL1BalanceDto>,
@@ -166,12 +167,10 @@ pub struct RgbBalancesDto {
 }
 
 /// L1 RGB balance for a single contract.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbL1BalanceDto {
 	/// Contract ID (string like `contract:...`).
 	pub contract_id: String,
-	/// Asset ID (hex-encoded 32 bytes).
-	pub asset_id: String,
 	/// Confirmed on-chain balance.
 	#[serde(with = "serde_u64_decimal_string")]
 	pub mined: u64,
@@ -190,12 +189,12 @@ pub struct RgbL1BalanceDto {
 }
 
 /// L2 RGB balance for a single channel.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbL2BalanceDto {
 	/// Channel id (32-byte hex).
 	pub channel_id: String,
-	/// Asset ID (hex-encoded 32 bytes).
-	pub asset_id: String,
+	/// Contract ID (string like `contract:...`).
+	pub contract_id: String,
 	/// Local (our) RGB balance in this channel.
 	#[serde(with = "serde_u64_decimal_string")]
 	pub local_amount: u64,
@@ -205,7 +204,7 @@ pub struct RgbL2BalanceDto {
 }
 
 /// Peer details entry.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PeerDetailsDto {
 	/// Peer node id in hex.
 	pub node_id: String,
@@ -218,7 +217,7 @@ pub struct PeerDetailsDto {
 }
 
 /// Request to connect to a peer.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PeerConnectRequest {
 	/// Peer node id in hex.
 	pub node_id: String,
@@ -230,7 +229,7 @@ pub struct PeerConnectRequest {
 }
 
 /// Request to disconnect a peer.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PeerDisconnectRequest {
 	/// Peer node id in hex.
 	pub node_id: String,
@@ -239,7 +238,7 @@ pub struct PeerDisconnectRequest {
 /// Payment kind-specific details (machine-friendly).
 ///
 /// This is optional and may grow over time; clients should treat unknown fields as opaque.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PaymentDetailsDto {
 	/// Payment id (hex-encoded 32 bytes).
 	pub id: String,
@@ -261,10 +260,10 @@ pub struct PaymentDetailsDto {
 }
 
 /// RGB asset balance in a channel.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbChannelBalanceDto {
-	/// Asset ID (hex-encoded 32 bytes).
-	pub asset_id: String,
+	/// Contract ID (string like `contract:...`).
+	pub contract_id: String,
 	/// Local (our) RGB balance in this channel.
 	#[serde(with = "serde_u64_decimal_string")]
 	pub local_amount: u64,
@@ -274,7 +273,7 @@ pub struct RgbChannelBalanceDto {
 }
 
 /// Channel details entry (extended for control-plane integrations).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ChannelDetailsExtendedDto {
 	/// Channel id (32-byte hex).
 	pub channel_id: String,
@@ -338,13 +337,13 @@ pub struct ChannelDetailsExtendedDto {
 }
 
 /// Request to decode a BOLT11 invoice.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Bolt11DecodeRequest {
 	pub invoice: String,
 }
 
 /// Decoded BOLT11 invoice summary.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Bolt11DecodeResponse {
 	pub payment_hash: String,
 	pub destination: String,
@@ -355,7 +354,7 @@ pub struct Bolt11DecodeResponse {
 }
 
 /// Request to create a BOLT11 invoice.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Bolt11ReceiveRequest {
 	#[serde(with = "serde_u64_decimal_string")]
 	pub amount_msat: u64,
@@ -364,7 +363,7 @@ pub struct Bolt11ReceiveRequest {
 }
 
 /// Request to create a variable-amount BOLT11 invoice.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Bolt11ReceiveVarRequest {
 	pub description: String,
 	pub expiry_secs: u32,
@@ -375,7 +374,7 @@ pub struct Bolt11ReceiveVarRequest {
 /// The resulting invoice will NOT be auto-claimed. The receiver must manually
 /// call `/bolt11/claim_for_hash` or `/bolt11/fail_for_hash` after receiving
 /// the `PaymentClaimable` event.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Bolt11ReceiveForHashRequest {
 	#[serde(with = "serde_u64_decimal_string")]
 	pub amount_msat: u64,
@@ -386,7 +385,7 @@ pub struct Bolt11ReceiveForHashRequest {
 }
 
 /// Request to fail a held payment by its payment hash.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Bolt11FailForHashRequest {
 	/// Payment hash (hex-encoded 32 bytes).
 	pub payment_hash: String,
@@ -395,7 +394,7 @@ pub struct Bolt11FailForHashRequest {
 /// Manually claim a held payment created via `/bolt11/receive_for_hash`.
 ///
 /// Requires the original preimage that corresponds to the payment hash.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Bolt11ClaimForHashRequest {
 	/// Payment hash (hex-encoded 32 bytes).
 	pub payment_hash: String,
@@ -407,19 +406,19 @@ pub struct Bolt11ClaimForHashRequest {
 }
 
 /// Response containing a newly created BOLT11 invoice.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Bolt11ReceiveResponse {
 	pub invoice: String,
 }
 
 /// Request to pay a BOLT11 invoice.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Bolt11SendRequest {
 	pub invoice: String,
 }
 
 /// Request to pay a BOLT11 invoice using a specified amount.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Bolt11SendUsingAmountRequest {
 	pub invoice: String,
 	#[serde(with = "serde_u64_decimal_string")]
@@ -427,7 +426,7 @@ pub struct Bolt11SendUsingAmountRequest {
 }
 
 /// Preferred BOLT11 payment endpoint: waits for completion and returns preimage.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Bolt11PayRequest {
 	pub invoice: String,
 	#[serde(default, with = "serde_opt_u64_decimal_string")]
@@ -435,7 +434,7 @@ pub struct Bolt11PayRequest {
 }
 
 /// Response of a completed BOLT11 payment.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Bolt11PayResponse {
 	pub payment_id: String,
 	pub preimage: String,
@@ -447,7 +446,7 @@ pub struct Bolt11PayResponse {
 }
 
 /// Request to open a channel to a peer.
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 pub struct OpenChannelRequest {
 	pub node_id: String,
 	pub address: String,
@@ -461,26 +460,26 @@ pub struct OpenChannelRequest {
 }
 
 /// Response of a successful channel open request.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct OpenChannelResponse {
 	pub user_channel_id: String,
 }
 
 /// Request to close or force-close a channel.
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 pub struct CloseChannelRequest {
 	pub user_channel_id: String,
 	pub counterparty_node_id: String,
 }
 
 /// Response containing the id of a sent payment.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct SendResponse {
 	pub payment_id: String,
 }
 
 /// TLV record for spontaneous payments.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct CustomTlvDto {
 	#[serde(rename = "type")]
 	#[serde(with = "serde_u64_decimal_string")]
@@ -489,7 +488,7 @@ pub struct CustomTlvDto {
 }
 
 /// Request to send a spontaneous (keysend) payment.
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 pub struct SpontaneousSendRequest {
 	pub counterparty_node_id: String,
 	#[serde(with = "serde_u64_decimal_string")]
@@ -499,14 +498,14 @@ pub struct SpontaneousSendRequest {
 }
 
 /// Outpoint for channel pending events.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct OutPointDto {
 	pub txid: String,
 	pub vout: u32,
 }
 
 /// Event DTO (subset; others are mapped to `Other`).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(tag = "type", content = "data")]
 pub enum EventDto {
 	PaymentSuccessful {
@@ -547,10 +546,10 @@ pub enum EventDto {
 }
 
 /// RGB context for Lightning payments/events.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbPaymentContextDto {
-	/// Asset ID (hex-encoded 32 bytes).
-	pub asset_id: String,
+	/// Contract ID (string like `contract:...`).
+	pub contract_id: String,
 	/// Asset amount.
 	#[serde(with = "serde_u64_decimal_string")]
 	pub asset_amount: u64,
@@ -562,7 +561,7 @@ pub struct RgbPaymentContextDto {
 
 /// ---- BOLT12 (offers + refunds) ----
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Bolt12OfferReceiveRequest {
 	#[serde(with = "serde_u64_decimal_string")]
 	pub amount_msat: u64,
@@ -574,7 +573,7 @@ pub struct Bolt12OfferReceiveRequest {
 	pub quantity: Option<u64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Bolt12OfferReceiveVarRequest {
 	pub description: String,
 	/// Seconds from now; if omitted, offer does not expire.
@@ -582,17 +581,17 @@ pub struct Bolt12OfferReceiveVarRequest {
 	pub expiry_secs: Option<u32>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Bolt12OfferResponse {
 	pub offer: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Bolt12OfferDecodeRequest {
 	pub offer: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Bolt12OfferDecodeResponse {
 	pub offer_id: String,
 	#[serde(default)]
@@ -612,7 +611,7 @@ pub struct Bolt12OfferDecodeResponse {
 	pub expects_quantity: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Bolt12OfferSendRequest {
 	pub offer: String,
 	/// Required for zero-amount offers; may be used to overpay fixed-amount offers.
@@ -624,7 +623,7 @@ pub struct Bolt12OfferSendRequest {
 	pub payer_note: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Bolt12RefundInitiateRequest {
 	#[serde(with = "serde_u64_decimal_string")]
 	pub amount_msat: u64,
@@ -635,18 +634,18 @@ pub struct Bolt12RefundInitiateRequest {
 	pub payer_note: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Bolt12RefundInitiateResponse {
 	pub refund: String,
 	pub payment_id: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Bolt12RefundDecodeRequest {
 	pub refund: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Bolt12RefundDecodeResponse {
 	pub description: String,
 	#[serde(default)]
@@ -665,12 +664,12 @@ pub struct Bolt12RefundDecodeResponse {
 	pub paths_count: usize,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Bolt12RefundRequestPaymentRequest {
 	pub refund: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Bolt12RefundRequestPaymentResponse {
 	/// Informational only (bech32-encoded BOLT12 invoice, HRP `lni`).
 	pub invoice: String,
@@ -679,14 +678,14 @@ pub struct Bolt12RefundRequestPaymentResponse {
 	pub payment_id: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PaymentWaitRequest {
 	/// Default: 60 seconds.
 	#[serde(default)]
 	pub timeout_secs: Option<u32>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct PaymentWaitResponse {
 	pub ok: bool,
 	pub payment: PaymentDetailsDto,
@@ -715,10 +714,10 @@ pub struct PaymentWaitResponse {
 
 /// ---- RGB (Lightning + on-chain) ----
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbOpenChannelRequest {
-	/// RGB asset id (hex-encoded bytes).
-	pub asset_id: String,
+	/// RGB contract ID.
+	pub contract_id: String,
 	/// RGB asset amount to commit into the channel.
 	#[serde(with = "serde_u64_decimal_string")]
 	pub asset_amount: u64,
@@ -726,16 +725,14 @@ pub struct RgbOpenChannelRequest {
 	pub color_context_data: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbNewAddressResponse {
 	pub address: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbContractDto {
 	pub contract_id: String,
-	/// Lightning-facing RGB asset id (hex-encoded 32 bytes).
-	pub asset_id: String,
 	/// Human-friendly asset name (if known).
 	pub name: Option<String>,
 	/// Short asset ticker (if known).
@@ -749,7 +746,7 @@ pub struct RgbContractDto {
 	pub details: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbContractsResponse {
 	pub contracts: Vec<RgbContractDto>,
 }
@@ -775,7 +772,7 @@ pub struct RgbIssuersImportResponse {
 	pub checks: Vec<HealthCheckDto>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbContractsImportResponse {
 	pub ok: bool,
 	pub contract_id: String,
@@ -785,7 +782,7 @@ pub struct RgbContractsImportResponse {
 	pub checks: Vec<HealthCheckDto>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbContractsIssueRequest {
 	/// Issuer name from the local issuer registry.
 	pub issuer_name: String,
@@ -805,24 +802,22 @@ pub struct RgbContractsIssueRequest {
 	pub utxo: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbContractsIssueResponse {
 	pub ok: bool,
 	pub contract_id: String,
-	/// Lightning-facing RGB asset id (hex 32 bytes).
-	pub asset_id: String,
 	#[serde(with = "serde_u64_decimal_string")]
 	pub issued_supply: u64,
 	#[serde(default)]
 	pub checks: Vec<HealthCheckDto>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbContractsExportRequest {
 	pub contract_id: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbContractsExportResponse {
 	pub ok: bool,
 	pub contract_id: String,
@@ -832,7 +827,7 @@ pub struct RgbContractsExportResponse {
 	pub checks: Vec<HealthCheckDto>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbContractBalanceDto {
 	#[serde(with = "serde_u64_decimal_string")]
 	pub mined: u64,
@@ -846,22 +841,22 @@ pub struct RgbContractBalanceDto {
 	pub total: u64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbContractBalanceResponse {
 	pub contract_id: String,
 	pub balance: RgbContractBalanceDto,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbContractKnownResponse {
 	pub contract_id: String,
 	pub known: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbLnInvoiceCreateRequest {
-	/// RGB asset id (hex-encoded bytes).
-	pub asset_id: String,
+	/// RGB contract ID.
+	pub contract_id: String,
 	/// RGB asset amount.
 	#[serde(with = "serde_u64_decimal_string")]
 	pub asset_amount: u64,
@@ -875,10 +870,10 @@ pub struct RgbLnInvoiceCreateRequest {
 	pub btc_carrier_amount_msat: u64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbLnInvoiceCreateForHashRequest {
-	/// RGB asset id (hex-encoded bytes).
-	pub asset_id: String,
+	/// RGB contract ID.
+	pub contract_id: String,
 	/// RGB asset amount.
 	#[serde(with = "serde_u64_decimal_string")]
 	pub asset_amount: u64,
@@ -894,17 +889,17 @@ pub struct RgbLnInvoiceCreateForHashRequest {
 	pub btc_carrier_amount_msat: u64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbLnInvoiceResponse {
 	pub invoice: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbLnInvoiceDecodeRequest {
 	pub invoice: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbLnInvoiceDecodeResponse {
 	pub payment_hash: String,
 	pub destination: String,
@@ -913,23 +908,23 @@ pub struct RgbLnInvoiceDecodeResponse {
 	#[serde(with = "serde_u64_decimal_string")]
 	pub expiry_secs: u64,
 	#[serde(default)]
-	pub asset_id: Option<String>,
+	pub contract_id: Option<String>,
 	#[serde(default, with = "serde_opt_u64_decimal_string")]
 	pub asset_amount: Option<u64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbLnPayRequest {
 	pub invoice: String,
-	/// Optional explicit asset id for invoices that do not embed RGB fields.
+	/// Optional explicit contract ID for invoices that do not embed RGB fields.
 	#[serde(default)]
-	pub asset_id: Option<String>,
+	pub contract_id: Option<String>,
 	/// Optional explicit asset amount for invoices that do not embed RGB fields.
 	#[serde(default, with = "serde_opt_u64_decimal_string")]
 	pub asset_amount: Option<u64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbOnchainInvoiceCreateRequest {
 	pub contract_id: String,
 	#[serde(with = "serde_u64_decimal_string")]
@@ -955,7 +950,7 @@ pub struct RgbOnchainInvoiceCreateRequest {
 	pub blinding_utxo: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbOnchainInvoiceResponse {
 	pub invoice: String,
 	/// Outpoint actually used for blinding when creating a blinded invoice (`use_witness_utxo=false`).
@@ -963,12 +958,12 @@ pub struct RgbOnchainInvoiceResponse {
 	pub blinding_utxo_used: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbOnchainInvoiceDecodeRequest {
 	pub invoice: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbOnchainInvoiceDecodeResponse {
 	pub contract_id: String,
 	#[serde(with = "serde_u64_decimal_string")]
@@ -979,7 +974,7 @@ pub struct RgbOnchainInvoiceDecodeResponse {
 	pub expiry_unix_secs: Option<u64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbOnchainSendRequest {
 	pub invoice: String,
 	#[serde(default, with = "serde_opt_u64_decimal_string")]
@@ -987,13 +982,13 @@ pub struct RgbOnchainSendRequest {
 	pub fee_rate_sats_per_vb: f32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbOnchainSendResponse {
 	pub txid: String,
 	pub consignment_key: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbOnchainReceiveRequest {
 	pub consignment_key: String,
 	/// Optional invoice id (hex-encoded 32 bytes, i.e. `sha256(invoice_str)`).
@@ -1010,19 +1005,19 @@ pub struct RgbOnchainReceiveRequest {
 	pub invoice: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbOnchainReceiveResponse {
-	pub asset_id: String,
+	pub contract_id: String,
 	#[serde(with = "serde_u64_decimal_string")]
 	pub amount: u64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbOnchainPaymentsResponse {
 	pub payments: Vec<RgbOnchainPaymentDto>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbOnchainPaymentDto {
 	pub id: String,
 	/// Constant `onchain` (RGB L1 non-channel payment lifecycle).
@@ -1049,22 +1044,20 @@ pub struct RgbOnchainPaymentDto {
 	pub consignment_key: Option<String>,
 	#[serde(default)]
 	pub consignment_download_path: Option<String>,
-	#[serde(default)]
-	pub asset_id: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbUtxosResponse {
 	/// RGB wallet UTXOs (outpoints formatted as `txid:vout`).
 	pub utxos: Vec<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbUtxosSummaryResponse {
 	pub utxos: Vec<RgbUtxoSummaryDto>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbUtxoAssetAllocationDto {
 	/// Contract ID (string like `contract:...`).
 	pub contract_id: String,
@@ -1073,7 +1066,7 @@ pub struct RgbUtxoAssetAllocationDto {
 	pub amount: u64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbUtxoSummaryDto {
 	/// Outpoint formatted as `txid:vout`.
 	pub outpoint: String,
@@ -1095,7 +1088,7 @@ pub struct RgbUtxoSummaryDto {
 	pub assets: Vec<RgbUtxoAssetAllocationDto>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbUtxosReserveRequest {
 	/// Optional explicit outpoint to reserve (`txid:vout`).
 	#[serde(default)]
@@ -1105,7 +1098,7 @@ pub struct RgbUtxosReserveRequest {
 	pub ttl_secs: Option<u64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbUtxosReserveResponse {
 	pub reservation_id: String,
 	pub outpoint: String,
@@ -1113,7 +1106,7 @@ pub struct RgbUtxosReserveResponse {
 	pub reserved_until_unix_secs: u64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbUtxosReleaseRequest {
 	/// Release by reservation id (preferred).
 	#[serde(default)]
@@ -1123,7 +1116,7 @@ pub struct RgbUtxosReleaseRequest {
 	pub outpoint: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbUtxosReleaseResponse {
 	pub released: bool,
 }

@@ -11,6 +11,7 @@ import sys
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from urllib.parse import urlparse
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,14 +26,6 @@ class SourceInfo:
     generated_at_utc: str
 
 
-@dataclass
-class RouteDef:
-    method: str
-    path: str
-    handler: str
-    source_text: str
-
-
 def _read_toml(path: Path) -> dict:
     try:
         import tomllib
@@ -45,6 +38,17 @@ def _read_toml(path: Path) -> dict:
 def _git_head(repo: Path) -> str | None:
     try:
         out = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD"], stderr=subprocess.DEVNULL)
+        text = out.decode("utf-8").strip()
+        return text or None
+    except Exception:
+        return None
+
+
+def _git_origin_url(repo: Path) -> str | None:
+    try:
+        out = subprocess.check_output(
+            ["git", "-C", str(repo), "remote", "get-url", "origin"], stderr=subprocess.DEVNULL
+        )
         text = out.decode("utf-8").strip()
         return text or None
     except Exception:
@@ -79,6 +83,17 @@ def _copytree_merge(src: Path, dst: Path) -> None:
 
 
 def _sanitize_repo_reference(value: str) -> str:
+    ssh_match = re.match(r"^git@[^:]+:([^/]+)/(.+?)(?:\.git)?$", value)
+    if ssh_match:
+        return f"{ssh_match.group(1)}/{ssh_match.group(2)}"
+    if value.startswith(("https://", "http://", "ssh://")):
+        parsed = urlparse(value)
+        path = parsed.path.strip("/")
+        if path.endswith(".git"):
+            path = path[:-4]
+        if path:
+            return path
+        return value
     if re.search(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", value):
         return value
 
@@ -99,167 +114,103 @@ def _sanitize_repo_reference(value: str) -> str:
     return name or "local-path-redacted"
 
 
-def _find_async_fn_block(text: str, name: str) -> tuple[str, str] | None:
-    needle = f"async fn {name}"
-    start = text.find(needle)
-    if start < 0:
+def _schema_type_name(schema: dict | None) -> str | None:
+    if not isinstance(schema, dict):
         return None
-    brace = text.find("{", start)
-    if brace < 0:
-        return None
-    sig = text[start:brace]
-    index = brace
-    depth = 0
-    while index < len(text):
-        char = text[index]
-        if char == "{":
-            depth += 1
-        elif char == "}":
-            depth -= 1
-            if depth == 0:
-                return sig, text[brace : index + 1]
-        index += 1
+    ref = schema.get("$ref")
+    if isinstance(ref, str) and ref.startswith("#/components/schemas/"):
+        return ref.rsplit("/", 1)[-1]
+    schema_type = schema.get("type")
+    if schema_type == "array":
+        inner = _schema_type_name(schema.get("items"))
+        return f"{inner}[]" if inner else "array"
+    if schema_type == "string":
+        fmt = schema.get("format")
+        if fmt == "binary":
+            return "binary"
+        return "string"
+    if isinstance(schema_type, str):
+        return schema_type
     return None
 
 
-def _normalize_type_name(type_name: str) -> str:
-    value = type_name.strip().replace(" ", "")
-    return value.split("::")[-1]
+def _prefixed_api_path(path: str) -> str:
+    if path.startswith("/api/v1"):
+        return path
+    return "/api/v1" + (path if path.startswith("/") else "/" + path)
 
 
-def _infer_request_type(sig: str) -> str | None:
-    match = re.search(r"Json\([^)]*\)\s*:\s*Json<\s*([^>]+)\s*>", sig)
-    if not match:
-        return None
-    value = _normalize_type_name(match.group(1))
-    if value in ("serde_json::Value", "Value"):
-        return None
-    return value
-
-
-def _infer_response_type(sig: str, body: str) -> str | None:
-    return_match = re.search(r"->\s*([^{]+)$", sig.strip())
-    if return_match:
-        return_type = return_match.group(1).strip()
-        json_match = re.search(r"Json<\s*([^>]+)\s*>", return_type)
-        if json_match:
-            inner = json_match.group(1).strip()
-            if "serde_json::Value" not in inner and inner != "serde_json::Value":
-                vec_match = re.match(r"Vec<\s*([^>]+)\s*>", inner)
-                if vec_match:
-                    return _normalize_type_name(vec_match.group(1)) + "[]"
-                return _normalize_type_name(inner)
-
-    body_match = re.search(r"json_with_status\(\s*StatusCode::OK\s*,\s*([A-Za-z0-9_]+)\b", body)
-    if body_match:
-        return _normalize_type_name(body_match.group(1))
-
-    return None
-
-
-def _split_endpoints_md_sections(md: str) -> dict[tuple[str, str], str]:
-    lines = md.splitlines()
-    sections: dict[tuple[str, str], str] = {}
-    index = 0
-
-    while index < len(lines):
-        line = lines[index].strip()
-        match = re.match(r"^###\s+(GET|POST|PUT|DELETE|PATCH)\s+`([^`]+)`", line)
-        if not match:
-            index += 1
-            continue
-        method = match.group(1).upper()
-        path = match.group(2).strip()
-        start = index
-        index += 1
-        while index < len(lines) and not re.match(
-            r"^###\s+(GET|POST|PUT|DELETE|PATCH)\s+`([^`]+)`", lines[index].strip()
-        ):
-            index += 1
-        sections[(method, path)] = "\n".join(lines[start:index]).rstrip() + "\n"
-    return sections
-
-
-def _route_files(node_repo: Path) -> list[Path]:
-    files: list[Path] = []
-    handlers_dir = node_repo / "src" / "http" / "handlers"
-    if handlers_dir.exists():
-        files.extend(sorted(handlers_dir.glob("*.rs")))
-    mod_rs = node_repo / "src" / "http" / "mod.rs"
-    if mod_rs.exists():
-        files.append(mod_rs)
-    return files
-
-
-def _extract_http_routes(node_repo: Path) -> list[RouteDef]:
-    pattern = re.compile(
-        r'\.route\(\s*"([^"]+)"\s*,\s*(get|post|put|delete|patch)\(\s*([A-Za-z0-9_]+)\s*\)\s*\)',
-        re.IGNORECASE,
-    )
-    routes: list[RouteDef] = []
-    seen: set[tuple[str, str]] = set()
-
-    for file_path in _route_files(node_repo):
-        text = file_path.read_text(encoding="utf-8")
-        for match in pattern.finditer(text):
-            route = RouteDef(
-                method=match.group(2).upper(),
-                path=match.group(1),
-                handler=match.group(3),
-                source_text=text,
-            )
-            key = (route.method, route.path)
-            if key in seen:
-                continue
-            seen.add(key)
-            routes.append(route)
-
-    return routes
-
-
-def _render_endpoints_md(node_repo: Path) -> str:
-    routes = _extract_http_routes(node_repo)
-
-    existing = ""
-    existing_path = node_repo / "docs" / "http-api" / "endpoints.md"
-    if existing_path.exists():
-        existing = existing_path.read_text(encoding="utf-8")
-    sections = _split_endpoints_md_sections(existing) if existing else {}
-
+def _render_endpoints_md(openapi: dict) -> str:
+    paths = openapi.get("paths")
+    if not isinstance(paths, dict):
+        raise RuntimeError("openapi.json is missing top-level paths")
     out: list[str] = []
     out.append("# Endpoint List (Prefix: `/api/v1`)")
     out.append("")
     out.append("*This file is exported by `scripts/rgbldk_api_sync.py`.*")
     out.append("")
-
-    for route in routes:
-        full_path = "/api/v1" + (route.path if route.path.startswith("/") else "/" + route.path)
-        key = (route.method, full_path)
-        if key in sections:
-            out.append(sections[key].rstrip())
-            out.append("")
+    route_entries: list[tuple[str, str, dict]] = []
+    for raw_path, path_item in paths.items():
+        if not isinstance(path_item, dict):
             continue
+        for method in ("get", "post", "put", "delete", "patch"):
+            op = path_item.get(method)
+            if isinstance(op, dict):
+                route_entries.append((method.upper(), _prefixed_api_path(raw_path), op))
 
-        fn_block = _find_async_fn_block(route.source_text, route.handler)
-        req_type = None
-        resp_type = None
-        if fn_block:
-            sig, body = fn_block
-            req_type = _infer_request_type(sig)
-            resp_type = _infer_response_type(sig, body)
+    route_entries.sort(key=lambda item: (item[1], item[0]))
 
-        out.append(f"### {route.method} `{full_path}`")
+    for method, full_path, op in route_entries:
+        out.append(f"### {method} `{full_path}`")
         out.append("")
-        if route.method in ("POST", "PUT", "PATCH"):
-            if req_type:
-                out.append(f"* **Request Body:** `{req_type}`")
-            else:
-                out.append("* **Request:** Empty body.")
-        if resp_type:
-            out.append(f"* **Response (200):** `{resp_type}`")
+        summary = op.get("summary")
+        if isinstance(summary, str) and summary.strip():
+            out.append(f"* **Summary:** {summary.strip()}")
+        description = op.get("description")
+        if isinstance(description, str) and description.strip():
+            out.append(f"* **Description:** {description.strip()}")
+        request_body = op.get("requestBody")
+        if method in ("POST", "PUT", "PATCH") and isinstance(request_body, dict):
+            content = request_body.get("content")
+            if isinstance(content, dict):
+                json_content = content.get("application/json")
+                octet_content = content.get("application/octet-stream")
+                selected = json_content if isinstance(json_content, dict) else octet_content
+                if isinstance(selected, dict):
+                    req_type = _schema_type_name(selected.get("schema"))
+                    if req_type:
+                        out.append(f"* **Request Body:** `{req_type}`")
+        responses = op.get("responses")
+        if isinstance(responses, dict):
+            for status in sorted(responses, key=lambda code: (not str(code).isdigit(), str(code))):
+                resp = responses.get(status)
+                if not isinstance(resp, dict):
+                    continue
+                content = resp.get("content")
+                resp_type = None
+                if isinstance(content, dict):
+                    json_content = content.get("application/json")
+                    octet_content = content.get("application/octet-stream")
+                    selected = json_content if isinstance(json_content, dict) else octet_content
+                    if isinstance(selected, dict):
+                        resp_type = _schema_type_name(selected.get("schema"))
+                if resp_type:
+                    out.append(f"* **Response ({status}):** `{resp_type}`")
+                else:
+                    desc = resp.get("description")
+                    if isinstance(desc, str) and desc.strip():
+                        out.append(f"* **Response ({status}):** {desc.strip()}")
         out.append("")
 
     return "\n".join(out).rstrip() + "\n"
+
+
+def _export_openapi_json(node_repo: Path, output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.check_call(
+        ["cargo", "run", "--bin", "rgbldkd", "--", "openapi", "--output", str(output_path)],
+        cwd=node_repo,
+    )
 
 
 def export_artifacts(node_repo: Path, out_dir: Path) -> None:
@@ -273,8 +224,9 @@ def export_artifacts(node_repo: Path, out_dir: Path) -> None:
     node_version = str(package["version"])
     api_version = "v1"
 
+    node_repo_ref = _git_origin_url(node_repo) or str(node_repo)
     info = SourceInfo(
-        node_repo=_sanitize_repo_reference(str(node_repo)),
+        node_repo=_sanitize_repo_reference(node_repo_ref),
         node_commit=_git_head(node_repo),
         node_package_version=node_version,
         api_version=api_version,
@@ -284,7 +236,10 @@ def export_artifacts(node_repo: Path, out_dir: Path) -> None:
     _write_text(out_dir / "generated" / "spec" / "api-version.txt", f"{api_version}\n")
     _write_text(out_dir / "generated" / "spec" / "node-package-version.txt", f"{node_version}\n")
     _write_text(out_dir / "generated" / "spec" / "source.json", json.dumps(asdict(info), indent=2, sort_keys=True) + "\n")
-    _write_text(out_dir / "generated" / "spec" / "endpoints.md", _render_endpoints_md(node_repo))
+    exported_openapi = out_dir / "generated" / "spec" / "openapi.json"
+    _export_openapi_json(node_repo, exported_openapi)
+    openapi = json.loads(exported_openapi.read_text(encoding="utf-8"))
+    _write_text(out_dir / "generated" / "spec" / "endpoints.md", _render_endpoints_md(openapi))
 
     dto_src = (node_repo / "src" / "http" / "dto.rs").read_text(encoding="utf-8")
     crate_dir = out_dir / "crates" / "rgbldk_http_dto"

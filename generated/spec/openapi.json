@@ -1,7 +1,2202 @@
 {
+  "openapi": "3.1.0",
+  "info": {
+    "title": "rgb-ldk-node HTTP API",
+    "description": "Experimental OpenAPI source of truth for the node HTTP API.",
+    "contact": {
+      "name": "Elias Rohrer",
+      "email": "dev@tnull.de"
+    },
+    "license": {
+      "name": "MIT OR Apache-2.0",
+      "identifier": "MIT OR Apache-2.0"
+    },
+    "version": "0.7.0+git"
+  },
+  "paths": {
+    "/balances": {
+      "get": {
+        "tags": [
+          "wallet"
+        ],
+        "summary": "List balances",
+        "description": "Returns the aggregated BTC and RGB balances tracked by the node.",
+        "operationId": "balances",
+        "responses": {
+          "200": {
+            "description": "Current wallet and channel balances",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BalancesDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/bolt11/claim_for_hash": {
+      "post": {
+        "tags": [
+          "bolt11"
+        ],
+        "summary": "Claim held payment",
+        "description": "Claims a held BOLT11 payment using the original payment hash and preimage.",
+        "operationId": "bolt11_claim_for_hash",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Bolt11ClaimForHashRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Held payment claimed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/bolt11/decode": {
+      "post": {
+        "tags": [
+          "bolt11"
+        ],
+        "summary": "Decode BOLT11 invoice",
+        "description": "Parses a BOLT11 invoice string and returns a normalized summary.",
+        "operationId": "bolt11_decode",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Bolt11DecodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Decoded BOLT11 invoice",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Bolt11DecodeResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/bolt11/fail_for_hash": {
+      "post": {
+        "tags": [
+          "bolt11"
+        ],
+        "summary": "Fail held payment",
+        "description": "Fails a held BOLT11 payment identified by payment hash.",
+        "operationId": "bolt11_fail_for_hash",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Bolt11FailForHashRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Held payment failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/bolt11/pay": {
+      "post": {
+        "tags": [
+          "bolt11"
+        ],
+        "summary": "Pay BOLT11 invoice",
+        "description": "Pays a BOLT11 invoice and waits for terminal completion, returning the preimage on success.",
+        "operationId": "bolt11_pay",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Bolt11PayRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Payment completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Bolt11PayResponse"
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "Timed out while waiting for payment completion"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/bolt11/receive": {
+      "post": {
+        "tags": [
+          "bolt11"
+        ],
+        "summary": "Create BOLT11 invoice",
+        "description": "Creates a fixed-amount BOLT11 invoice.",
+        "operationId": "bolt11_receive",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Bolt11ReceiveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Created BOLT11 invoice",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Bolt11ReceiveResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/bolt11/receive_for_hash": {
+      "post": {
+        "tags": [
+          "bolt11"
+        ],
+        "summary": "Create hold invoice",
+        "description": "Creates a fixed-amount BOLT11 invoice bound to an explicit payment hash.",
+        "operationId": "bolt11_receive_for_hash",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Bolt11ReceiveForHashRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Created hold invoice",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Bolt11ReceiveResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/bolt11/receive_var": {
+      "post": {
+        "tags": [
+          "bolt11"
+        ],
+        "summary": "Create variable-amount invoice",
+        "description": "Creates a BOLT11 invoice whose amount is chosen by the payer.",
+        "operationId": "bolt11_receive_var",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Bolt11ReceiveVarRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Created variable-amount invoice",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Bolt11ReceiveResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/bolt11/send": {
+      "post": {
+        "tags": [
+          "bolt11"
+        ],
+        "summary": "Send BOLT11 payment",
+        "description": "Initiates payment for a fixed-amount BOLT11 invoice.",
+        "operationId": "bolt11_send",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Bolt11SendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Payment initiated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/bolt11/send_using_amount": {
+      "post": {
+        "tags": [
+          "bolt11"
+        ],
+        "summary": "Send variable-amount BOLT11 payment",
+        "description": "Initiates payment for a BOLT11 invoice using an explicit amount.",
+        "operationId": "bolt11_send_using_amount",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Bolt11SendUsingAmountRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Payment initiated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/bolt12/offer/decode": {
+      "post": {
+        "tags": [
+          "bolt12"
+        ],
+        "summary": "Decode BOLT12 offer",
+        "description": "Parses a BOLT12 offer and returns a normalized summary.",
+        "operationId": "bolt12_offer_decode",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Bolt12OfferDecodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Decoded BOLT12 offer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Bolt12OfferDecodeResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/bolt12/offer/receive": {
+      "post": {
+        "tags": [
+          "bolt12"
+        ],
+        "summary": "Create BOLT12 offer",
+        "description": "Creates a fixed-amount BOLT12 offer.",
+        "operationId": "bolt12_offer_receive",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Bolt12OfferReceiveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Created BOLT12 offer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Bolt12OfferResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/bolt12/offer/receive_var": {
+      "post": {
+        "tags": [
+          "bolt12"
+        ],
+        "summary": "Create variable-amount BOLT12 offer",
+        "description": "Creates a BOLT12 offer whose amount is chosen by the payer.",
+        "operationId": "bolt12_offer_receive_var",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Bolt12OfferReceiveVarRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Created variable-amount BOLT12 offer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Bolt12OfferResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/bolt12/offer/send": {
+      "post": {
+        "tags": [
+          "bolt12"
+        ],
+        "summary": "Send to BOLT12 offer",
+        "description": "Initiates payment to a BOLT12 offer.",
+        "operationId": "bolt12_offer_send",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Bolt12OfferSendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Payment initiated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/bolt12/refund/decode": {
+      "post": {
+        "tags": [
+          "bolt12"
+        ],
+        "summary": "Decode BOLT12 refund",
+        "description": "Parses a BOLT12 refund and returns a normalized summary.",
+        "operationId": "bolt12_refund_decode",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Bolt12RefundDecodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Decoded BOLT12 refund",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Bolt12RefundDecodeResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/bolt12/refund/initiate": {
+      "post": {
+        "tags": [
+          "bolt12"
+        ],
+        "summary": "Initiate BOLT12 refund",
+        "description": "Creates a BOLT12 refund object and returns the associated payment id.",
+        "operationId": "bolt12_refund_initiate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Bolt12RefundInitiateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Created BOLT12 refund",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Bolt12RefundInitiateResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/bolt12/refund/request_payment": {
+      "post": {
+        "tags": [
+          "bolt12"
+        ],
+        "summary": "Request payment for refund",
+        "description": "Builds a BOLT12 invoice from a refund and returns both bech32 and hex forms.",
+        "operationId": "bolt12_refund_request_payment",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Bolt12RefundRequestPaymentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Refund payment requested",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Bolt12RefundRequestPaymentResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/channel/close": {
+      "post": {
+        "tags": [
+          "channel"
+        ],
+        "summary": "Close channel",
+        "description": "Requests a cooperative close for a channel.",
+        "operationId": "channel_close",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseChannelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Channel close requested",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/channel/force_close": {
+      "post": {
+        "tags": [
+          "channel"
+        ],
+        "summary": "Force-close channel",
+        "description": "Force-closes a channel when a cooperative close is not desired or possible.",
+        "operationId": "channel_force_close",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CloseChannelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Channel force-close requested",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/channel/open": {
+      "post": {
+        "tags": [
+          "channel"
+        ],
+        "summary": "Open channel",
+        "description": "Opens a new Lightning channel, optionally with an RGB allocation.",
+        "operationId": "channel_open",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenChannelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Channel open initiated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenChannelResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/channels": {
+      "get": {
+        "tags": [
+          "channel"
+        ],
+        "summary": "List channels",
+        "description": "Returns the current Lightning channels with extended BTC and RGB balance details.",
+        "operationId": "channels",
+        "responses": {
+          "200": {
+            "description": "Known channels",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChannelDetailsExtendedDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/events/handled": {
+      "post": {
+        "tags": [
+          "events"
+        ],
+        "summary": "Mark event handled",
+        "description": "Marks the most recently delivered event as handled so processing can continue.",
+        "operationId": "events_handled",
+        "responses": {
+          "200": {
+            "description": "Event marked handled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/events/wait_next": {
+      "post": {
+        "tags": [
+          "events"
+        ],
+        "summary": "Wait for next event",
+        "description": "Blocks until the next node event becomes available and returns it as a DTO.",
+        "operationId": "events_wait_next",
+        "responses": {
+          "200": {
+            "description": "Next queued event",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EventDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/healthz": {
+      "get": {
+        "tags": [
+          "node"
+        ],
+        "summary": "Health check",
+        "description": "Returns a basic liveness probe for the HTTP server itself.",
+        "operationId": "healthz",
+        "responses": {
+          "200": {
+            "description": "HTTP server is responding",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/listening_addresses": {
+      "get": {
+        "tags": [
+          "node"
+        ],
+        "summary": "Listening addresses",
+        "description": "Returns the list of socket addresses currently advertised by the node.",
+        "operationId": "listening_addresses",
+        "responses": {
+          "200": {
+            "description": "Node listening addresses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListeningAddressesResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/node_id": {
+      "get": {
+        "tags": [
+          "node"
+        ],
+        "summary": "Node public key",
+        "description": "Returns the node's public key in hex format.",
+        "operationId": "node_id",
+        "responses": {
+          "200": {
+            "description": "Node public key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NodeIdResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/payment/{payment_id}": {
+      "get": {
+        "tags": [
+          "payment"
+        ],
+        "summary": "Get payment",
+        "description": "Returns the current state and details of a single payment by id.",
+        "operationId": "payment_get",
+        "parameters": [
+          {
+            "name": "payment_id",
+            "in": "path",
+            "description": "Hex-encoded 32-byte payment id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payment details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentDetailsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/payment/{payment_id}/abandon": {
+      "post": {
+        "tags": [
+          "payment"
+        ],
+        "summary": "Abandon payment",
+        "description": "Stops tracking a payment locally.",
+        "operationId": "payment_abandon",
+        "parameters": [
+          {
+            "name": "payment_id",
+            "in": "path",
+            "description": "Hex-encoded 32-byte payment id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Payment abandoned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/payment/{payment_id}/wait": {
+      "post": {
+        "tags": [
+          "payment"
+        ],
+        "summary": "Wait for payment completion",
+        "description": "Waits until the payment reaches a terminal state or the timeout elapses.",
+        "operationId": "payment_wait",
+        "parameters": [
+          {
+            "name": "payment_id",
+            "in": "path",
+            "description": "Hex-encoded 32-byte payment id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentWaitRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Payment reached a terminal state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentWaitResponse"
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "Timed out while waiting for the payment"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/payments": {
+      "get": {
+        "tags": [
+          "payment"
+        ],
+        "summary": "List payments",
+        "description": "Returns all known payments tracked by the node.",
+        "operationId": "payments_list",
+        "responses": {
+          "200": {
+            "description": "Known payments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PaymentDetailsDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/peers": {
+      "get": {
+        "tags": [
+          "peer"
+        ],
+        "summary": "List peers",
+        "description": "Returns the known peers together with connection and persistence state.",
+        "operationId": "peers",
+        "responses": {
+          "200": {
+            "description": "Known peers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PeerDetailsDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/peers/connect": {
+      "post": {
+        "tags": [
+          "peer"
+        ],
+        "summary": "Connect peer",
+        "description": "Connects to a peer and optionally persists it in the peer store.",
+        "operationId": "peers_connect",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeerConnectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Peer connected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/peers/disconnect": {
+      "post": {
+        "tags": [
+          "peer"
+        ],
+        "summary": "Disconnect peer",
+        "description": "Disconnects a currently known peer.",
+        "operationId": "peers_disconnect",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeerDisconnectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Peer disconnected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/readyz": {
+      "get": {
+        "tags": [
+          "node"
+        ],
+        "summary": "Readiness check",
+        "description": "Returns readiness details for the node runtime and P2P listener.",
+        "operationId": "readyz",
+        "responses": {
+          "200": {
+            "description": "Node runtime is ready",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Node runtime is not ready yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rgb/consignments/{consignment_key}": {
+      "get": {
+        "tags": [
+          "rgb-contracts"
+        ],
+        "summary": "Download consignment",
+        "description": "Returns a stored consignment by key. The response body is binary and can be encoded as raw, gzip, or zip.",
+        "operationId": "rgb_consignments_get",
+        "parameters": [
+          {
+            "name": "consignment_key",
+            "in": "path",
+            "description": "Stored consignment cache key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Response format: raw, gzip, or zip",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Binary consignment payload",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rgb/contract/{contract_id}/balance": {
+      "get": {
+        "tags": [
+          "rgb-contracts"
+        ],
+        "summary": "Get RGB contract balance",
+        "description": "Returns the aggregated L1 balance view for a single RGB contract.",
+        "operationId": "rgb_contract_balance",
+        "parameters": [
+          {
+            "name": "contract_id",
+            "in": "path",
+            "description": "RGB contract id in `contract:...` form",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "RGB contract balance",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbContractBalanceResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/rgb/contract/{contract_id}/known": {
+      "get": {
+        "tags": [
+          "rgb-contracts"
+        ],
+        "summary": "Check RGB contract known",
+        "description": "Returns whether the node currently knows a given RGB contract id.",
+        "operationId": "rgb_contract_known",
+        "parameters": [
+          {
+            "name": "contract_id",
+            "in": "path",
+            "description": "RGB contract id in `contract:...` form",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "RGB contract known status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbContractKnownResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/rgb/contracts": {
+      "get": {
+        "tags": [
+          "rgb-contracts"
+        ],
+        "summary": "List RGB contracts",
+        "description": "Returns RGB contracts known to the node together with best-effort metadata.",
+        "operationId": "rgb_contracts",
+        "responses": {
+          "200": {
+            "description": "Known RGB contracts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbContractsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/rgb/contracts/export": {
+      "post": {
+        "tags": [
+          "rgb-contracts"
+        ],
+        "summary": "Export RGB contract",
+        "description": "Exports a contract consignment. By default it returns JSON with a consignment key; when `download=true` it returns the encoded consignment bytes directly.",
+        "operationId": "rgb_contracts_export",
+        "parameters": [
+          {
+            "name": "download",
+            "in": "query",
+            "description": "When true, return the consignment bytes directly",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Binary download format: raw, gzip, or zip",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RgbContractsExportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "RGB contract exported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbContractsExportResponse"
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/rgb/contracts/import": {
+      "post": {
+        "tags": [
+          "rgb-contracts"
+        ],
+        "summary": "Import RGB contract",
+        "description": "Imports a contract consignment from the raw request body. The body may be raw, gzip, or zip depending on the `format` query parameter.",
+        "operationId": "rgb_contracts_import",
+        "parameters": [
+          {
+            "name": "contract_id",
+            "in": "query",
+            "description": "RGB contract id in `contract:...` form",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Upload format: auto, raw, gzip, or zip",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Contract consignment archive bytes",
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "RGB contract imported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbContractsImportResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/rgb/contracts/issue": {
+      "post": {
+        "tags": [
+          "rgb-contracts"
+        ],
+        "summary": "Issue RGB contract",
+        "description": "Issues a new RGB contract using an imported issuer and an RGB wallet UTXO.",
+        "operationId": "rgb_contracts_issue",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RgbContractsIssueRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "RGB contract issued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbContractsIssueResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/rgb/ln/invoice/create": {
+      "post": {
+        "tags": [
+          "rgb-ln"
+        ],
+        "summary": "Create RGB Lightning invoice",
+        "description": "Creates an RGB-aware Lightning invoice using a contract id and asset amount.",
+        "operationId": "rgb_ln_invoice_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RgbLnInvoiceCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Created RGB Lightning invoice",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbLnInvoiceResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/rgb/ln/invoice/create_for_hash": {
+      "post": {
+        "tags": [
+          "rgb-ln"
+        ],
+        "summary": "Create RGB hold invoice",
+        "description": "Creates an RGB-aware Lightning invoice bound to an explicit payment hash.",
+        "operationId": "rgb_ln_invoice_create_for_hash",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RgbLnInvoiceCreateForHashRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Created RGB Lightning hold invoice",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbLnInvoiceResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/rgb/ln/invoice/decode": {
+      "post": {
+        "tags": [
+          "rgb-ln"
+        ],
+        "summary": "Decode RGB Lightning invoice",
+        "description": "Decodes an RGB-aware Lightning invoice and returns both carrier and asset fields.",
+        "operationId": "rgb_ln_invoice_decode",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RgbLnInvoiceDecodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Decoded RGB Lightning invoice",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbLnInvoiceDecodeResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/rgb/ln/pay": {
+      "post": {
+        "tags": [
+          "rgb-ln"
+        ],
+        "summary": "Pay RGB Lightning invoice",
+        "description": "Pays an RGB Lightning invoice, optionally accepting explicit contract and asset values when the invoice does not carry them.",
+        "operationId": "rgb_ln_pay",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RgbLnPayRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "RGB Lightning payment initiated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/rgb/new_address": {
+      "post": {
+        "tags": [
+          "rgb-wallet"
+        ],
+        "summary": "New RGB address",
+        "description": "Generates a new RGB wallet receive address.",
+        "operationId": "rgb_new_address",
+        "responses": {
+          "200": {
+            "description": "New RGB address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbNewAddressResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/rgb/onchain/invoice/create": {
+      "post": {
+        "tags": [
+          "rgb-onchain"
+        ],
+        "summary": "Create RGB on-chain invoice",
+        "description": "Creates an RGB on-chain invoice using either witness-out or blinded beneficiary mode.",
+        "operationId": "rgb_onchain_invoice_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RgbOnchainInvoiceCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Created RGB on-chain invoice",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbOnchainInvoiceResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/rgb/onchain/invoice/decode": {
+      "post": {
+        "tags": [
+          "rgb-onchain"
+        ],
+        "summary": "Decode RGB on-chain invoice",
+        "description": "Parses an RGB on-chain invoice and returns beneficiary and amount details.",
+        "operationId": "rgb_onchain_invoice_decode",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RgbOnchainInvoiceDecodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Decoded RGB on-chain invoice",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbOnchainInvoiceDecodeResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/rgb/onchain/payments": {
+      "get": {
+        "tags": [
+          "rgb-onchain"
+        ],
+        "summary": "List RGB on-chain payments",
+        "description": "Returns RGB on-chain payment history, optionally filtered by contract id.",
+        "operationId": "rgb_onchain_payments",
+        "parameters": [
+          {
+            "name": "contract_id",
+            "in": "query",
+            "description": "Optional RGB contract id filter",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "RGB on-chain payment history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbOnchainPaymentsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/rgb/onchain/receive": {
+      "post": {
+        "tags": [
+          "rgb-onchain"
+        ],
+        "summary": "Receive RGB on-chain payment",
+        "description": "Accepts an RGB on-chain consignment. The request can be either JSON metadata or raw/gzip/zip binary consignment bytes. Binary uploads require `payment_id` in the query string.",
+        "operationId": "rgb_onchain_receive",
+        "parameters": [
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Binary upload format: auto, raw, gzip, or zip",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "payment_id",
+            "in": "query",
+            "description": "Required for binary uploads; omitted for JSON requests unless needed",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RgbOnchainReceiveRequest"
+              }
+            },
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "RGB on-chain payment received",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbOnchainReceiveResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/rgb/onchain/send": {
+      "post": {
+        "tags": [
+          "rgb-onchain"
+        ],
+        "summary": "Send RGB on-chain payment",
+        "description": "Builds and broadcasts an RGB on-chain payment transaction for an invoice.",
+        "operationId": "rgb_onchain_send",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RgbOnchainSendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "RGB on-chain payment sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbOnchainSendResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/rgb/sync": {
+      "post": {
+        "tags": [
+          "rgb-wallet"
+        ],
+        "summary": "Sync RGB runtime",
+        "description": "Synchronizes the RGB runtime state with the configured chain data and local wallet.",
+        "operationId": "rgb_sync",
+        "responses": {
+          "200": {
+            "description": "RGB runtime sync completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/rgb/utxos": {
+      "get": {
+        "tags": [
+          "rgb-wallet"
+        ],
+        "summary": "List RGB UTXOs",
+        "description": "Returns the RGB wallet outpoints known to the node.",
+        "operationId": "rgb_utxos",
+        "responses": {
+          "200": {
+            "description": "RGB wallet UTXOs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbUtxosResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/rgb/utxos/release": {
+      "post": {
+        "tags": [
+          "rgb-wallet"
+        ],
+        "summary": "Release RGB UTXO reservation",
+        "description": "Releases an RGB UTXO reservation by reservation id or outpoint.",
+        "operationId": "rgb_utxos_release",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RgbUtxosReleaseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "RGB UTXO reservation released",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbUtxosReleaseResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/rgb/utxos/reserve": {
+      "post": {
+        "tags": [
+          "rgb-wallet"
+        ],
+        "summary": "Reserve RGB UTXO",
+        "description": "Reserves an RGB wallet outpoint for temporary exclusive use.",
+        "operationId": "rgb_utxos_reserve",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RgbUtxosReserveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "RGB UTXO reserved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbUtxosReserveResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/rgb/utxos/summary": {
+      "get": {
+        "tags": [
+          "rgb-wallet"
+        ],
+        "summary": "Summarize RGB UTXOs",
+        "description": "Returns RGB wallet UTXOs with BTC value, reservation state, and per-contract allocations.",
+        "operationId": "rgb_utxos_summary",
+        "responses": {
+          "200": {
+            "description": "Detailed RGB UTXO summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbUtxosSummaryResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/spontaneous/send": {
+      "post": {
+        "tags": [
+          "payment"
+        ],
+        "summary": "Send spontaneous payment",
+        "description": "Sends a keysend payment, optionally with custom TLV records.",
+        "operationId": "spontaneous_send",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpontaneousSendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Payment initiated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/status": {
+      "get": {
+        "tags": [
+          "node"
+        ],
+        "summary": "Node status",
+        "description": "Returns the current runtime, listener, and best-block status of the node.",
+        "operationId": "status",
+        "responses": {
+          "200": {
+            "description": "Node status snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/version": {
+      "get": {
+        "tags": [
+          "node"
+        ],
+        "summary": "API version",
+        "description": "Returns HTTP API versioning metadata for compatibility checks.",
+        "operationId": "version",
+        "responses": {
+          "200": {
+            "description": "API version metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/wallet/new_address": {
+      "post": {
+        "tags": [
+          "wallet"
+        ],
+        "summary": "New on-chain address",
+        "description": "Generates a new Bitcoin on-chain receive address from the wallet.",
+        "operationId": "wallet_new_address",
+        "responses": {
+          "200": {
+            "description": "New wallet address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletNewAddressResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/wallet/sync": {
+      "post": {
+        "tags": [
+          "wallet"
+        ],
+        "summary": "Sync wallet",
+        "description": "Synchronizes the wallet state with the configured chain source.",
+        "operationId": "wallet_sync",
+        "responses": {
+          "200": {
+            "description": "Wallet sync completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    }
+  },
   "components": {
     "schemas": {
       "BalancesDto": {
+        "type": "object",
+        "description": "Wallet and channel balance overview (BTC + RGB).",
+        "required": [
+          "btc",
+          "rgb"
+        ],
         "properties": {
           "btc": {
             "$ref": "#/components/schemas/BtcBalancesDto"
@@ -9,106 +2204,127 @@
           "rgb": {
             "$ref": "#/components/schemas/RgbBalancesDto"
           }
-        },
-        "required": [
-          "btc",
-          "rgb"
-        ],
-        "type": "object"
+        }
       },
       "Bolt11ClaimForHashRequest": {
+        "type": "object",
+        "description": "Manually claim a held payment created via `/bolt11/receive_for_hash`.\n\nRequires the original preimage that corresponds to the payment hash.",
+        "required": [
+          "payment_hash",
+          "preimage",
+          "claimable_amount_msat"
+        ],
         "properties": {
           "claimable_amount_msat": {
+            "type": "string",
             "pattern": "^[0-9]+$",
-            "type": "string"
+            "description": "The claimable amount in millisatoshis."
           },
           "payment_hash": {
-            "type": "string"
+            "type": "string",
+            "description": "Payment hash (hex-encoded 32 bytes)."
           },
           "preimage": {
-            "type": "string"
+            "type": "string",
+            "description": "Payment preimage (hex-encoded 32 bytes)."
           }
-        },
-        "required": [
-          "claimable_amount_msat",
-          "payment_hash",
-          "preimage"
-        ],
-        "type": "object"
+        }
       },
       "Bolt11DecodeRequest": {
+        "type": "object",
+        "description": "Request to decode a BOLT11 invoice.",
+        "required": [
+          "invoice"
+        ],
         "properties": {
           "invoice": {
             "type": "string"
           }
-        },
-        "required": [
-          "invoice"
-        ],
-        "type": "object"
+        }
       },
       "Bolt11DecodeResponse": {
+        "type": "object",
+        "description": "Decoded BOLT11 invoice summary.",
+        "required": [
+          "payment_hash",
+          "destination",
+          "expiry_secs"
+        ],
         "properties": {
           "amount_msat": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$"
           },
           "destination": {
             "type": "string"
           },
           "expiry_secs": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9]+$"
           },
           "payment_hash": {
             "type": "string"
           }
-        },
-        "required": [
-          "destination",
-          "expiry_secs",
-          "payment_hash"
-        ],
-        "type": "object"
+        }
       },
       "Bolt11FailForHashRequest": {
-        "properties": {
-          "payment_hash": {
-            "type": "string"
-          }
-        },
+        "type": "object",
+        "description": "Request to fail a held payment by its payment hash.",
         "required": [
           "payment_hash"
         ],
-        "type": "object"
+        "properties": {
+          "payment_hash": {
+            "type": "string",
+            "description": "Payment hash (hex-encoded 32 bytes)."
+          }
+        }
       },
       "Bolt11PayRequest": {
+        "type": "object",
+        "description": "Preferred BOLT11 payment endpoint: waits for completion and returns preimage.",
+        "required": [
+          "invoice"
+        ],
         "properties": {
           "amount_msat": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$"
           },
           "invoice": {
             "type": "string"
           }
-        },
-        "required": [
-          "invoice"
-        ],
-        "type": "object"
+        }
       },
       "Bolt11PayResponse": {
+        "type": "object",
+        "description": "Response of a completed BOLT11 payment.",
+        "required": [
+          "payment_id",
+          "preimage",
+          "amount_sats",
+          "destination"
+        ],
         "properties": {
           "amount_sats": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9]+$"
           },
           "destination": {
             "type": "string"
           },
           "fee_paid_msat": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$"
           },
           "payment_id": {
             "type": "string"
@@ -116,255 +2332,316 @@
           "preimage": {
             "type": "string"
           }
-        },
-        "required": [
-          "amount_sats",
-          "destination",
-          "payment_id",
-          "preimage"
-        ],
-        "type": "object"
+        }
       },
       "Bolt11ReceiveForHashRequest": {
-        "properties": {
-          "amount_msat": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "expiry_secs": {
-            "type": "integer"
-          },
-          "payment_hash": {
-            "type": "string"
-          }
-        },
+        "type": "object",
+        "description": "Request to create a BOLT11 invoice for a specific payment hash (hold invoice).\n\nThe resulting invoice will NOT be auto-claimed. The receiver must manually\ncall `/bolt11/claim_for_hash` or `/bolt11/fail_for_hash` after receiving\nthe `PaymentClaimable` event.",
         "required": [
           "amount_msat",
           "description",
           "expiry_secs",
           "payment_hash"
         ],
-        "type": "object"
+        "properties": {
+          "amount_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "description": {
+            "type": "string"
+          },
+          "expiry_secs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "payment_hash": {
+            "type": "string",
+            "description": "Payment hash (hex-encoded 32 bytes)."
+          }
+        }
       },
       "Bolt11ReceiveRequest": {
-        "properties": {
-          "amount_msat": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "expiry_secs": {
-            "type": "integer"
-          }
-        },
+        "type": "object",
+        "description": "Request to create a BOLT11 invoice.",
         "required": [
           "amount_msat",
           "description",
           "expiry_secs"
         ],
-        "type": "object"
+        "properties": {
+          "amount_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "description": {
+            "type": "string"
+          },
+          "expiry_secs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
       },
       "Bolt11ReceiveResponse": {
+        "type": "object",
+        "description": "Response containing a newly created BOLT11 invoice.",
+        "required": [
+          "invoice"
+        ],
         "properties": {
           "invoice": {
             "type": "string"
           }
-        },
-        "required": [
-          "invoice"
-        ],
-        "type": "object"
+        }
       },
       "Bolt11ReceiveVarRequest": {
+        "type": "object",
+        "description": "Request to create a variable-amount BOLT11 invoice.",
+        "required": [
+          "description",
+          "expiry_secs"
+        ],
         "properties": {
           "description": {
             "type": "string"
           },
           "expiry_secs": {
-            "type": "integer"
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
           }
-        },
-        "required": [
-          "description",
-          "expiry_secs"
-        ],
-        "type": "object"
+        }
       },
       "Bolt11SendRequest": {
+        "type": "object",
+        "description": "Request to pay a BOLT11 invoice.",
+        "required": [
+          "invoice"
+        ],
         "properties": {
           "invoice": {
             "type": "string"
           }
-        },
-        "required": [
-          "invoice"
-        ],
-        "type": "object"
+        }
       },
       "Bolt11SendUsingAmountRequest": {
+        "type": "object",
+        "description": "Request to pay a BOLT11 invoice using a specified amount.",
+        "required": [
+          "invoice",
+          "amount_msat"
+        ],
         "properties": {
           "amount_msat": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9]+$"
           },
           "invoice": {
             "type": "string"
           }
-        },
-        "required": [
-          "amount_msat",
-          "invoice"
-        ],
-        "type": "object"
+        }
       },
       "Bolt12OfferDecodeRequest": {
+        "type": "object",
+        "required": [
+          "offer"
+        ],
         "properties": {
           "offer": {
             "type": "string"
           }
-        },
-        "required": [
-          "offer"
-        ],
-        "type": "object"
+        }
       },
       "Bolt12OfferDecodeResponse": {
+        "type": "object",
+        "required": [
+          "offer_id",
+          "paths_count",
+          "expects_quantity"
+        ],
         "properties": {
           "absolute_expiry_unix_secs": {
+            "type": [
+              "string",
+              "null"
+            ],
             "pattern": "^[0-9]+$",
-            "type": "string"
+            "description": "Seconds since Unix epoch."
           },
           "amount_msat": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$"
           },
           "chain_hashes": {
+            "type": "array",
             "items": {
               "type": "string"
-            },
-            "type": "array"
+            }
           },
           "description": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "expects_quantity": {
             "type": "boolean"
           },
           "issuer": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "offer_id": {
             "type": "string"
           },
           "paths_count": {
-            "type": "integer"
+            "type": "integer",
+            "minimum": 0
           },
           "signing_pubkey": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           }
-        },
-        "required": [
-          "expects_quantity",
-          "offer_id",
-          "paths_count"
-        ],
-        "type": "object"
+        }
       },
       "Bolt12OfferReceiveRequest": {
-        "properties": {
-          "amount_msat": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "expiry_secs": {
-            "type": "integer"
-          },
-          "quantity": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          }
-        },
+        "type": "object",
+        "description": "---- BOLT12 (offers + refunds) ----",
         "required": [
           "amount_msat",
           "description"
         ],
-        "type": "object"
+        "properties": {
+          "amount_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "description": {
+            "type": "string"
+          },
+          "expiry_secs": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Seconds from now; if omitted, offer does not expire.",
+            "minimum": 0
+          },
+          "quantity": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$"
+          }
+        }
       },
       "Bolt12OfferReceiveVarRequest": {
+        "type": "object",
+        "required": [
+          "description"
+        ],
         "properties": {
           "description": {
             "type": "string"
           },
           "expiry_secs": {
-            "type": "integer"
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Seconds from now; if omitted, offer does not expire.",
+            "minimum": 0
           }
-        },
-        "required": [
-          "description"
-        ],
-        "type": "object"
+        }
       },
       "Bolt12OfferResponse": {
+        "type": "object",
+        "required": [
+          "offer"
+        ],
         "properties": {
           "offer": {
             "type": "string"
           }
-        },
+        }
+      },
+      "Bolt12OfferSendRequest": {
+        "type": "object",
         "required": [
           "offer"
         ],
-        "type": "object"
-      },
-      "Bolt12OfferSendRequest": {
         "properties": {
           "amount_msat": {
+            "type": [
+              "string",
+              "null"
+            ],
             "pattern": "^[0-9]+$",
-            "type": "string"
+            "description": "Required for zero-amount offers; may be used to overpay fixed-amount offers."
           },
           "offer": {
             "type": "string"
           },
           "payer_note": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "quantity": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$"
           }
-        },
-        "required": [
-          "offer"
-        ],
-        "type": "object"
+        }
       },
       "Bolt12RefundDecodeRequest": {
+        "type": "object",
+        "required": [
+          "refund"
+        ],
         "properties": {
           "refund": {
             "type": "string"
           }
-        },
-        "required": [
-          "refund"
-        ],
-        "type": "object"
+        }
       },
       "Bolt12RefundDecodeResponse": {
+        "type": "object",
+        "required": [
+          "description",
+          "amount_msat",
+          "chain_hash",
+          "payer_signing_pubkey",
+          "paths_count"
+        ],
         "properties": {
           "absolute_expiry_unix_secs": {
+            "type": [
+              "string",
+              "null"
+            ],
             "pattern": "^[0-9]+$",
-            "type": "string"
+            "description": "Seconds since Unix epoch."
           },
           "amount_msat": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9]+$"
           },
           "chain_hash": {
             "type": "string"
@@ -373,55 +2650,70 @@
             "type": "string"
           },
           "issuer": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "paths_count": {
-            "type": "integer"
+            "type": "integer",
+            "minimum": 0
           },
           "payer_note": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "payer_signing_pubkey": {
             "type": "string"
           },
           "quantity": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$"
           }
-        },
-        "required": [
-          "amount_msat",
-          "chain_hash",
-          "description",
-          "paths_count",
-          "payer_signing_pubkey"
-        ],
-        "type": "object"
+        }
       },
       "Bolt12RefundInitiateRequest": {
-        "properties": {
-          "amount_msat": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "expiry_secs": {
-            "type": "integer"
-          },
-          "payer_note": {
-            "type": "string"
-          },
-          "quantity": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          }
-        },
+        "type": "object",
         "required": [
           "amount_msat",
           "expiry_secs"
         ],
-        "type": "object"
+        "properties": {
+          "amount_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "expiry_secs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "payer_note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "quantity": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$"
+          }
+        }
       },
       "Bolt12RefundInitiateResponse": {
+        "type": "object",
+        "required": [
+          "refund",
+          "payment_id"
+        ],
         "properties": {
           "payment_id": {
             "type": "string"
@@ -429,140 +2721,183 @@
           "refund": {
             "type": "string"
           }
-        },
-        "required": [
-          "payment_id",
-          "refund"
-        ],
-        "type": "object"
+        }
       },
       "Bolt12RefundRequestPaymentRequest": {
+        "type": "object",
+        "required": [
+          "refund"
+        ],
         "properties": {
           "refund": {
             "type": "string"
           }
-        },
-        "required": [
-          "refund"
-        ],
-        "type": "object"
+        }
       },
       "Bolt12RefundRequestPaymentResponse": {
-        "properties": {
-          "invoice": {
-            "type": "string"
-          },
-          "invoice_hex": {
-            "type": "string"
-          },
-          "payment_id": {
-            "type": "string"
-          }
-        },
+        "type": "object",
         "required": [
           "invoice",
           "invoice_hex",
           "payment_id"
         ],
-        "type": "object"
+        "properties": {
+          "invoice": {
+            "type": "string",
+            "description": "Informational only (bech32-encoded BOLT12 invoice, HRP `lni`)."
+          },
+          "invoice_hex": {
+            "type": "string",
+            "description": "Informational only (raw TLV bytes hex-encoded)."
+          },
+          "payment_id": {
+            "type": "string"
+          }
+        }
       },
       "BtcBalancesDto": {
+        "type": "object",
+        "description": "Bitcoin (BTC) balance overview.",
+        "required": [
+          "onchain_total_sats",
+          "onchain_spendable_sats",
+          "anchor_channels_reserve_sats",
+          "lightning_total_sats"
+        ],
         "properties": {
           "anchor_channels_reserve_sats": {
+            "type": "string",
             "pattern": "^[0-9]+$",
-            "type": "string"
+            "description": "Sum of sats reserved for anchor channels."
           },
           "lightning_total_sats": {
+            "type": "string",
             "pattern": "^[0-9]+$",
-            "type": "string"
+            "description": "Total claimable Lightning balance in satoshis."
           },
           "onchain_spendable_sats": {
+            "type": "string",
             "pattern": "^[0-9]+$",
-            "type": "string"
+            "description": "Spendable on-chain balance in satoshis."
           },
           "onchain_total_sats": {
+            "type": "string",
             "pattern": "^[0-9]+$",
-            "type": "string"
+            "description": "Total confirmed on-chain balance in satoshis."
           }
-        },
-        "required": [
-          "anchor_channels_reserve_sats",
-          "lightning_total_sats",
-          "onchain_spendable_sats",
-          "onchain_total_sats"
-        ],
-        "type": "object"
+        }
       },
       "ChannelDetailsExtendedDto": {
-        "properties": {
-          "channel_id": {
-            "type": "string"
-          },
-          "channel_point": {
-            "type": "string"
-          },
-          "channel_value_sats": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "counterparty_node_id": {
-            "type": "string"
-          },
-          "inbound_capacity_msat": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "is_announced": {
-            "type": "boolean"
-          },
-          "is_channel_ready": {
-            "type": "boolean"
-          },
-          "is_usable": {
-            "type": "boolean"
-          },
-          "local_balance_msat": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "local_unspendable_punishment_reserve_sats": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "outbound_capacity_msat": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "remote_balance_msat": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "remote_unspendable_punishment_reserve_sats": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "rgb_balance": {
-            "$ref": "#/components/schemas/RgbChannelBalanceDto"
-          },
-          "user_channel_id": {
-            "type": "string"
-          }
-        },
+        "type": "object",
+        "description": "Channel details entry (extended for control-plane integrations).",
         "required": [
           "channel_id",
-          "channel_value_sats",
+          "user_channel_id",
           "counterparty_node_id",
+          "channel_value_sats",
+          "outbound_capacity_msat",
           "inbound_capacity_msat",
-          "is_announced",
+          "remote_unspendable_punishment_reserve_sats",
           "is_channel_ready",
           "is_usable",
-          "outbound_capacity_msat",
-          "remote_unspendable_punishment_reserve_sats",
-          "user_channel_id"
+          "is_announced"
         ],
-        "type": "object"
+        "properties": {
+          "channel_id": {
+            "type": "string",
+            "description": "Channel id (32-byte hex)."
+          },
+          "channel_point": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Funding outpoint formatted as `txid:vout` if known."
+          },
+          "channel_value_sats": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Total channel capacity in satoshis."
+          },
+          "counterparty_node_id": {
+            "type": "string",
+            "description": "Counterparty node id (hex pubkey)."
+          },
+          "inbound_capacity_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Receivable capacity in millisatoshis."
+          },
+          "is_announced": {
+            "type": "boolean",
+            "description": "Whether channel is announced."
+          },
+          "is_channel_ready": {
+            "type": "boolean",
+            "description": "Whether channel is ready."
+          },
+          "is_usable": {
+            "type": "boolean",
+            "description": "Whether channel is usable."
+          },
+          "local_balance_msat": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$",
+            "description": "Estimated local (our) total balance in millisatoshis.\n\nThis includes our `unspendable_punishment_reserve` and therefore may be higher than\n`outbound_capacity_msat`.\n\nReturns `None` for outbound channels until the counterparty accepts the channel (as LDK\nwill report `unspendable_punishment_reserve = None`)."
+          },
+          "local_unspendable_punishment_reserve_sats": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$",
+            "description": "Local (our) unspendable punishment reserve in satoshis."
+          },
+          "outbound_capacity_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Sendable capacity in millisatoshis."
+          },
+          "remote_balance_msat": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$",
+            "description": "Estimated remote (counterparty) total balance in millisatoshis.\n\nThis is derived as `channel_value_sats * 1000 - local_balance_msat` and is therefore also\n`None` if `local_balance_msat` is unavailable."
+          },
+          "remote_unspendable_punishment_reserve_sats": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Remote (counterparty) unspendable punishment reserve in satoshis."
+          },
+          "rgb_balance": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RgbChannelBalanceDto",
+                "description": "RGB asset balance in this channel, if any."
+              }
+            ]
+          },
+          "user_channel_id": {
+            "type": "string",
+            "description": "User channel id (hex-encoded 16 bytes BIG-ENDIAN)."
+          }
+        }
       },
       "CloseChannelRequest": {
+        "type": "object",
+        "description": "Request to close or force-close a channel.",
+        "required": [
+          "user_channel_id",
+          "counterparty_node_id"
+        ],
         "properties": {
           "counterparty_node_id": {
             "type": "string"
@@ -570,323 +2905,281 @@
           "user_channel_id": {
             "type": "string"
           }
-        },
-        "required": [
-          "counterparty_node_id",
-          "user_channel_id"
-        ],
-        "type": "object"
-      },
-      "ControlLockRequest": {
-        "properties": {
-          "force": {
-            "type": "boolean"
-          },
-          "yes": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "yes"
-        ],
-        "type": "object"
-      },
-      "ControlStatusDto": {
-        "properties": {
-          "checks": {
-            "items": {
-              "$ref": "#/components/schemas/HealthCheckDto"
-            },
-            "type": "array"
-          },
-          "lockable": {
-            "type": "boolean"
-          },
-          "locked": {
-            "type": "boolean"
-          },
-          "ok": {
-            "type": "boolean"
-          },
-          "running": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "locked",
-          "ok",
-          "running"
-        ],
-        "type": "object"
-      },
-      "ControlUnlockRequest": {
-        "properties": {
-          "passphrase": {
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
-      "ControlVersionDto": {
-        "properties": {
-          "daemon": {
-            "type": "string"
-          },
-          "daemon_version": {
-            "type": "string"
-          },
-          "ok": {
-            "type": "boolean"
-          },
-          "protocol": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "daemon",
-          "daemon_version",
-          "ok",
-          "protocol"
-        ],
-        "type": "object"
+        }
       },
       "CustomTlvDto": {
-        "properties": {
-          "type": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "value_hex": {
-            "type": "string"
-          }
-        },
+        "type": "object",
+        "description": "TLV record for spontaneous payments.",
         "required": [
           "type",
           "value_hex"
         ],
-        "type": "object"
-      },
-      "ErrorResponse": {
         "properties": {
-          "checks": {
-            "items": {
-              "$ref": "#/components/schemas/HealthCheckDto"
-            },
-            "type": "array"
+          "type": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
           },
-          "error": {
+          "value_hex": {
             "type": "string"
-          },
-          "hint": {
-            "type": "string"
-          },
-          "ok": {
-            "type": "boolean"
           }
-        },
-        "required": [
-          "error",
-          "ok"
-        ],
-        "type": "object"
+        }
       },
       "EventDto": {
         "oneOf": [
           {
+            "type": "object",
+            "required": [
+              "data",
+              "type"
+            ],
             "properties": {
               "data": {
+                "type": "object",
                 "properties": {
                   "fee_paid_msat": {
-                    "pattern": "^[0-9]+$",
-                    "type": "string"
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "pattern": "^[0-9]+$"
                   },
                   "payment_id": {
-                    "type": "string"
+                    "type": [
+                      "string",
+                      "null"
+                    ]
                   }
-                },
-                "type": "object"
+                }
               },
               "type": {
-                "const": "PaymentSuccessful"
+                "type": "string",
+                "enum": [
+                  "PaymentSuccessful"
+                ]
               }
-            },
-            "required": [
-              "type",
-              "data"
-            ],
-            "type": "object"
+            }
           },
           {
+            "type": "object",
+            "required": [
+              "data",
+              "type"
+            ],
             "properties": {
               "data": {
+                "type": "object",
                 "properties": {
                   "payment_id": {
-                    "type": "string"
+                    "type": [
+                      "string",
+                      "null"
+                    ]
                   }
-                },
-                "type": "object"
+                }
               },
               "type": {
-                "const": "PaymentFailed"
+                "type": "string",
+                "enum": [
+                  "PaymentFailed"
+                ]
               }
-            },
-            "required": [
-              "type",
-              "data"
-            ],
-            "type": "object"
+            }
           },
           {
+            "type": "object",
+            "required": [
+              "data",
+              "type"
+            ],
             "properties": {
               "data": {
+                "type": "object",
+                "required": [
+                  "payment_hash",
+                  "amount_msat"
+                ],
                 "properties": {
                   "amount_msat": {
-                    "pattern": "^[0-9]+$",
-                    "type": "string"
+                    "type": "string",
+                    "pattern": "^[0-9]+$"
                   },
                   "custom_records": {
+                    "type": "array",
                     "items": {
                       "$ref": "#/components/schemas/CustomTlvDto"
-                    },
-                    "type": "array"
+                    }
                   },
                   "payment_hash": {
                     "type": "string"
                   },
                   "payment_id": {
-                    "type": "string"
+                    "type": [
+                      "string",
+                      "null"
+                    ]
                   },
                   "rgb": {
-                    "$ref": "#/components/schemas/RgbPaymentContextDto"
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "$ref": "#/components/schemas/RgbPaymentContextDto"
+                      }
+                    ]
                   }
-                },
-                "required": [
-                  "amount_msat",
-                  "payment_hash"
-                ],
-                "type": "object"
+                }
               },
               "type": {
-                "const": "PaymentReceived"
+                "type": "string",
+                "enum": [
+                  "PaymentReceived"
+                ]
               }
-            },
-            "required": [
-              "type",
-              "data"
-            ],
-            "type": "object"
+            }
           },
           {
+            "type": "object",
+            "required": [
+              "data",
+              "type"
+            ],
             "properties": {
               "data": {
+                "type": "object",
+                "required": [
+                  "funding_txo"
+                ],
                 "properties": {
                   "funding_txo": {
                     "$ref": "#/components/schemas/OutPointDto"
                   }
-                },
-                "required": [
-                  "funding_txo"
-                ],
-                "type": "object"
+                }
               },
               "type": {
-                "const": "ChannelPending"
+                "type": "string",
+                "enum": [
+                  "ChannelPending"
+                ]
               }
-            },
-            "required": [
-              "type",
-              "data"
-            ],
-            "type": "object"
+            }
           },
           {
+            "type": "object",
+            "required": [
+              "data",
+              "type"
+            ],
             "properties": {
               "data": {
+                "type": "object",
+                "required": [
+                  "user_channel_id"
+                ],
                 "properties": {
                   "user_channel_id": {
                     "type": "string"
                   }
-                },
-                "required": [
-                  "user_channel_id"
-                ],
-                "type": "object"
+                }
               },
               "type": {
-                "const": "ChannelReady"
+                "type": "string",
+                "enum": [
+                  "ChannelReady"
+                ]
               }
-            },
-            "required": [
-              "type",
-              "data"
-            ],
-            "type": "object"
+            }
           },
           {
+            "type": "object",
+            "required": [
+              "data",
+              "type"
+            ],
             "properties": {
               "data": {
+                "type": "object",
+                "required": [
+                  "channel_id",
+                  "user_channel_id"
+                ],
                 "properties": {
                   "channel_id": {
                     "type": "string"
                   },
                   "counterparty_node_id": {
-                    "type": "string"
+                    "type": [
+                      "string",
+                      "null"
+                    ]
                   },
                   "reason": {
-                    "type": "string"
+                    "type": [
+                      "string",
+                      "null"
+                    ]
                   },
                   "user_channel_id": {
                     "type": "string"
                   }
-                },
-                "required": [
-                  "channel_id",
-                  "user_channel_id"
-                ],
-                "type": "object"
+                }
               },
               "type": {
-                "const": "ChannelClosed"
+                "type": "string",
+                "enum": [
+                  "ChannelClosed"
+                ]
               }
-            },
-            "required": [
-              "type",
-              "data"
-            ],
-            "type": "object"
+            }
           },
           {
+            "type": "object",
+            "required": [
+              "data",
+              "type"
+            ],
             "properties": {
               "data": {
+                "type": "object",
+                "required": [
+                  "kind"
+                ],
                 "properties": {
                   "kind": {
                     "type": "string"
                   }
-                },
-                "required": [
-                  "kind"
-                ],
-                "type": "object"
+                }
               },
               "type": {
-                "const": "Other"
+                "type": "string",
+                "enum": [
+                  "Other"
+                ]
               }
-            },
-            "required": [
-              "type",
-              "data"
-            ],
-            "type": "object"
+            }
           }
-        ]
+        ],
+        "description": "Event DTO (subset; others are mapped to `Other`)."
       },
       "HealthCheckDto": {
+        "type": "object",
+        "description": "A single readiness/health sub-check.",
+        "required": [
+          "name",
+          "ok"
+        ],
         "properties": {
           "detail": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "hint": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "name": {
             "type": "string"
@@ -894,193 +3187,200 @@
           "ok": {
             "type": "boolean"
           }
-        },
-        "required": [
-          "name",
-          "ok"
-        ],
-        "type": "object"
+        }
       },
       "ListeningAddressesResponse": {
-        "properties": {
-          "addresses": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          }
-        },
+        "type": "object",
+        "description": "Response containing the node's listening addresses.",
         "required": [
           "addresses"
         ],
-        "type": "object"
-      },
-      "LockedStatusDto": {
         "properties": {
-          "checks": {
+          "addresses": {
+            "type": "array",
             "items": {
-              "$ref": "#/components/schemas/HealthCheckDto"
-            },
-            "type": "array"
-          },
-          "locked": {
-            "type": "boolean"
-          },
-          "ok": {
-            "type": "boolean"
-          },
-          "running": {
-            "type": "boolean"
+              "type": "string"
+            }
           }
-        },
-        "required": [
-          "locked",
-          "ok",
-          "running"
-        ],
-        "type": "object"
-      },
-      "MainStatusResponse": {
-        "oneOf": [
-          {
-            "$ref": "#/components/schemas/StatusDto"
-          },
-          {
-            "$ref": "#/components/schemas/LockedStatusDto"
-          }
-        ]
+        }
       },
       "NodeIdResponse": {
+        "type": "object",
+        "description": "Response containing the node's public key.",
+        "required": [
+          "node_id"
+        ],
         "properties": {
           "node_id": {
             "type": "string"
           }
-        },
-        "required": [
-          "node_id"
-        ],
-        "type": "object"
+        }
       },
       "OkResponse": {
+        "type": "object",
+        "description": "Generic OK response (optionally with sub-checks).",
+        "required": [
+          "ok"
+        ],
         "properties": {
           "checks": {
+            "type": "array",
             "items": {
               "$ref": "#/components/schemas/HealthCheckDto"
-            },
-            "type": "array"
+            }
           },
           "ok": {
             "type": "boolean"
           }
-        },
-        "required": [
-          "ok"
-        ],
-        "type": "object"
+        }
       },
       "OpenChannelRequest": {
+        "type": "object",
+        "description": "Request to open a channel to a peer.",
+        "required": [
+          "node_id",
+          "address",
+          "channel_amount_sats"
+        ],
         "properties": {
           "address": {
             "type": "string"
           },
           "announce": {
-            "type": "boolean"
+            "type": [
+              "boolean",
+              "null"
+            ]
           },
           "channel_amount_sats": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9]+$"
           },
           "node_id": {
             "type": "string"
           },
           "push_to_counterparty_msat": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$"
           },
           "rgb": {
-            "$ref": "#/components/schemas/RgbOpenChannelRequest"
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RgbOpenChannelRequest"
+              }
+            ]
           }
-        },
-        "required": [
-          "address",
-          "channel_amount_sats",
-          "node_id"
-        ],
-        "type": "object"
+        }
       },
       "OpenChannelResponse": {
+        "type": "object",
+        "description": "Response of a successful channel open request.",
+        "required": [
+          "user_channel_id"
+        ],
         "properties": {
           "user_channel_id": {
             "type": "string"
           }
-        },
-        "required": [
-          "user_channel_id"
-        ],
-        "type": "object"
+        }
       },
       "OutPointDto": {
+        "type": "object",
+        "description": "Outpoint for channel pending events.",
+        "required": [
+          "txid",
+          "vout"
+        ],
         "properties": {
           "txid": {
             "type": "string"
           },
           "vout": {
-            "type": "integer"
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
           }
-        },
-        "required": [
-          "txid",
-          "vout"
-        ],
-        "type": "object"
+        }
       },
       "PaymentDetailsDto": {
+        "type": "object",
+        "description": "Payment kind-specific details (machine-friendly).\n\nThis is optional and may grow over time; clients should treat unknown fields as opaque.",
+        "required": [
+          "id",
+          "direction",
+          "status",
+          "kind"
+        ],
         "properties": {
           "amount_msat": {
+            "type": [
+              "string",
+              "null"
+            ],
             "pattern": "^[0-9]+$",
-            "type": "string"
+            "description": "Amount in millisatoshis, if known."
           },
           "direction": {
-            "type": "string"
+            "type": "string",
+            "description": "Direction, either Inbound or Outbound."
           },
           "fee_paid_msat": {
+            "type": [
+              "string",
+              "null"
+            ],
             "pattern": "^[0-9]+$",
-            "type": "string"
+            "description": "Fee paid in millisatoshis, if known."
           },
           "id": {
-            "type": "string"
+            "type": "string",
+            "description": "Payment id (hex-encoded 32 bytes)."
           },
           "kind": {
-            "type": "string"
+            "type": "string",
+            "description": "Payment kind label."
           },
-          "kind_details": {},
+          "kind_details": {
+            "description": "Kind-specific details (when available)."
+          },
           "status": {
-            "type": "string"
+            "type": "string",
+            "description": "Status, one of Pending, Succeeded, Failed."
           }
-        },
-        "required": [
-          "direction",
-          "id",
-          "kind",
-          "status"
-        ],
-        "type": "object"
+        }
       },
       "PaymentWaitRequest": {
+        "type": "object",
         "properties": {
           "timeout_secs": {
-            "type": "integer"
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Default: 60 seconds.",
+            "minimum": 0
           }
-        },
-        "type": "object"
+        }
       },
       "PaymentWaitResponse": {
+        "type": "object",
+        "required": [
+          "ok",
+          "payment"
+        ],
         "properties": {
           "checks": {
+            "type": "array",
             "items": {
               "$ref": "#/components/schemas/HealthCheckDto"
-            },
-            "type": "array"
+            }
           },
           "ok": {
             "type": "boolean"
@@ -1088,140 +3388,158 @@
           "payment": {
             "$ref": "#/components/schemas/PaymentDetailsDto"
           }
-        },
-        "required": [
-          "ok",
-          "payment"
-        ],
-        "type": "object"
+        }
       },
       "PeerConnectRequest": {
+        "type": "object",
+        "description": "Request to connect to a peer.",
+        "required": [
+          "node_id",
+          "address"
+        ],
         "properties": {
           "address": {
-            "type": "string"
+            "type": "string",
+            "description": "Socket address, e.g. `lnd1:9735`."
           },
           "node_id": {
-            "type": "string"
+            "type": "string",
+            "description": "Peer node id in hex."
           },
           "persist": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether to persist the peer to disk."
           }
-        },
-        "required": [
-          "address",
-          "node_id"
-        ],
-        "type": "object"
+        }
       },
       "PeerDetailsDto": {
+        "type": "object",
+        "description": "Peer details entry.",
+        "required": [
+          "node_id",
+          "address",
+          "is_persisted",
+          "is_connected"
+        ],
         "properties": {
           "address": {
-            "type": "string"
+            "type": "string",
+            "description": "Selected address for the peer."
           },
           "is_connected": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether peer is currently connected."
           },
           "is_persisted": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether peer is persisted to peer store."
           },
           "node_id": {
-            "type": "string"
+            "type": "string",
+            "description": "Peer node id in hex."
           }
-        },
-        "required": [
-          "address",
-          "is_connected",
-          "is_persisted",
-          "node_id"
-        ],
-        "type": "object"
+        }
       },
       "PeerDisconnectRequest": {
-        "properties": {
-          "node_id": {
-            "type": "string"
-          }
-        },
+        "type": "object",
+        "description": "Request to disconnect a peer.",
         "required": [
           "node_id"
         ],
-        "type": "object"
+        "properties": {
+          "node_id": {
+            "type": "string",
+            "description": "Peer node id in hex."
+          }
+        }
       },
       "RgbBalancesDto": {
-        "properties": {
-          "l1": {
-            "items": {
-              "$ref": "#/components/schemas/RgbL1BalanceDto"
-            },
-            "type": "array"
-          },
-          "l2": {
-            "items": {
-              "$ref": "#/components/schemas/RgbL2BalanceDto"
-            },
-            "type": "array"
-          }
-        },
+        "type": "object",
+        "description": "RGB balance overview, split by asset location.",
         "required": [
           "l1",
           "l2"
         ],
-        "type": "object"
+        "properties": {
+          "l1": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RgbL1BalanceDto"
+            },
+            "description": "L1 (on-chain) RGB balances by contract."
+          },
+          "l2": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RgbL2BalanceDto"
+            },
+            "description": "L2 (Lightning channel) RGB balances by channel."
+          }
+        }
       },
       "RgbChannelBalanceDto": {
-        "properties": {
-          "asset_id": {
-            "type": "string"
-          },
-          "local_amount": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "remote_amount": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          }
-        },
+        "type": "object",
+        "description": "RGB asset balance in a channel.",
         "required": [
-          "asset_id",
+          "contract_id",
           "local_amount",
           "remote_amount"
         ],
-        "type": "object"
+        "properties": {
+          "contract_id": {
+            "type": "string",
+            "description": "Contract ID (string like `contract:...`)."
+          },
+          "local_amount": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Local (our) RGB balance in this channel."
+          },
+          "remote_amount": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Remote (counterparty) RGB balance in this channel."
+          }
+        }
       },
       "RgbContractBalanceDto": {
-        "properties": {
-          "archived": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "mined": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "offchain": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "tentative": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "total": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          }
-        },
+        "type": "object",
         "required": [
-          "archived",
           "mined",
-          "offchain",
           "tentative",
+          "offchain",
+          "archived",
           "total"
         ],
-        "type": "object"
+        "properties": {
+          "archived": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "mined": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "offchain": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "tentative": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "total": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          }
+        }
       },
       "RgbContractBalanceResponse": {
+        "type": "object",
+        "required": [
+          "contract_id",
+          "balance"
+        ],
         "properties": {
           "balance": {
             "$ref": "#/components/schemas/RgbContractBalanceDto"
@@ -1229,45 +3547,63 @@
           "contract_id": {
             "type": "string"
           }
-        },
-        "required": [
-          "balance",
-          "contract_id"
-        ],
-        "type": "object"
+        }
       },
       "RgbContractDto": {
+        "type": "object",
+        "required": [
+          "contract_id"
+        ],
         "properties": {
-          "asset_id": {
-            "type": "string"
-          },
           "contract_id": {
             "type": "string"
           },
           "details": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional human-readable details/description (if present in global state)."
           },
           "issued_supply": {
+            "type": [
+              "string",
+              "null"
+            ],
             "pattern": "^[0-9]+$",
-            "type": "string"
+            "description": "Total issued supply (if known)."
           },
           "name": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Human-friendly asset name (if known)."
           },
           "precision": {
-            "type": "integer"
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Asset precision (if known).",
+            "minimum": 0
           },
           "ticker": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Short asset ticker (if known)."
           }
-        },
-        "required": [
-          "asset_id",
-          "contract_id"
-        ],
-        "type": "object"
+        }
       },
       "RgbContractKnownResponse": {
+        "type": "object",
+        "required": [
+          "contract_id",
+          "known"
+        ],
         "properties": {
           "contract_id": {
             "type": "string"
@@ -1275,34 +3611,36 @@
           "known": {
             "type": "boolean"
           }
-        },
-        "required": [
-          "contract_id",
-          "known"
-        ],
-        "type": "object"
+        }
       },
       "RgbContractsExportRequest": {
-        "properties": {
-          "contract_id": {
-            "type": "string"
-          }
-        },
+        "type": "object",
         "required": [
           "contract_id"
         ],
-        "type": "object"
+        "properties": {
+          "contract_id": {
+            "type": "string"
+          }
+        }
       },
       "RgbContractsExportResponse": {
+        "type": "object",
+        "required": [
+          "ok",
+          "contract_id",
+          "consignment_key"
+        ],
         "properties": {
           "checks": {
+            "type": "array",
             "items": {
               "$ref": "#/components/schemas/HealthCheckDto"
-            },
-            "type": "array"
+            }
           },
           "consignment_key": {
-            "type": "string"
+            "type": "string",
+            "description": "Storage key used by the RGB wallet to read the exported consignment."
           },
           "contract_id": {
             "type": "string"
@@ -1310,24 +3648,25 @@
           "ok": {
             "type": "boolean"
           }
-        },
-        "required": [
-          "consignment_key",
-          "contract_id",
-          "ok"
-        ],
-        "type": "object"
+        }
       },
       "RgbContractsImportResponse": {
+        "type": "object",
+        "required": [
+          "ok",
+          "contract_id",
+          "consignment_key"
+        ],
         "properties": {
           "checks": {
+            "type": "array",
             "items": {
               "$ref": "#/components/schemas/HealthCheckDto"
-            },
-            "type": "array"
+            }
           },
           "consignment_key": {
-            "type": "string"
+            "type": "string",
+            "description": "Storage key used by the RGB wallet to read the imported consignment."
           },
           "contract_id": {
             "type": "string"
@@ -1335,396 +3674,415 @@
           "ok": {
             "type": "boolean"
           }
-        },
-        "required": [
-          "consignment_key",
-          "contract_id",
-          "ok"
-        ],
-        "type": "object"
+        }
       },
       "RgbContractsIssueRequest": {
+        "type": "object",
+        "required": [
+          "issuer_name",
+          "contract_name",
+          "issued_supply"
+        ],
         "properties": {
           "contract_name": {
-            "type": "string"
+            "type": "string",
+            "description": "RGB contract name."
           },
           "issued_supply": {
+            "type": "string",
             "pattern": "^[0-9]+$",
-            "type": "string"
+            "description": "Total issued supply for the contract."
           },
           "issuer_name": {
-            "type": "string"
+            "type": "string",
+            "description": "Issuer name from the local issuer registry."
           },
           "precision": {
-            "type": "integer"
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Optional precision override.",
+            "minimum": 0
           },
           "ticker": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional ticker (defaults to `contract_name`)."
           },
           "utxo": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional issuance UTXO outpoint (`txid:vout`). If omitted, a wallet UTXO is auto-selected."
           }
-        },
-        "required": [
-          "contract_name",
-          "issued_supply",
-          "issuer_name"
-        ],
-        "type": "object"
+        }
       },
       "RgbContractsIssueResponse": {
+        "type": "object",
+        "required": [
+          "ok",
+          "contract_id",
+          "issued_supply"
+        ],
         "properties": {
-          "asset_id": {
-            "type": "string"
-          },
           "checks": {
+            "type": "array",
             "items": {
               "$ref": "#/components/schemas/HealthCheckDto"
-            },
-            "type": "array"
+            }
           },
           "contract_id": {
             "type": "string"
           },
           "issued_supply": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9]+$"
           },
           "ok": {
             "type": "boolean"
           }
-        },
-        "required": [
-          "asset_id",
-          "contract_id",
-          "issued_supply",
-          "ok"
-        ],
-        "type": "object"
+        }
       },
       "RgbContractsResponse": {
-        "properties": {
-          "contracts": {
-            "items": {
-              "$ref": "#/components/schemas/RgbContractDto"
-            },
-            "type": "array"
-          }
-        },
+        "type": "object",
         "required": [
           "contracts"
         ],
-        "type": "object"
-      },
-      "RgbInvalidIssuerDto": {
         "properties": {
-          "error": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "error",
-          "name"
-        ],
-        "type": "object"
-      },
-      "RgbIssuersImportResponse": {
-        "properties": {
-          "checks": {
+          "contracts": {
+            "type": "array",
             "items": {
-              "$ref": "#/components/schemas/HealthCheckDto"
-            },
-            "type": "array"
-          },
-          "issuer_name": {
-            "type": "string"
-          },
-          "ok": {
-            "type": "boolean"
+              "$ref": "#/components/schemas/RgbContractDto"
+            }
           }
-        },
-        "required": [
-          "issuer_name",
-          "ok"
-        ],
-        "type": "object"
-      },
-      "RgbIssuersResponse": {
-        "properties": {
-          "invalid_issuers": {
-            "items": {
-              "$ref": "#/components/schemas/RgbInvalidIssuerDto"
-            },
-            "type": "array"
-          },
-          "issuers": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array"
-          }
-        },
-        "required": [
-          "issuers"
-        ],
-        "type": "object"
+        }
       },
       "RgbL1BalanceDto": {
-        "properties": {
-          "archived": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "asset_id": {
-            "type": "string"
-          },
-          "contract_id": {
-            "type": "string"
-          },
-          "mined": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "offchain": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "tentative": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "total": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          }
-        },
+        "type": "object",
+        "description": "L1 RGB balance for a single contract.",
         "required": [
-          "archived",
-          "asset_id",
           "contract_id",
           "mined",
-          "offchain",
           "tentative",
+          "offchain",
+          "archived",
           "total"
         ],
-        "type": "object"
+        "properties": {
+          "archived": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Archived balance (historical, not spendable)."
+          },
+          "contract_id": {
+            "type": "string",
+            "description": "Contract ID (string like `contract:...`)."
+          },
+          "mined": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Confirmed on-chain balance."
+          },
+          "offchain": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Off-chain balance tracked by the RGB wallet."
+          },
+          "tentative": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Unconfirmed (tentative) on-chain balance."
+          },
+          "total": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Total of mined + tentative + offchain."
+          }
+        }
       },
       "RgbL2BalanceDto": {
-        "properties": {
-          "asset_id": {
-            "type": "string"
-          },
-          "channel_id": {
-            "type": "string"
-          },
-          "local_amount": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "remote_amount": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          }
-        },
+        "type": "object",
+        "description": "L2 RGB balance for a single channel.",
         "required": [
-          "asset_id",
           "channel_id",
+          "contract_id",
           "local_amount",
           "remote_amount"
         ],
-        "type": "object"
+        "properties": {
+          "channel_id": {
+            "type": "string",
+            "description": "Channel id (32-byte hex)."
+          },
+          "contract_id": {
+            "type": "string",
+            "description": "Contract ID (string like `contract:...`)."
+          },
+          "local_amount": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Local (our) RGB balance in this channel."
+          },
+          "remote_amount": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Remote (counterparty) RGB balance in this channel."
+          }
+        }
       },
       "RgbLnInvoiceCreateForHashRequest": {
+        "type": "object",
+        "required": [
+          "contract_id",
+          "asset_amount",
+          "payment_hash",
+          "description",
+          "btc_carrier_amount_msat"
+        ],
         "properties": {
           "asset_amount": {
+            "type": "string",
             "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "asset_id": {
-            "type": "string"
+            "description": "RGB asset amount."
           },
           "btc_carrier_amount_msat": {
+            "type": "string",
             "pattern": "^[0-9]+$",
-            "type": "string"
+            "description": "BTC carrier amount in msat embedded into the BOLT11 invoice."
+          },
+          "contract_id": {
+            "type": "string",
+            "description": "RGB contract ID."
           },
           "description": {
-            "type": "string"
+            "type": "string",
+            "description": "Human-readable description."
           },
           "expiry_secs": {
-            "type": "integer"
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Invoice expiry in seconds. If omitted, the BOLT11 default expiry is used.",
+            "minimum": 0
           },
           "payment_hash": {
-            "type": "string"
+            "type": "string",
+            "description": "Payment hash (64 hex chars) provided by caller."
           }
-        },
-        "required": [
-          "asset_amount",
-          "asset_id",
-          "btc_carrier_amount_msat",
-          "description",
-          "payment_hash"
-        ],
-        "type": "object"
+        }
       },
       "RgbLnInvoiceCreateRequest": {
+        "type": "object",
+        "required": [
+          "contract_id",
+          "asset_amount",
+          "description",
+          "btc_carrier_amount_msat"
+        ],
         "properties": {
           "asset_amount": {
+            "type": "string",
             "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "asset_id": {
-            "type": "string"
+            "description": "RGB asset amount."
           },
           "btc_carrier_amount_msat": {
+            "type": "string",
             "pattern": "^[0-9]+$",
-            "type": "string"
+            "description": "BTC carrier amount in msat embedded into the BOLT11 invoice."
+          },
+          "contract_id": {
+            "type": "string",
+            "description": "RGB contract ID."
           },
           "description": {
-            "type": "string"
+            "type": "string",
+            "description": "Human-readable description."
           },
           "expiry_secs": {
-            "type": "integer"
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Invoice expiry in seconds. If omitted, the BOLT11 default expiry is used.",
+            "minimum": 0
           }
-        },
-        "required": [
-          "asset_amount",
-          "asset_id",
-          "btc_carrier_amount_msat",
-          "description"
-        ],
-        "type": "object"
+        }
       },
       "RgbLnInvoiceDecodeRequest": {
+        "type": "object",
+        "required": [
+          "invoice"
+        ],
         "properties": {
           "invoice": {
             "type": "string"
           }
-        },
-        "required": [
-          "invoice"
-        ],
-        "type": "object"
+        }
       },
       "RgbLnInvoiceDecodeResponse": {
+        "type": "object",
+        "required": [
+          "payment_hash",
+          "destination",
+          "expiry_secs"
+        ],
         "properties": {
           "asset_amount": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "asset_id": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$"
           },
           "carrier_amount_msat": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$"
+          },
+          "contract_id": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "destination": {
             "type": "string"
           },
           "expiry_secs": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9]+$"
           },
           "payment_hash": {
             "type": "string"
           }
-        },
-        "required": [
-          "destination",
-          "expiry_secs",
-          "payment_hash"
-        ],
-        "type": "object"
+        }
       },
       "RgbLnInvoiceResponse": {
+        "type": "object",
+        "required": [
+          "invoice"
+        ],
         "properties": {
           "invoice": {
             "type": "string"
           }
-        },
-        "required": [
-          "invoice"
-        ],
-        "type": "object"
+        }
       },
       "RgbLnPayRequest": {
+        "type": "object",
+        "required": [
+          "invoice"
+        ],
         "properties": {
           "asset_amount": {
+            "type": [
+              "string",
+              "null"
+            ],
             "pattern": "^[0-9]+$",
-            "type": "string"
+            "description": "Optional explicit asset amount for invoices that do not embed RGB fields."
           },
-          "asset_id": {
-            "type": "string"
+          "contract_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional explicit contract ID for invoices that do not embed RGB fields."
           },
           "invoice": {
             "type": "string"
           }
-        },
-        "required": [
-          "invoice"
-        ],
-        "type": "object"
+        }
       },
       "RgbNewAddressResponse": {
+        "type": "object",
+        "required": [
+          "address"
+        ],
         "properties": {
           "address": {
             "type": "string"
           }
-        },
-        "required": [
-          "address"
-        ],
-        "type": "object"
+        }
       },
       "RgbOnchainInvoiceCreateRequest": {
+        "type": "object",
+        "required": [
+          "contract_id",
+          "amount"
+        ],
         "properties": {
           "amount": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9]+$"
           },
           "blinding_utxo": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Outpoint used for blinding when `use_witness_utxo=false`.\n\nIf omitted and `use_witness_utxo=false`, the node will auto-select a wallet UTXO."
           },
           "contract_id": {
             "type": "string"
           },
           "expiry_secs": {
+            "type": [
+              "string",
+              "null"
+            ],
             "pattern": "^[0-9]+$",
-            "type": "string"
+            "description": "Expiration time for the invoice in seconds.\n\nIf omitted, the server will apply a reasonable default."
           },
           "nonce": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$"
           },
           "use_witness_utxo": {
-            "type": "boolean"
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Controls whether the invoice uses a witness-output (`wout:`) beneficiary (`true`) or a\nblinded auth-token (`at:`) beneficiary (`false`).\n\nThis field is intentionally required at the API level to avoid ambiguous requests where\ncallers accidentally rely on defaults and create an invoice type they didn't intend."
           }
-        },
-        "required": [
-          "amount",
-          "contract_id"
-        ],
-        "type": "object"
+        }
       },
       "RgbOnchainInvoiceDecodeRequest": {
+        "type": "object",
+        "required": [
+          "invoice"
+        ],
         "properties": {
           "invoice": {
             "type": "string"
           }
-        },
-        "required": [
-          "invoice"
-        ],
-        "type": "object"
+        }
       },
       "RgbOnchainInvoiceDecodeResponse": {
+        "type": "object",
+        "required": [
+          "contract_id",
+          "amount",
+          "beneficiary",
+          "use_witness_utxo"
+        ],
         "properties": {
           "amount": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9]+$"
           },
           "beneficiary": {
             "type": "string"
@@ -1733,157 +4091,194 @@
             "type": "string"
           },
           "expiry_unix_secs": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$"
           },
           "use_witness_utxo": {
             "type": "boolean"
           }
-        },
-        "required": [
-          "amount",
-          "beneficiary",
-          "contract_id",
-          "use_witness_utxo"
-        ],
-        "type": "object"
+        }
       },
       "RgbOnchainInvoiceResponse": {
+        "type": "object",
+        "required": [
+          "invoice"
+        ],
         "properties": {
           "blinding_utxo_used": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Outpoint actually used for blinding when creating a blinded invoice (`use_witness_utxo=false`)."
           },
           "invoice": {
             "type": "string"
           }
-        },
-        "required": [
-          "invoice"
-        ],
-        "type": "object"
+        }
       },
       "RgbOnchainPaymentDto": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "created_at_unix_secs",
+          "latest_update_timestamp"
+        ],
         "properties": {
           "amount": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "asset_id": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$"
           },
           "consignment_download_path": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "consignment_key": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "contract_id": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "created_at_unix_secs": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9]+$"
           },
           "expires_at_unix_secs": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$"
           },
           "id": {
             "type": "string"
           },
           "invoice": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "kind": {
-            "type": "string"
+            "type": "string",
+            "description": "Constant `onchain` (RGB L1 non-channel payment lifecycle)."
           },
           "latest_update_timestamp": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9]+$"
           },
           "status": {
-            "type": "string"
+            "type": "string",
+            "description": "One of: pending | succeeded | failed | expired"
           },
           "txid": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           }
-        },
-        "required": [
-          "created_at_unix_secs",
-          "id",
-          "kind",
-          "latest_update_timestamp",
-          "status"
-        ],
-        "type": "object"
+        }
       },
       "RgbOnchainPaymentsResponse": {
-        "properties": {
-          "payments": {
-            "items": {
-              "$ref": "#/components/schemas/RgbOnchainPaymentDto"
-            },
-            "type": "array"
-          }
-        },
+        "type": "object",
         "required": [
           "payments"
         ],
-        "type": "object"
+        "properties": {
+          "payments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RgbOnchainPaymentDto"
+            }
+          }
+        }
       },
       "RgbOnchainReceiveRequest": {
+        "type": "object",
+        "required": [
+          "consignment_key"
+        ],
         "properties": {
           "consignment_key": {
             "type": "string"
           },
           "invoice": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional invoice string this consignment is expected to satisfy.\n\nCallers must provide either `payment_id` or `invoice` so the node can correlate the\nconsignment to a single stable payment record."
           },
           "payment_id": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional invoice id (hex-encoded 32 bytes, i.e. `sha256(invoice_str)`).\n\nCallers must provide either `payment_id` or `invoice` so the node can correlate the\nconsignment to a single stable payment record."
           }
-        },
-        "required": [
-          "consignment_key"
-        ],
-        "type": "object"
+        }
       },
       "RgbOnchainReceiveResponse": {
+        "type": "object",
+        "required": [
+          "contract_id",
+          "amount"
+        ],
         "properties": {
           "amount": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9]+$"
           },
-          "asset_id": {
+          "contract_id": {
             "type": "string"
           }
-        },
-        "required": [
-          "amount",
-          "asset_id"
-        ],
-        "type": "object"
+        }
       },
       "RgbOnchainSendRequest": {
+        "type": "object",
+        "required": [
+          "invoice",
+          "fee_rate_sats_per_vb"
+        ],
         "properties": {
           "fee_rate_sats_per_vb": {
-            "type": "number"
+            "type": "number",
+            "format": "float"
           },
           "invoice": {
             "type": "string"
           },
           "sats_for_fee_and_outputs": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$"
           }
-        },
-        "required": [
-          "fee_rate_sats_per_vb",
-          "invoice"
-        ],
-        "type": "object"
+        }
       },
       "RgbOnchainSendResponse": {
+        "type": "object",
+        "required": [
+          "txid",
+          "consignment_key"
+        ],
         "properties": {
           "consignment_key": {
             "type": "string"
@@ -1891,140 +4286,185 @@
           "txid": {
             "type": "string"
           }
-        },
-        "required": [
-          "consignment_key",
-          "txid"
-        ],
-        "type": "object"
+        }
       },
       "RgbOpenChannelRequest": {
-        "properties": {
-          "asset_amount": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "asset_id": {
-            "type": "string"
-          },
-          "color_context_data": {
-            "type": "string"
-          }
-        },
+        "type": "object",
+        "description": "---- RGB (Lightning + on-chain) ----",
         "required": [
+          "contract_id",
           "asset_amount",
-          "asset_id",
           "color_context_data"
         ],
-        "type": "object"
-      },
-      "RgbPaymentContextDto": {
         "properties": {
           "asset_amount": {
+            "type": "string",
             "pattern": "^[0-9]+$",
-            "type": "string"
+            "description": "RGB asset amount to commit into the channel."
           },
-          "asset_id": {
-            "type": "string"
+          "color_context_data": {
+            "type": "string",
+            "description": "RGB color context data (e.g. a consignment endpoint like `file://...`)."
           },
-          "direction": {
-            "type": "string"
-          },
-          "is_swap": {
-            "type": "boolean"
+          "contract_id": {
+            "type": "string",
+            "description": "RGB contract ID."
           }
-        },
+        }
+      },
+      "RgbPaymentContextDto": {
+        "type": "object",
+        "description": "RGB context for Lightning payments/events.",
         "required": [
+          "contract_id",
           "asset_amount",
-          "asset_id",
           "direction",
           "is_swap"
         ],
-        "type": "object"
-      },
-      "RgbUtxoAssetAllocationDto": {
         "properties": {
-          "amount": {
+          "asset_amount": {
+            "type": "string",
             "pattern": "^[0-9]+$",
-            "type": "string"
+            "description": "Asset amount."
           },
           "contract_id": {
-            "type": "string"
+            "type": "string",
+            "description": "Contract ID (string like `contract:...`)."
+          },
+          "direction": {
+            "type": "string",
+            "description": "RGB payment direction (Inbound/Outbound)."
+          },
+          "is_swap": {
+            "type": "boolean",
+            "description": "Whether this payment is part of an atomic swap."
           }
-        },
+        }
+      },
+      "RgbUtxoAssetAllocationDto": {
+        "type": "object",
         "required": [
-          "amount",
-          "contract_id"
+          "contract_id",
+          "amount"
         ],
-        "type": "object"
+        "properties": {
+          "amount": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Amount anchored on this UTXO for the given contract."
+          },
+          "contract_id": {
+            "type": "string",
+            "description": "Contract ID (string like `contract:...`)."
+          }
+        }
       },
       "RgbUtxoSummaryDto": {
-        "properties": {
-          "assets": {
-            "items": {
-              "$ref": "#/components/schemas/RgbUtxoAssetAllocationDto"
-            },
-            "type": "array"
-          },
-          "confirmed_height": {
-            "type": "integer"
-          },
-          "outpoint": {
-            "type": "string"
-          },
-          "reserved": {
-            "type": "boolean"
-          },
-          "reserved_until_unix_secs": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          },
-          "value_sats": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
-          }
-        },
+        "type": "object",
         "required": [
           "outpoint",
           "reserved"
         ],
-        "type": "object"
+        "properties": {
+          "assets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RgbUtxoAssetAllocationDto"
+            },
+            "description": "RGB assets anchored on this UTXO.\n\nEach element contains only `contract_id` and `amount`."
+          },
+          "confirmed_height": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Confirmation block height, if known (confirmed only).",
+            "minimum": 0
+          },
+          "outpoint": {
+            "type": "string",
+            "description": "Outpoint formatted as `txid:vout`."
+          },
+          "reserved": {
+            "type": "boolean",
+            "description": "Whether this outpoint is currently reserved by the node."
+          },
+          "reserved_until_unix_secs": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$",
+            "description": "Reservation expiry (unix seconds), if reserved."
+          },
+          "value_sats": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$",
+            "description": "BTC value of the output (sats), if available from the configured chain source."
+          }
+        }
       },
       "RgbUtxosReleaseRequest": {
+        "type": "object",
         "properties": {
           "outpoint": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Release by outpoint (`txid:vout`)."
           },
           "reservation_id": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Release by reservation id (preferred)."
           }
-        },
-        "type": "object"
+        }
       },
       "RgbUtxosReleaseResponse": {
+        "type": "object",
+        "required": [
+          "released"
+        ],
         "properties": {
           "released": {
             "type": "boolean"
           }
-        },
-        "required": [
-          "released"
-        ],
-        "type": "object"
+        }
       },
       "RgbUtxosReserveRequest": {
+        "type": "object",
         "properties": {
           "outpoint": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional explicit outpoint to reserve (`txid:vout`)."
           },
           "ttl_secs": {
+            "type": [
+              "string",
+              "null"
+            ],
             "pattern": "^[0-9]+$",
-            "type": "string"
+            "description": "Optional reservation TTL in seconds (default: 300)."
           }
-        },
-        "type": "object"
+        }
       },
       "RgbUtxosReserveResponse": {
+        "type": "object",
+        "required": [
+          "reservation_id",
+          "outpoint",
+          "reserved_until_unix_secs"
+        ],
         "properties": {
           "outpoint": {
             "type": "string"
@@ -2033,98 +4473,108 @@
             "type": "string"
           },
           "reserved_until_unix_secs": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9]+$"
           }
-        },
-        "required": [
-          "outpoint",
-          "reservation_id",
-          "reserved_until_unix_secs"
-        ],
-        "type": "object"
+        }
       },
       "RgbUtxosResponse": {
+        "type": "object",
+        "required": [
+          "utxos"
+        ],
         "properties": {
           "utxos": {
+            "type": "array",
             "items": {
               "type": "string"
             },
-            "type": "array"
+            "description": "RGB wallet UTXOs (outpoints formatted as `txid:vout`)."
           }
-        },
-        "required": [
-          "utxos"
-        ],
-        "type": "object"
+        }
       },
       "RgbUtxosSummaryResponse": {
-        "properties": {
-          "utxos": {
-            "items": {
-              "$ref": "#/components/schemas/RgbUtxoSummaryDto"
-            },
-            "type": "array"
-          }
-        },
+        "type": "object",
         "required": [
           "utxos"
         ],
-        "type": "object"
+        "properties": {
+          "utxos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RgbUtxoSummaryDto"
+            }
+          }
+        }
       },
       "SendResponse": {
+        "type": "object",
+        "description": "Response containing the id of a sent payment.",
+        "required": [
+          "payment_id"
+        ],
         "properties": {
           "payment_id": {
             "type": "string"
           }
-        },
-        "required": [
-          "payment_id"
-        ],
-        "type": "object"
+        }
       },
       "SpontaneousSendRequest": {
+        "type": "object",
+        "description": "Request to send a spontaneous (keysend) payment.",
+        "required": [
+          "counterparty_node_id",
+          "amount_msat"
+        ],
         "properties": {
           "amount_msat": {
-            "pattern": "^[0-9]+$",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9]+$"
           },
           "counterparty_node_id": {
             "type": "string"
           },
           "custom_tlvs": {
+            "type": "array",
             "items": {
               "$ref": "#/components/schemas/CustomTlvDto"
-            },
-            "type": "array"
+            }
           }
-        },
-        "required": [
-          "amount_msat",
-          "counterparty_node_id"
-        ],
-        "type": "object"
+        }
       },
       "StatusDto": {
+        "type": "object",
+        "description": "Node status response.",
+        "required": [
+          "is_running",
+          "is_listening",
+          "best_block_height"
+        ],
         "properties": {
           "best_block_height": {
-            "type": "integer"
+            "type": "integer",
+            "format": "int32",
+            "description": "Current best block height as seen by the node.",
+            "minimum": 0
           },
           "is_listening": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether the node is currently listening for inbound peers."
           },
           "is_running": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether the node runtime is running."
           }
-        },
-        "required": [
-          "best_block_height",
-          "is_listening",
-          "is_running"
-        ],
-        "type": "object"
+        }
       },
       "VersionResponse": {
+        "type": "object",
+        "description": "Version metadata.",
+        "required": [
+          "api_version",
+          "api_crate_version",
+          "core_crate_version"
+        ],
         "properties": {
           "api_crate_version": {
             "type": "string"
@@ -2135,727 +4585,77 @@
           "core_crate_version": {
             "type": "string"
           }
-        },
-        "required": [
-          "api_crate_version",
-          "api_version",
-          "core_crate_version"
-        ],
-        "type": "object"
+        }
       },
       "WalletNewAddressResponse": {
+        "type": "object",
+        "description": "Response containing a newly-generated on-chain address.",
+        "required": [
+          "address"
+        ],
         "properties": {
           "address": {
             "type": "string"
           }
-        },
-        "required": [
-          "address"
-        ],
-        "type": "object"
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearer_auth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "opaque"
       }
     }
   },
-  "info": {
-    "title": "rgbldk node api",
-    "version": "v1"
-  },
-  "openapi": "3.1.0",
-  "paths": {
-    "/api/v1/balances": {
-      "get": {
-        "operationId": "GET__api_v1_balances",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/bolt11/claim_for_hash": {
-      "post": {
-        "operationId": "POST__api_v1_bolt11_claim_for_hash",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/bolt11/decode": {
-      "post": {
-        "operationId": "POST__api_v1_bolt11_decode",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/bolt11/fail_for_hash": {
-      "post": {
-        "operationId": "POST__api_v1_bolt11_fail_for_hash",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/bolt11/pay": {
-      "post": {
-        "operationId": "POST__api_v1_bolt11_pay",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/bolt11/receive": {
-      "post": {
-        "operationId": "POST__api_v1_bolt11_receive",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/bolt11/receive_for_hash": {
-      "post": {
-        "operationId": "POST__api_v1_bolt11_receive_for_hash",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/bolt11/receive_var": {
-      "post": {
-        "operationId": "POST__api_v1_bolt11_receive_var",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/bolt11/send": {
-      "post": {
-        "operationId": "POST__api_v1_bolt11_send",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/bolt11/send_using_amount": {
-      "post": {
-        "operationId": "POST__api_v1_bolt11_send_using_amount",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/bolt12/offer/decode": {
-      "post": {
-        "operationId": "POST__api_v1_bolt12_offer_decode",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/bolt12/offer/receive": {
-      "post": {
-        "operationId": "POST__api_v1_bolt12_offer_receive",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/bolt12/offer/receive_var": {
-      "post": {
-        "operationId": "POST__api_v1_bolt12_offer_receive_var",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/bolt12/offer/send": {
-      "post": {
-        "operationId": "POST__api_v1_bolt12_offer_send",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/bolt12/refund/decode": {
-      "post": {
-        "operationId": "POST__api_v1_bolt12_refund_decode",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/bolt12/refund/initiate": {
-      "post": {
-        "operationId": "POST__api_v1_bolt12_refund_initiate",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/bolt12/refund/request_payment": {
-      "post": {
-        "operationId": "POST__api_v1_bolt12_refund_request_payment",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/channel/close": {
-      "post": {
-        "operationId": "POST__api_v1_channel_close",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/channel/force_close": {
-      "post": {
-        "operationId": "POST__api_v1_channel_force_close",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/channel/open": {
-      "post": {
-        "operationId": "POST__api_v1_channel_open",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/channels": {
-      "get": {
-        "operationId": "GET__api_v1_channels",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/events/handled": {
-      "post": {
-        "operationId": "POST__api_v1_events_handled",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/events/wait_next": {
-      "post": {
-        "operationId": "POST__api_v1_events_wait_next",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/healthz": {
-      "get": {
-        "operationId": "GET__api_v1_healthz",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/listening_addresses": {
-      "get": {
-        "operationId": "GET__api_v1_listening_addresses",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/node_id": {
-      "get": {
-        "operationId": "GET__api_v1_node_id",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/payment/{payment_id}": {
-      "get": {
-        "operationId": "GET__api_v1_payment_payment_id",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "payment_id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/payment/{payment_id}/abandon": {
-      "post": {
-        "operationId": "POST__api_v1_payment_payment_id_abandon",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "payment_id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/payment/{payment_id}/wait": {
-      "post": {
-        "operationId": "POST__api_v1_payment_payment_id_wait",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "payment_id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/payments": {
-      "get": {
-        "operationId": "GET__api_v1_payments",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/peers": {
-      "get": {
-        "operationId": "GET__api_v1_peers",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/peers/connect": {
-      "post": {
-        "operationId": "POST__api_v1_peers_connect",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/peers/disconnect": {
-      "post": {
-        "operationId": "POST__api_v1_peers_disconnect",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/readyz": {
-      "get": {
-        "operationId": "GET__api_v1_readyz",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/rgb/consignments/{consignment_key}": {
-      "get": {
-        "operationId": "GET__api_v1_rgb_consignments_consignment_key",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "consignment_key",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/rgb/contract/{contract_id}/balance": {
-      "get": {
-        "operationId": "GET__api_v1_rgb_contract_contract_id_balance",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "contract_id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/rgb/contract/{contract_id}/known": {
-      "get": {
-        "operationId": "GET__api_v1_rgb_contract_contract_id_known",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "contract_id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/rgb/contracts": {
-      "get": {
-        "operationId": "GET__api_v1_rgb_contracts",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/rgb/contracts/export": {
-      "post": {
-        "operationId": "POST__api_v1_rgb_contracts_export",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/rgb/contracts/import": {
-      "post": {
-        "operationId": "POST__api_v1_rgb_contracts_import",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/rgb/contracts/issue": {
-      "post": {
-        "operationId": "POST__api_v1_rgb_contracts_issue",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/rgb/issuers": {
-      "get": {
-        "operationId": "GET__api_v1_rgb_issuers",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/rgb/issuers/import": {
-      "post": {
-        "operationId": "POST__api_v1_rgb_issuers_import",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/rgb/ln/invoice/create": {
-      "post": {
-        "operationId": "POST__api_v1_rgb_ln_invoice_create",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/rgb/ln/invoice/create_for_hash": {
-      "post": {
-        "operationId": "POST__api_v1_rgb_ln_invoice_create_for_hash",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/rgb/ln/invoice/decode": {
-      "post": {
-        "operationId": "POST__api_v1_rgb_ln_invoice_decode",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/rgb/ln/pay": {
-      "post": {
-        "operationId": "POST__api_v1_rgb_ln_pay",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/rgb/new_address": {
-      "post": {
-        "operationId": "POST__api_v1_rgb_new_address",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/rgb/onchain/invoice/create": {
-      "post": {
-        "operationId": "POST__api_v1_rgb_onchain_invoice_create",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/rgb/onchain/invoice/decode": {
-      "post": {
-        "operationId": "POST__api_v1_rgb_onchain_invoice_decode",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/rgb/onchain/payments": {
-      "get": {
-        "operationId": "GET__api_v1_rgb_onchain_payments",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/rgb/onchain/receive": {
-      "post": {
-        "operationId": "POST__api_v1_rgb_onchain_receive",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/rgb/onchain/send": {
-      "post": {
-        "operationId": "POST__api_v1_rgb_onchain_send",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/rgb/sync": {
-      "post": {
-        "operationId": "POST__api_v1_rgb_sync",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/rgb/utxos": {
-      "get": {
-        "operationId": "GET__api_v1_rgb_utxos",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/rgb/utxos/release": {
-      "post": {
-        "operationId": "POST__api_v1_rgb_utxos_release",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/rgb/utxos/reserve": {
-      "post": {
-        "operationId": "POST__api_v1_rgb_utxos_reserve",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/rgb/utxos/summary": {
-      "get": {
-        "operationId": "GET__api_v1_rgb_utxos_summary",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/spontaneous/send": {
-      "post": {
-        "operationId": "POST__api_v1_spontaneous_send",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/status": {
-      "get": {
-        "operationId": "GET__api_v1_status",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/version": {
-      "get": {
-        "operationId": "GET__api_v1_version",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/wallet/new_address": {
-      "post": {
-        "operationId": "POST__api_v1_wallet_new_address",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/wallet/sync": {
-      "post": {
-        "operationId": "POST__api_v1_wallet_sync",
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    }
-  },
-  "servers": [
+  "tags": [
     {
-      "url": "http://127.0.0.1:8500"
+      "name": "node",
+      "description": "Node liveness, readiness, version, and identity endpoints."
+    },
+    {
+      "name": "peer",
+      "description": "Peer management endpoints."
+    },
+    {
+      "name": "wallet",
+      "description": "On-chain wallet and balance endpoints."
+    },
+    {
+      "name": "channel",
+      "description": "Lightning channel management endpoints."
+    },
+    {
+      "name": "payment",
+      "description": "Payment lifecycle endpoints."
+    },
+    {
+      "name": "events",
+      "description": "Node event polling endpoints."
+    },
+    {
+      "name": "bolt11",
+      "description": "BOLT11 invoice and payment endpoints."
+    },
+    {
+      "name": "bolt12",
+      "description": "BOLT12 offer and refund endpoints."
+    },
+    {
+      "name": "rgb-wallet",
+      "description": "RGB wallet, UTXO, and reservation endpoints."
+    },
+    {
+      "name": "rgb-ln",
+      "description": "RGB Lightning invoice and payment endpoints."
+    },
+    {
+      "name": "rgb-contracts",
+      "description": "RGB contract catalog and issuance endpoints."
+    },
+    {
+      "name": "rgb-onchain",
+      "description": "RGB on-chain invoice and payment endpoints."
     }
   ]
 }

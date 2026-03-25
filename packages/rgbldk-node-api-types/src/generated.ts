@@ -305,7 +305,7 @@ export interface RgbBalancesDto {
 }
 
 export interface RgbChannelBalanceDto {
-  asset_id: string;
+  contract_id: string;
   local_amount: U64String;
   remote_amount: U64String;
 }
@@ -325,7 +325,6 @@ export interface RgbContractBalanceResponse {
 
 export interface RgbContractDto {
   contract_id: string;
-  asset_id: string;
   name?: string;
   ticker?: string;
   precision?: number;
@@ -368,7 +367,6 @@ export interface RgbContractsIssueRequest {
 export interface RgbContractsIssueResponse {
   ok: boolean;
   contract_id: string;
-  asset_id: string;
   issued_supply: U64String;
   checks?: HealthCheckDto[];
 }
@@ -395,7 +393,6 @@ export interface RgbIssuersResponse {
 
 export interface RgbL1BalanceDto {
   contract_id: string;
-  asset_id: string;
   mined: U64String;
   tentative: U64String;
   offchain: U64String;
@@ -405,13 +402,13 @@ export interface RgbL1BalanceDto {
 
 export interface RgbL2BalanceDto {
   channel_id: string;
-  asset_id: string;
+  contract_id: string;
   local_amount: U64String;
   remote_amount: U64String;
 }
 
 export interface RgbLnInvoiceCreateForHashRequest {
-  asset_id: string;
+  contract_id: string;
   asset_amount: U64String;
   payment_hash: string;
   description: string;
@@ -420,7 +417,7 @@ export interface RgbLnInvoiceCreateForHashRequest {
 }
 
 export interface RgbLnInvoiceCreateRequest {
-  asset_id: string;
+  contract_id: string;
   asset_amount: U64String;
   description: string;
   expiry_secs?: number;
@@ -436,7 +433,7 @@ export interface RgbLnInvoiceDecodeResponse {
   destination: string;
   carrier_amount_msat?: U64String;
   expiry_secs: U64String;
-  asset_id?: string;
+  contract_id?: string;
   asset_amount?: U64String;
 }
 
@@ -446,7 +443,7 @@ export interface RgbLnInvoiceResponse {
 
 export interface RgbLnPayRequest {
   invoice: string;
-  asset_id?: string;
+  contract_id?: string;
   asset_amount?: U64String;
 }
 
@@ -493,7 +490,6 @@ export interface RgbOnchainPaymentDto {
   txid?: string;
   consignment_key?: string;
   consignment_download_path?: string;
-  asset_id?: string;
 }
 
 export interface RgbOnchainPaymentsResponse {
@@ -507,7 +503,7 @@ export interface RgbOnchainReceiveRequest {
 }
 
 export interface RgbOnchainReceiveResponse {
-  asset_id: string;
+  contract_id: string;
   amount: U64String;
 }
 
@@ -523,13 +519,13 @@ export interface RgbOnchainSendResponse {
 }
 
 export interface RgbOpenChannelRequest {
-  asset_id: string;
+  contract_id: string;
   asset_amount: U64String;
   color_context_data: string;
 }
 
 export interface RgbPaymentContextDto {
-  asset_id: string;
+  contract_id: string;
   asset_amount: U64String;
   direction: string;
   is_swap: boolean;

@@ -11,7 +11,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DTO_RS = ROOT / "crates" / "rgbldk_http_dto" / "src" / "dto.rs"
-ENDPOINTS_MD = ROOT / "generated" / "spec" / "endpoints.md"
 SOURCE_JSON = ROOT / "generated" / "spec" / "source.json"
 
 OUT_TS_TYPES = ROOT / "packages" / "rgbldk-node-api-types" / "src" / "generated.ts"
@@ -69,6 +68,8 @@ def main(argv: list[str]) -> int:
 def gen() -> None:
     if not DTO_RS.exists():
         raise SystemExit(f"missing dto source: {DTO_RS} (run node sync first)")
+    if not OUT_OPENAPI_JSON.exists():
+        raise SystemExit(f"missing openapi source: {OUT_OPENAPI_JSON} (run node sync first)")
 
     src = DTO_RS.read_text(encoding="utf-8").splitlines()
     structs, enums = parse_rust_dtos(src)
@@ -76,10 +77,6 @@ def gen() -> None:
     OUT_TS_TYPES.write_text(render_ts_types(structs, enums), encoding="utf-8")
     OUT_TS_CLIENT.write_text(render_ts_client(), encoding="utf-8")
     OUT_RS_CLIENT.write_text(render_rs_client(), encoding="utf-8")
-    if ENDPOINTS_MD.exists():
-        OUT_OPENAPI_JSON.write_text(render_openapi_json(structs, enums, ENDPOINTS_MD.read_text(encoding="utf-8")), encoding="utf-8")
-    else:
-        OUT_OPENAPI_JSON.write_text(render_openapi_json(structs, enums, ""), encoding="utf-8")
     sanitize_generated_metadata()
 
 
