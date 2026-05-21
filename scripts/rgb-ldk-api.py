@@ -11,6 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DTO_RS = ROOT / "crates" / "rgbldk_http_dto" / "src" / "dto.rs"
+DTO_DIR = ROOT / "crates" / "rgbldk_http_dto" / "src" / "dto"
 SOURCE_JSON = ROOT / "generated" / "spec" / "source.json"
 
 OUT_TS_TYPES = ROOT / "packages" / "rgbldk-node-api-types" / "src" / "generated.ts"
@@ -37,6 +38,7 @@ class Struct:
 @dataclass
 class Variant:
     name: str
+    json_name: str
     fields: list[Field]
     tuple_ty: str | None = None
 
@@ -66,18 +68,35 @@ def main(argv: list[str]) -> int:
 
 
 def gen() -> None:
-    if not DTO_RS.exists():
-        raise SystemExit(f"missing dto source: {DTO_RS} (run node sync first)")
     if not OUT_OPENAPI_JSON.exists():
         raise SystemExit(f"missing openapi source: {OUT_OPENAPI_JSON} (run node sync first)")
 
-    src = DTO_RS.read_text(encoding="utf-8").splitlines()
+    src = load_dto_source_lines()
     structs, enums = parse_rust_dtos(src)
 
     OUT_TS_TYPES.write_text(render_ts_types(structs, enums), encoding="utf-8")
     OUT_TS_CLIENT.write_text(render_ts_client(), encoding="utf-8")
     OUT_RS_CLIENT.write_text(render_rs_client(), encoding="utf-8")
     sanitize_generated_metadata()
+
+
+def load_dto_source_lines() -> list[str]:
+    if DTO_RS.exists():
+        return DTO_RS.read_text(encoding="utf-8").splitlines()
+
+    if DTO_DIR.exists():
+        paths = []
+        mod_rs = DTO_DIR / "mod.rs"
+        if mod_rs.exists():
+            paths.append(mod_rs)
+        paths.extend(sorted(path for path in DTO_DIR.rglob("*.rs") if path.name != "mod.rs"))
+        lines: list[str] = []
+        for path in paths:
+            lines.extend(path.read_text(encoding="utf-8").splitlines())
+            lines.append("")
+        return lines
+
+    raise SystemExit(f"missing dto source: {DTO_RS} or {DTO_DIR} (run node sync first)")
 
 
 def sanitize_generated_metadata() -> None:
@@ -184,6 +203,7 @@ def parse_rust_dtos(lines: list[str]) -> tuple[list[Struct], list[Enum]]:
         if m:
             name = m.group(1)
             serde_tag, serde_content = parse_enum_serde_tag(attrs)
+            serde_rename_all = parse_enum_serde_rename_all(attrs)
             i += 1
             variants: list[Variant] = []
             variant_attrs: list[str] = []
@@ -229,7 +249,13 @@ def parse_rust_dtos(lines: list[str]) -> tuple[list[Struct], list[Enum]]:
                             )
                             field_attrs = []
                         i += 1
-                    variants.append(Variant(name=vname, fields=fields))
+                    variants.append(
+                        Variant(
+                            name=vname,
+                            json_name=variant_json_name(vname, variant_attrs, serde_rename_all),
+                            fields=fields,
+                        )
+                    )
                     variant_attrs = []
                     i += 1
                     # optional trailing comma
@@ -240,7 +266,14 @@ def parse_rust_dtos(lines: list[str]) -> tuple[list[Struct], list[Enum]]:
                 # Unit variant: VariantName,
                 vm = re.match(r"([A-Za-z0-9_]+)\s*,", l)
                 if vm:
-                    variants.append(Variant(name=vm.group(1), fields=[]))
+                    vname = vm.group(1)
+                    variants.append(
+                        Variant(
+                            name=vname,
+                            json_name=variant_json_name(vname, variant_attrs, serde_rename_all),
+                            fields=[],
+                        )
+                    )
                     variant_attrs = []
                     i += 1
                     continue
@@ -250,7 +283,14 @@ def parse_rust_dtos(lines: list[str]) -> tuple[list[Struct], list[Enum]]:
                 if vm:
                     vname = vm.group(1)
                     inner_ty = vm.group(2).strip()
-                    variants.append(Variant(name=vname, fields=[], tuple_ty=inner_ty))
+                    variants.append(
+                        Variant(
+                            name=vname,
+                            json_name=variant_json_name(vname, variant_attrs, serde_rename_all),
+                            fields=[],
+                            tuple_ty=inner_ty,
+                        )
+                    )
                     variant_attrs = []
                     i += 1
                     continue
@@ -297,9 +337,35 @@ def parse_enum_serde_tag(attrs: list[str]) -> tuple[str | None, str | None]:
     return (None, None)
 
 
+def parse_enum_serde_rename_all(attrs: list[str]) -> str | None:
+    for a in attrs:
+        if a.startswith("#[serde(") and "rename_all" in a:
+            m = re.search(r'rename_all\s*=\s*"([^"]+)"', a)
+            if m:
+                return m.group(1)
+    return None
+
+
 def rust_ident_to_ts(raw: str) -> str:
     if raw.startswith("r#"):
         return raw[2:]
+    return raw
+
+
+def rust_variant_to_snake_case(raw: str) -> str:
+    s = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", raw)
+    s = re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s)
+    return s.lower()
+
+
+def variant_json_name(raw: str, attrs: list[str], rename_all: str | None) -> str:
+    for a in attrs:
+        if a.startswith("#[serde(") and "rename" in a:
+            m = re.search(r'rename\s*=\s*"([^"]+)"', a)
+            if m:
+                return m.group(1)
+    if rename_all == "snake_case":
+        return rust_variant_to_snake_case(raw)
     return raw
 
 
@@ -390,7 +456,7 @@ def render_ts_types(structs: list[Struct], enums: list[Enum]) -> str:
             for v in e.variants:
                 if v.tuple_ty is not None:
                     data_ts = ts_type_for(Field("value", "value", v.tuple_ty, False, False))
-                    parts.append(f'  | {{ {e.serde_tag}: "{v.name}"; {e.serde_content}: {data_ts}; }}')
+                    parts.append(f'  | {{ {e.serde_tag}: "{v.json_name}"; {e.serde_content}: {data_ts}; }}')
                     continue
                 data_lines: list[str] = []
                 for f in v.fields:
@@ -403,7 +469,7 @@ def render_ts_types(structs: list[Struct], enums: list[Enum]) -> str:
                     data = "{}"
                 else:
                     data = "{\n" + "\n".join(data_lines) + "\n    }"
-                parts.append(f'  | {{ {e.serde_tag}: "{v.name}"; {e.serde_content}: {data}; }}')
+                parts.append(f'  | {{ {e.serde_tag}: "{v.json_name}"; {e.serde_content}: {data}; }}')
             out.append(f"export type {e.name} =")
             out.extend(parts)
             out.append(";")
@@ -414,7 +480,7 @@ def render_ts_types(structs: list[Struct], enums: list[Enum]) -> str:
             # - If any variant has fields/tuple payload => union of shapes (no discriminant in JSON)
             has_payload = any((len(v.fields) > 0) or (v.tuple_ty is not None) for v in e.variants)
             if not has_payload:
-                lit = " | ".join([f'\"{v.name}\"' for v in e.variants]) or "never"
+                lit = " | ".join([f'\"{v.json_name}\"' for v in e.variants]) or "never"
                 out.append(f"export type {e.name} = {lit};")
                 out.append("")
                 continue
@@ -792,7 +858,7 @@ def schema_for_enum(e: Enum) -> dict:
                 variant_schema = {
                     "type": "object",
                     "properties": {
-                        e.serde_tag: {"const": v.name},
+                        e.serde_tag: {"const": v.json_name},
                         e.serde_content: schema_ref_or_inline(v.tuple_ty),
                     },
                     "required": [e.serde_tag, e.serde_content],
@@ -811,7 +877,7 @@ def schema_for_enum(e: Enum) -> dict:
             variant_schema = {
                 "type": "object",
                 "properties": {
-                    e.serde_tag: {"const": v.name},
+                    e.serde_tag: {"const": v.json_name},
                     e.serde_content: data_schema,
                 },
                 "required": [e.serde_tag, e.serde_content],
@@ -824,7 +890,7 @@ def schema_for_enum(e: Enum) -> dict:
     # - Else => oneOf union of the possible payload shapes
     has_payload = any((len(v.fields) > 0) or (v.tuple_ty is not None) for v in e.variants)
     if not has_payload:
-        return {"type": "string", "enum": [v.name for v in e.variants]}
+        return {"type": "string", "enum": [v.json_name for v in e.variants]}
 
     one_of: list[dict] = []
     for v in e.variants:
@@ -843,7 +909,7 @@ def schema_for_enum(e: Enum) -> dict:
                 data_schema["required"] = sorted(data_required)
             one_of.append(data_schema)
             continue
-        one_of.append({"type": "string", "const": v.name})
+        one_of.append({"type": "string", "const": v.json_name})
 
     return {"oneOf": one_of}
 

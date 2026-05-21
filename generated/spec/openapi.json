@@ -1500,6 +1500,33 @@
         ]
       }
     },
+    "/rgb/descriptor": {
+      "get": {
+        "tags": [
+          "rgb-wallet"
+        ],
+        "summary": "Get RGB wallet descriptor",
+        "description": "Returns the public RGB wallet root descriptor plus derived public descriptors used by signing/address workflows.",
+        "operationId": "rgb_descriptor",
+        "responses": {
+          "200": {
+            "description": "RGB wallet descriptor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbDescriptorResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
     "/rgb/ln/invoice/create": {
       "post": {
         "tags": [
@@ -1887,6 +1914,43 @@
         ]
       }
     },
+    "/rgb/sign_message": {
+      "post": {
+        "tags": [
+          "rgb-wallet"
+        ],
+        "summary": "Sign message with RGB wallet key",
+        "description": "Signs an arbitrary message using the RGB wallet descriptor key. `bitcoin_signed_message` uses the request `message` string directly. `ecdsa` interprets the request `message` as bytes encoded with the requested `encoding`, then signs the SHA-256 digest of those bytes. The response `signature` uses the same `encoding`.",
+        "operationId": "rgb_sign_message",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RgbSignMessageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Signed message",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbSignMessageResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
     "/rgb/sync": {
       "post": {
         "tags": [
@@ -2232,7 +2296,6 @@
       },
       "Bolt11DecodeRequest": {
         "type": "object",
-        "description": "Request to decode a BOLT11 invoice.",
         "required": [
           "invoice"
         ],
@@ -3453,6 +3516,26 @@
           }
         }
       },
+      "RgbAllocationDto": {
+        "type": "object",
+        "required": [
+          "contract_id",
+          "amount",
+          "layer"
+        ],
+        "properties": {
+          "amount": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "contract_id": {
+            "type": "string"
+          },
+          "layer": {
+            "type": "string"
+          }
+        }
+      },
       "RgbBalancesDto": {
         "type": "object",
         "description": "RGB balance overview, split by asset location.",
@@ -3759,6 +3842,46 @@
             "items": {
               "$ref": "#/components/schemas/RgbContractDto"
             }
+          }
+        }
+      },
+      "RgbDerivedDescriptorDto": {
+        "type": "object",
+        "required": [
+          "fingerprint",
+          "derivation_path",
+          "xpub",
+          "descriptor"
+        ],
+        "properties": {
+          "derivation_path": {
+            "type": "string"
+          },
+          "descriptor": {
+            "type": "string"
+          },
+          "fingerprint": {
+            "type": "string"
+          },
+          "xpub": {
+            "type": "string"
+          }
+        }
+      },
+      "RgbDescriptorResponse": {
+        "type": "object",
+        "required": [
+          "descriptor"
+        ],
+        "properties": {
+          "derived_descriptors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RgbDerivedDescriptorDto"
+            }
+          },
+          "descriptor": {
+            "type": "string"
           }
         }
       },
@@ -4290,7 +4413,6 @@
       },
       "RgbOpenChannelRequest": {
         "type": "object",
-        "description": "---- RGB (Lightning + on-chain) ----",
         "required": [
           "contract_id",
           "asset_amount",
@@ -4341,6 +4463,102 @@
           }
         }
       },
+      "RgbSignMessageAlgorithmDto": {
+        "type": "string",
+        "enum": [
+          "bitcoin_signed_message",
+          "ecdsa"
+        ]
+      },
+      "RgbSignMessageEncodingDto": {
+        "type": "string",
+        "enum": [
+          "hex",
+          "base64"
+        ]
+      },
+      "RgbSignMessageRequest": {
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "properties": {
+          "algorithm": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RgbSignMessageAlgorithmDto"
+              }
+            ]
+          },
+          "compact": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "encoding": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RgbSignMessageEncodingDto"
+              }
+            ]
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "RgbSignMessageResponse": {
+        "type": "object",
+        "required": [
+          "message",
+          "algorithm",
+          "signature",
+          "pubkey",
+          "derivation_path"
+        ],
+        "properties": {
+          "algorithm": {
+            "type": "string"
+          },
+          "compact": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "derivation_path": {
+            "type": "string"
+          },
+          "digest_hex": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "encoding": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "pubkey": {
+            "type": "string"
+          },
+          "signature": {
+            "type": "string"
+          }
+        }
+      },
       "RgbUtxoAssetAllocationDto": {
         "type": "object",
         "required": [
@@ -4356,6 +4574,49 @@
           "contract_id": {
             "type": "string",
             "description": "Contract ID (string like `contract:...`)."
+          }
+        }
+      },
+      "RgbUtxoDto": {
+        "type": "object",
+        "required": [
+          "outpoint",
+          "value_sats",
+          "rgb_allocations",
+          "has_mixed_asset_allocations",
+          "spend_roles"
+        ],
+        "properties": {
+          "confirmed_height": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "has_mixed_asset_allocations": {
+            "type": "boolean"
+          },
+          "outpoint": {
+            "type": "string",
+            "description": "Outpoint formatted as `txid:vout`."
+          },
+          "rgb_allocations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RgbAllocationDto"
+            }
+          },
+          "spend_roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "value_sats": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
           }
         }
       },
@@ -4487,9 +4748,9 @@
           "utxos": {
             "type": "array",
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/RgbUtxoDto"
             },
-            "description": "RGB wallet UTXOs (outpoints formatted as `txid:vout`)."
+            "description": "RGB spend-domain UTXOs with semantic metadata."
           }
         }
       },

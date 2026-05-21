@@ -82,6 +82,36 @@ def _copytree_merge(src: Path, dst: Path) -> None:
         shutil.copy2(path, out)
 
 
+def _generated_header(source: str) -> str:
+    return f"// Generated from {source}. Do not edit.\n\n"
+
+
+def _write_dto_sources(node_repo: Path, crate_dir: Path) -> None:
+    src_dir = crate_dir / "src"
+    legacy_dto = node_repo / "src" / "http" / "dto.rs"
+    module_dto = node_repo / "src" / "http" / "dto"
+
+    if legacy_dto.exists():
+        _write_text(
+            src_dir / "dto.rs",
+            _generated_header("rgb-ldk-node/src/http/dto.rs") + legacy_dto.read_text(encoding="utf-8") + "\n",
+        )
+        return
+
+    if not module_dto.exists():
+        raise RuntimeError(f"missing node DTO source: {legacy_dto} or {module_dto}")
+
+    for path in module_dto.rglob("*.rs"):
+        rel = path.relative_to(module_dto)
+        out = src_dir / "dto" / rel
+        _write_text(
+            out,
+            _generated_header(f"rgb-ldk-node/src/http/dto/{rel.as_posix()}")
+            + path.read_text(encoding="utf-8")
+            + "\n",
+        )
+
+
 def _sanitize_repo_reference(value: str) -> str:
     ssh_match = re.match(r"^git@[^:]+:([^/]+)/(.+?)(?:\.git)?$", value)
     if ssh_match:
@@ -241,7 +271,6 @@ def export_artifacts(node_repo: Path, out_dir: Path) -> None:
     openapi = json.loads(exported_openapi.read_text(encoding="utf-8"))
     _write_text(out_dir / "generated" / "spec" / "endpoints.md", _render_endpoints_md(openapi))
 
-    dto_src = (node_repo / "src" / "http" / "dto.rs").read_text(encoding="utf-8")
     crate_dir = out_dir / "crates" / "rgbldk_http_dto"
     _write_text(
         crate_dir / "Cargo.toml",
@@ -257,12 +286,13 @@ def export_artifacts(node_repo: Path, out_dir: Path) -> None:
                 "[dependencies]",
                 'serde = { version = "1", features = ["derive"] }',
                 'serde_json = "1"',
+                'utoipa = "5.4.0"',
                 "",
             ]
         ),
     )
     _write_text(crate_dir / "src" / "lib.rs", "//! Generated. Do not edit.\n\npub mod dto;\npub use dto::*;\n")
-    _write_text(crate_dir / "src" / "dto.rs", "// Generated from rgb-ldk-node/src/http/dto.rs. Do not edit.\n\n" + dto_src + "\n")
+    _write_dto_sources(node_repo, crate_dir)
 
 
 def sync_to_api_repo(node_repo: Path, api_repo: Path, git_commit: bool, git_commit_message: str) -> None:

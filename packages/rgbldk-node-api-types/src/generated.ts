@@ -187,11 +187,7 @@ export interface ControlLockRequest {
 }
 
 export interface ControlStatusDto {
-  ok: boolean;
   locked: boolean;
-  running: boolean;
-  lockable?: boolean;
-  checks?: HealthCheckDto[];
 }
 
 export interface ControlUnlockRequest {
@@ -229,10 +225,7 @@ export interface ListeningAddressesResponse {
 }
 
 export interface LockedStatusDto {
-  ok: boolean;
   locked: boolean;
-  running: boolean;
-  checks?: HealthCheckDto[];
 }
 
 export interface NodeIdResponse {
@@ -297,6 +290,12 @@ export interface PeerDetailsDto {
 
 export interface PeerDisconnectRequest {
   node_id: string;
+}
+
+export interface RgbAllocationDto {
+  contract_id: string;
+  amount: U64String;
+  layer: string;
 }
 
 export interface RgbBalancesDto {
@@ -373,6 +372,18 @@ export interface RgbContractsIssueResponse {
 
 export interface RgbContractsResponse {
   contracts: RgbContractDto[];
+}
+
+export interface RgbDerivedDescriptorDto {
+  fingerprint: string;
+  derivation_path: string;
+  xpub: string;
+  descriptor: string;
+}
+
+export interface RgbDescriptorResponse {
+  descriptor: string;
+  derived_descriptors?: RgbDerivedDescriptorDto[];
 }
 
 export interface RgbInvalidIssuerDto {
@@ -531,9 +542,36 @@ export interface RgbPaymentContextDto {
   is_swap: boolean;
 }
 
+export interface RgbSignMessageRequest {
+  message: string;
+  algorithm?: RgbSignMessageAlgorithmDto;
+  compact?: boolean;
+  encoding?: RgbSignMessageEncodingDto;
+}
+
+export interface RgbSignMessageResponse {
+  message: string;
+  algorithm: string;
+  signature: string;
+  encoding?: string;
+  compact?: boolean;
+  pubkey: string;
+  derivation_path: string;
+  digest_hex?: string;
+}
+
 export interface RgbUtxoAssetAllocationDto {
   contract_id: string;
   amount: U64String;
+}
+
+export interface RgbUtxoDto {
+  outpoint: string;
+  value_sats: U64String;
+  confirmed_height?: number;
+  rgb_allocations: RgbAllocationDto[];
+  has_mixed_asset_allocations: boolean;
+  spend_roles: string[];
 }
 
 export interface RgbUtxoSummaryDto {
@@ -566,7 +604,7 @@ export interface RgbUtxosReserveResponse {
 }
 
 export interface RgbUtxosResponse {
-  utxos: string[];
+  utxos: RgbUtxoDto[];
 }
 
 export interface RgbUtxosSummaryResponse {
@@ -635,3 +673,7 @@ export type MainStatusResponse =
   | StatusDto
   | LockedStatusDto
 ;
+
+export type RgbSignMessageAlgorithmDto = "bitcoin_signed_message" | "ecdsa";
+
+export type RgbSignMessageEncodingDto = "hex" | "base64";

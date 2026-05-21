@@ -276,6 +276,12 @@
 * **Request Body:** `RgbContractsIssueRequest`
 * **Response (200):** `RgbContractsIssueResponse`
 
+### GET `/api/v1/rgb/descriptor`
+
+* **Summary:** Get RGB wallet descriptor
+* **Description:** Returns the public RGB wallet root descriptor plus derived public descriptors used by signing/address workflows.
+* **Response (200):** `RgbDescriptorResponse`
+
 ### POST `/api/v1/rgb/ln/invoice/create`
 
 * **Summary:** Create RGB Lightning invoice
@@ -343,6 +349,13 @@
 * **Description:** Builds and broadcasts an RGB on-chain payment transaction for an invoice.
 * **Request Body:** `RgbOnchainSendRequest`
 * **Response (200):** `RgbOnchainSendResponse`
+
+### POST `/api/v1/rgb/sign_message`
+
+* **Summary:** Sign message with RGB wallet key
+* **Description:** Signs an arbitrary message using the RGB wallet descriptor key. `bitcoin_signed_message` uses the request `message` string directly. `ecdsa` interprets the request `message` as bytes encoded with the requested `encoding`, then signs the SHA-256 digest of those bytes. The response `signature` uses the same `encoding`.
+* **Request Body:** `RgbSignMessageRequest`
+* **Response (200):** `RgbSignMessageResponse`
 
 ### POST `/api/v1/rgb/sync`
 
