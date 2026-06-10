@@ -1,8 +1,9 @@
 // Generated from rgb-ldk-node/src/http/dto/core.rs. Do not edit.
 
-use super::*;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+
+use super::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Bolt11DecodeRequest {
@@ -182,6 +183,8 @@ pub enum EventDto {
 	},
 	PaymentFailed {
 		payment_id: Option<String>,
+		#[serde(default, skip_serializing_if = "Option::is_none")]
+		reason: Option<String>,
 	},
 	PaymentReceived {
 		payment_id: Option<String>,
@@ -206,6 +209,19 @@ pub enum EventDto {
 		counterparty_node_id: Option<String>,
 		#[serde(skip_serializing_if = "Option::is_none")]
 		reason: Option<String>,
+	},
+	SplicePending {
+		channel_id: String,
+		user_channel_id: String,
+		counterparty_node_id: String,
+		new_funding_txo: OutPointDto,
+	},
+	SpliceFailed {
+		channel_id: String,
+		user_channel_id: String,
+		counterparty_node_id: String,
+		#[serde(skip_serializing_if = "Option::is_none")]
+		abandoned_funding_txo: Option<OutPointDto>,
 	},
 	Other {
 		kind: String,

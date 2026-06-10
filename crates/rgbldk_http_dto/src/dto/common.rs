@@ -6,9 +6,10 @@
 
 #![allow(missing_docs)]
 
-use super::*;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+
+use super::*;
 
 /// A single readiness/health sub-check.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -52,7 +53,73 @@ pub struct ListeningAddressesResponse {
 /// Response containing a newly-generated on-chain address.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct WalletNewAddressResponse {
+	/// Receive/change address from the ordinary BTC wallet account.
+	///
+	/// Use this for plain BTC funding, `/wallet/utxos` change outputs, and the explicit
+	/// `change_address` field on RGB UTXO-management endpoints. Do not use it for RGB-owned
+	/// outputs; use `/rgb/new_address` for those.
 	pub address: String,
+}
+
+/// Response containing the ordinary L1 wallet UTXO view.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct WalletUtxosResponse {
+	/// Ordinary BTC-account outpoints known to txoscope.
+	///
+	/// RGB wallet outputs are intentionally excluded from this view.
+	pub utxos: Vec<WalletUtxoDto>,
+}
+
+/// Ordinary L1 wallet UTXO with confirmation and lock metadata.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct WalletUtxoDto {
+	/// Outpoint formatted as `txid:vout`.
+	pub outpoint: String,
+	/// BTC value of the output in sats.
+	#[serde(with = "serde_u64_decimal_string")]
+	pub value_sats: u64,
+	/// Confirmation status from the node's wallet/chain view.
+	pub confirmation: WalletUtxoConfirmationDto,
+	/// txoscope lock state for this ordinary BTC-wallet outpoint.
+	pub lock: WalletUtxoLockDto,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct WalletUtxoConfirmationDto {
+	/// One of: confirmed | mempool.
+	pub status: WalletUtxoConfirmationStatusDto,
+	/// Confirmation block height, if known.
+	#[serde(default)]
+	pub height: Option<u32>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum WalletUtxoConfirmationStatusDto {
+	Confirmed,
+	Mempool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct WalletUtxoLockDto {
+	/// Whether this outpoint is currently unavailable for new flows.
+	pub locked: bool,
+	/// One of: none | manual_reservation | operation.
+	pub kind: WalletUtxoLockKindDto,
+	/// Reservation or selected operation id, if locked.
+	#[serde(default)]
+	pub operation_id: Option<String>,
+	/// Lock expiry in unix seconds, if txoscope exposes one.
+	#[serde(default, with = "serde_opt_u64_decimal_string")]
+	pub expires_at_unix_secs: Option<u64>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum WalletUtxoLockKindDto {
+	None,
+	ManualReservation,
+	Operation,
 }
 
 /// Node status response.

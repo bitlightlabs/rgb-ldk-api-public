@@ -6,13 +6,20 @@
 
 #![allow(missing_docs)]
 
+mod async_payments;
 mod common;
 mod core;
+mod network_graph;
 mod rgb;
+mod splice;
 
-pub use common::*;
 pub use core::*;
+
+pub use async_payments::*;
+pub use common::*;
+pub use network_graph::*;
 pub use rgb::*;
+pub use splice::*;
 
 mod serde_u64_decimal_string {
 	use serde::de::Error;

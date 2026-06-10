@@ -5,7 +5,7 @@
 ### GET `/api/v1/balances`
 
 * **Summary:** List balances
-* **Description:** Returns the aggregated BTC and RGB balances tracked by the node.
+* **Description:** Returns the aggregated BTC and RGB balances currently tracked by the node. For the freshest wallet/runtime view, callers typically run `POST /wallet/sync` and `POST /rgb/sync` first.
 * **Response (200):** `BalancesDto`
 
 ### POST `/api/v1/bolt11/claim_for_hash`
@@ -142,6 +142,20 @@
 * **Request Body:** `OpenChannelRequest`
 * **Response (200):** `OpenChannelResponse`
 
+### POST `/api/v1/channel/splice_in`
+
+* **Summary:** Splice in funds (experimental)
+* **Description:** Adds additional funds from the on-chain wallet into an existing channel without closing it. Pure BTC channels only — RGB asset channels are not yet supported.
+* **Request Body:** `SpliceInRequest`
+* **Response (200):** `OkResponse`
+
+### POST `/api/v1/channel/splice_out`
+
+* **Summary:** Splice out funds (experimental)
+* **Description:** Withdraws funds from an existing channel to an on-chain address without closing it. Pure BTC channels only — RGB asset channels are not yet supported.
+* **Request Body:** `SpliceOutRequest`
+* **Response (200):** `OkResponse`
+
 ### GET `/api/v1/channels`
 
 * **Summary:** List channels
@@ -172,11 +186,59 @@
 * **Description:** Returns the list of socket addresses currently advertised by the node.
 * **Response (200):** `ListeningAddressesResponse`
 
+### GET `/api/v1/network_graph/channel/{scid}`
+
+* **Summary:** Get info for a channel by short channel ID
+* **Response (200):** `NetworkGraphChannelInfoResponse`
+* **Response (400):** Invalid scid
+* **Response (404):** Channel not found in graph
+
+### GET `/api/v1/network_graph/channels`
+
+* **Summary:** List all short channel IDs in the network graph
+* **Response (200):** `NetworkGraphChannelsResponse`
+
+### GET `/api/v1/network_graph/node/{node_id_hex}`
+
+* **Summary:** Get info for a node by hex node_id
+* **Response (200):** `NetworkGraphNodeInfoResponse`
+* **Response (400):** Invalid node_id_hex
+* **Response (404):** Node not found in graph
+
+### GET `/api/v1/network_graph/nodes`
+
+* **Summary:** List all node IDs in the network graph
+* **Response (200):** `NetworkGraphNodesResponse`
+
 ### GET `/api/v1/node_id`
 
 * **Summary:** Node public key
 * **Description:** Returns the node's public key in hex format.
 * **Response (200):** `NodeIdResponse`
+
+### POST `/api/v1/payment/bolt12/async/blinded_paths_for_recipient`
+
+* **Summary:** Compute blinded paths for an async recipient (experimental)
+* **Description:** Returns BlindedMessagePaths for an async recipient identified by `recipient_id_hex`. Requires the node to be running in async-payments Server role.
+* **Request Body:** `AsyncBlindedPathsRequest`
+* **Response (200):** `AsyncBlindedPathsResponse`
+* **Response (400):** Invalid recipient_id_hex or other failure
+* **Response (503):** Node is not in async-payments Server role
+
+### POST `/api/v1/payment/bolt12/async/receive_offer`
+
+* **Summary:** Get an async-payment offer (experimental)
+* **Description:** Returns a BOLT-12 offer that a static invoice server can serve invoices for on this node's behalf when offline. Available on any node; the offer is only produced after `set_static_invoice_server_paths` has been called and the static-invoice handshake completes.
+* **Response (200):** `AsyncReceiveOfferResponse`
+* **Response (400):** Offer not yet available (handshake incomplete)
+
+### POST `/api/v1/payment/bolt12/async/set_static_invoice_server_paths`
+
+* **Summary:** Configure paths to a static-invoice server (experimental)
+* **Description:** Sets the BlindedMessagePaths used to interactively build offers with a static-invoice server. `paths_hex` is the Writeable serialization of `Vec<BlindedMessagePath>`, hex-encoded. Available on any node.
+* **Request Body:** `AsyncSetStaticInvoiceServerPathsRequest`
+* **Response (200):** `OkResponse`
+* **Response (400):** Invalid hex or path encoding
 
 ### GET `/api/v1/payment/{payment_id}`
 
@@ -234,119 +296,132 @@
 ### GET `/api/v1/rgb/consignments/{consignment_key}`
 
 * **Summary:** Download consignment
-* **Description:** Returns a stored consignment by key. The response body is binary and can be encoded as raw, gzip, or zip.
+* **Description:** Returns a previously stored consignment by key. This is the follow-up download endpoint for `consignment_key` values returned by RGB export/send operations. The response body is binary and can be encoded as raw, gzip, or zip.
 * **Response (200):** `binary`
 
 ### GET `/api/v1/rgb/contract/{contract_id}/balance`
 
 * **Summary:** Get RGB contract balance
-* **Description:** Returns the aggregated L1 balance view for a single RGB contract.
+* **Description:** Returns the aggregated L1 balance view for a single RGB contract. For the freshest view after transfers or confirmations, call `POST /rgb/sync` first.
 * **Response (200):** `RgbContractBalanceResponse`
 
 ### GET `/api/v1/rgb/contract/{contract_id}/known`
 
 * **Summary:** Check RGB contract known
-* **Description:** Returns whether the node currently knows a given RGB contract id.
+* **Description:** Returns whether the node currently knows a given RGB contract id. This is a lightweight public probe endpoint useful before attempting imports, transfers, or UI contract lookups.
 * **Response (200):** `RgbContractKnownResponse`
 
 ### GET `/api/v1/rgb/contracts`
 
 * **Summary:** List RGB contracts
-* **Description:** Returns RGB contracts known to the node together with best-effort metadata.
+* **Description:** Returns RGB contracts currently known to the local RGB runtime/stockpile together with best-effort metadata. This is the catalog view to inspect after imports, issuance, or runtime sync.
 * **Response (200):** `RgbContractsResponse`
 
 ### POST `/api/v1/rgb/contracts/export`
 
 * **Summary:** Export RGB contract
-* **Description:** Exports a contract consignment. By default it returns JSON with a consignment key; when `download=true` it returns the encoded consignment bytes directly.
+* **Description:** Exports a contract consignment for transfer or archival. By default it returns JSON containing a stored `consignment_key`; when `download=true` it streams the encoded bytes directly so they can be forwarded or saved immediately.
 * **Request Body:** `RgbContractsExportRequest`
 * **Response (200):** `RgbContractsExportResponse`
 
 ### POST `/api/v1/rgb/contracts/import`
 
 * **Summary:** Import RGB contract
-* **Description:** Imports a contract consignment from the raw request body. The body may be raw, gzip, or zip depending on the `format` query parameter.
+* **Description:** Imports a contract consignment from the raw request body. Use this with bytes produced by `/rgb/contracts/export?download=true` or `/rgb/consignments/{consignment_key}`. The body may be raw, gzip, or zip depending on the `format` query parameter.
 * **Request Body:** `binary`
 * **Response (200):** `RgbContractsImportResponse`
 
 ### POST `/api/v1/rgb/contracts/issue`
 
 * **Summary:** Issue RGB contract
-* **Description:** Issues a new RGB contract using an imported issuer and an RGB wallet UTXO.
+* **Description:** Issues a new RGB contract using an imported issuer plus an RGB-wallet UTXO. Typical flow: `POST /rgb/issuers/import` -> fund the RGB wallet -> `POST /rgb/sync` -> `POST /rgb/contracts/issue`. If `utxo` is omitted, the node auto-selects a suitable RGB-wallet outpoint.
 * **Request Body:** `RgbContractsIssueRequest`
 * **Response (200):** `RgbContractsIssueResponse`
 
 ### GET `/api/v1/rgb/descriptor`
 
 * **Summary:** Get RGB wallet descriptor
-* **Description:** Returns the public RGB wallet root descriptor plus derived public descriptors used by signing/address workflows.
+* **Description:** Returns the public RGB wallet root descriptor plus derived public descriptors used by address/signing workflows. This is primarily for audits, interoperability, or descriptor inspection; it does not spend funds or change wallet state.
 * **Response (200):** `RgbDescriptorResponse`
+
+### GET `/api/v1/rgb/issuers`
+
+* **Summary:** List RGB issuers
+* **Description:** Lists issuer files currently present in the local issuer registry. These names are used by `POST /rgb/contracts/issue`. Corrupt or unloadable issuer files are returned separately in `invalid_issuers` so callers can surface cleanup actions.
+* **Response (200):** `RgbIssuersResponse`
+
+### POST `/api/v1/rgb/issuers/import`
+
+* **Summary:** Import RGB issuer
+* **Description:** Imports an issuer archive into the local issuer registry. Typical flow before contract issuance: `POST /rgb/issuers/import` -> `POST /rgb/contracts/issue`. The raw request body may be a raw `.issuer` file or a gzip/zip archive carrying one issuer entry, selected via the `format` query parameter.
+* **Request Body:** `binary`
+* **Response (200):** `RgbIssuersImportResponse`
 
 ### POST `/api/v1/rgb/ln/invoice/create`
 
 * **Summary:** Create RGB Lightning invoice
-* **Description:** Creates an RGB-aware Lightning invoice using a contract id and asset amount.
+* **Description:** Creates an RGB-aware Lightning invoice using a contract id, asset amount, and BTC carrier amount. The invoice embeds both the RGB asset data and the BTC carrier value required to keep the RGB state spendable on Lightning.
 * **Request Body:** `RgbLnInvoiceCreateRequest`
 * **Response (200):** `RgbLnInvoiceResponse`
 
 ### POST `/api/v1/rgb/ln/invoice/create_for_hash`
 
 * **Summary:** Create RGB hold invoice
-* **Description:** Creates an RGB-aware Lightning invoice bound to an explicit payment hash.
+* **Description:** Creates an RGB-aware hold invoice bound to an explicit payment hash. Use this when the caller must control the payment hash while still embedding RGB asset data and the BTC carrier amount.
 * **Request Body:** `RgbLnInvoiceCreateForHashRequest`
 * **Response (200):** `RgbLnInvoiceResponse`
 
 ### POST `/api/v1/rgb/ln/invoice/decode`
 
 * **Summary:** Decode RGB Lightning invoice
-* **Description:** Decodes an RGB-aware Lightning invoice and returns both carrier and asset fields.
+* **Description:** Decodes an RGB-aware Lightning invoice and returns both BTC carrier fields and embedded RGB asset fields. Use this before `POST /rgb/ln/pay` when the caller needs to know whether the invoice already carries RGB metadata or whether explicit contract/asset fields must be supplied.
 * **Request Body:** `RgbLnInvoiceDecodeRequest`
 * **Response (200):** `RgbLnInvoiceDecodeResponse`
 
 ### POST `/api/v1/rgb/ln/pay`
 
 * **Summary:** Pay RGB Lightning invoice
-* **Description:** Pays an RGB Lightning invoice, optionally accepting explicit contract and asset values when the invoice does not carry them.
+* **Description:** Pays an RGB Lightning invoice. When the invoice already embeds RGB fields, the request can contain just the invoice. When it does not, callers must also supply `contract_id` and `asset_amount`. The BTC carrier amount inside the invoice must still satisfy the RGB minimum carrier requirement.
 * **Request Body:** `RgbLnPayRequest`
 * **Response (200):** `SendResponse`
 
 ### POST `/api/v1/rgb/new_address`
 
 * **Summary:** New RGB address
-* **Description:** Generates a new RGB wallet receive address.
+* **Description:** Generates a new address owned by the dedicated RGB wallet descriptor. Use this for `/rgb/utxos/fund`, `/rgb/utxos/top_up`, RGB invoice beneficiaries, and other outputs that should later appear in `/rgb/utxos` after `POST /rgb/sync`. Do not use it for ordinary BTC change; use `POST /wallet/new_address` for that.
 * **Response (200):** `RgbNewAddressResponse`
 
 ### POST `/api/v1/rgb/onchain/invoice/create`
 
 * **Summary:** Create RGB on-chain invoice
-* **Description:** Creates an RGB on-chain invoice using either witness-out or blinded beneficiary mode.
+* **Description:** Creates an RGB on-chain invoice using either witness-out or blinded beneficiary mode. Set `use_witness_utxo=true` when you want an explicit witness-output beneficiary in the invoice. Set `use_witness_utxo=false` for blinded invoices; if `blinding_utxo` is omitted in that mode, the node auto-selects an available RGB-wallet outpoint, so callers should usually run `POST /rgb/sync` first.
 * **Request Body:** `RgbOnchainInvoiceCreateRequest`
 * **Response (200):** `RgbOnchainInvoiceResponse`
 
 ### POST `/api/v1/rgb/onchain/invoice/decode`
 
 * **Summary:** Decode RGB on-chain invoice
-* **Description:** Parses an RGB on-chain invoice and returns beneficiary and amount details.
+* **Description:** Parses an RGB on-chain invoice and returns beneficiary, amount, and expiry details. Use this before send/receive flows when a caller needs to inspect whether the invoice uses witness-out or blinded beneficiary mode.
 * **Request Body:** `RgbOnchainInvoiceDecodeRequest`
 * **Response (200):** `RgbOnchainInvoiceDecodeResponse`
 
 ### GET `/api/v1/rgb/onchain/payments`
 
 * **Summary:** List RGB on-chain payments
-* **Description:** Returns RGB on-chain payment history, optionally filtered by contract id.
+* **Description:** Returns RGB on-chain payment history, optionally filtered by contract id. This is the lifecycle log for invoices, sends, receives, and associated consignment keys/download paths.
 * **Response (200):** `RgbOnchainPaymentsResponse`
 
 ### POST `/api/v1/rgb/onchain/receive`
 
 * **Summary:** Receive RGB on-chain payment
-* **Description:** Accepts an RGB on-chain consignment. The request can be either JSON metadata or raw/gzip/zip binary consignment bytes. Binary uploads require `payment_id` in the query string.
+* **Description:** Accepts an RGB on-chain consignment into the local wallet. JSON mode is best when the caller already has a `consignment_key` plus either `invoice` or `payment_id`. Binary mode is for raw/gzip/zip consignment uploads and requires `payment_id` in the query string so the node can map the upload to an existing payment record. When the invoice was created elsewhere, prefer JSON mode and pass the full invoice string.
 * **Request Body:** `RgbOnchainReceiveRequest`
 * **Response (200):** `RgbOnchainReceiveResponse`
 
 ### POST `/api/v1/rgb/onchain/send`
 
 * **Summary:** Send RGB on-chain payment
-* **Description:** Builds and broadcasts an RGB on-chain payment transaction for an invoice.
+* **Description:** Builds and broadcasts an RGB on-chain payment transaction for an invoice. Use this for contract-bearing RGB transfers, not for empty RGB-UTXO lifecycle management (`/rgb/utxos/fund`, `/rgb/utxos/top_up`, `/rgb/utxos/sweep`). The response returns a `consignment_key`; receivers or follow-up tooling typically need that consignment to complete the transfer.
 * **Request Body:** `RgbOnchainSendRequest`
 * **Response (200):** `RgbOnchainSendResponse`
 
@@ -360,34 +435,55 @@
 ### POST `/api/v1/rgb/sync`
 
 * **Summary:** Sync RGB runtime
-* **Description:** Synchronizes the RGB runtime state with the configured chain data and local wallet.
+* **Description:** Synchronizes the RGB runtime/stockpile with the configured chain data and then refreshes the node's ordinary wallet view without triggering a second RGB refresh. Call this after funding the RGB wallet, importing or issuing contracts, broadcasting RGB on-chain operations, or when confirmations change and you want `/rgb/utxos`, `/rgb/contracts`, and RGB balances to reflect the latest state.
 * **Response (200):** `OkResponse`
 
 ### GET `/api/v1/rgb/utxos`
 
 * **Summary:** List RGB UTXOs
-* **Description:** Returns the RGB wallet outpoints known to the node.
+* **Description:** Returns the canonical RGB spend-domain outpoint view, including RGB allocations, semantic spend roles, and txoscope-backed lock metadata. Newly created or newly confirmed RGB outputs usually require `POST /rgb/sync` before they appear here. By default this uses a fast cached view; pass `refresh=true` to reconcile txoscope state and refresh confirmation heights for already-known RGB outpoints.
 * **Response (200):** `RgbUtxosResponse`
+
+### POST `/api/v1/rgb/utxos/fund`
+
+* **Summary:** Fund RGB UTXOs
+* **Description:** Low-level, stateless primitive that converts exact ordinary BTC-wallet inputs into one or more empty RGB-wallet outputs. Typical flow: `POST /wallet/sync` -> `GET /wallet/utxos` (pick exact inputs) -> `POST /rgb/new_address` (one per RGB output) -> `POST /wallet/new_address` (change) -> `POST /rgb/utxos/fund` -> `POST /rgb/sync`. The handler does not auto-select inputs or change outputs.
+* **Request Body:** `RgbUtxosFundRequest`
+* **Response (200):** `RgbUtxosFundResponse`
 
 ### POST `/api/v1/rgb/utxos/release`
 
 * **Summary:** Release RGB UTXO reservation
-* **Description:** Releases an RGB UTXO reservation by reservation id or outpoint.
+* **Description:** Clears a manual reservation previously created by `POST /rgb/utxos/reserve`. Prefer releasing by `reservation_id`; `outpoint` is a convenience fallback when the id is unavailable.
 * **Request Body:** `RgbUtxosReleaseRequest`
 * **Response (200):** `RgbUtxosReleaseResponse`
 
 ### POST `/api/v1/rgb/utxos/reserve`
 
 * **Summary:** Reserve RGB UTXO
-* **Description:** Reserves an RGB wallet outpoint for temporary exclusive use.
+* **Description:** Temporarily marks an RGB-wallet outpoint unavailable for other flows. Use this around multi-step caller-driven sequences when you first select an outpoint from `GET /rgb/utxos` and need it to stay stable until a later operation. If `outpoint` is omitted, the node auto-selects one available RGB-wallet UTXO.
 * **Request Body:** `RgbUtxosReserveRequest`
 * **Response (200):** `RgbUtxosReserveResponse`
 
 ### GET `/api/v1/rgb/utxos/summary`
 
 * **Summary:** Summarize RGB UTXOs
-* **Description:** Returns RGB wallet UTXOs with BTC value, reservation state, and per-contract allocations.
+* **Description:** Deprecated compatibility projection. Use `GET /rgb/utxos` for the canonical RGB UTXO view with allocations, spend roles, and lock metadata. By default this uses a fast cached view; pass `refresh=true` to reconcile txoscope state and refresh confirmation heights for already-known RGB outpoints.
 * **Response (200):** `RgbUtxosSummaryResponse`
+
+### POST `/api/v1/rgb/utxos/sweep`
+
+* **Summary:** Sweep empty RGB UTXO
+* **Description:** Low-level primitive that spends one empty, confirmed, unlocked RGB-wallet output back to an ordinary BTC-wallet address. Use this only for RGB outpoints with no allocations; otherwise use normal RGB payment flows or `/rgb/utxos/top_up`. Typical flow: `POST /rgb/sync` -> `GET /rgb/utxos` -> `POST /wallet/new_address` -> `POST /rgb/utxos/sweep`.
+* **Request Body:** `RgbUtxosSweepRequest`
+* **Response (200):** `RgbUtxosSweepResponse`
+
+### POST `/api/v1/rgb/utxos/top_up`
+
+* **Summary:** Increase RGB UTXO capacity
+* **Description:** Low-level primitive that replaces one confirmed, unlocked RGB UTXO with a larger RGB-wallet output while preserving its anchored single-contract RGB state. Typical flow: `POST /rgb/sync` -> `GET /rgb/utxos` (pick the RGB input) -> `POST /wallet/sync` + `GET /wallet/utxos` (pick extra BTC inputs) -> `POST /rgb/new_address` (replacement output) -> `POST /wallet/new_address` (change) -> `POST /rgb/utxos/top_up`. The response includes a `consignment_key` for the replacement transfer.
+* **Request Body:** `RgbUtxosTopUpRequest`
+* **Response (200):** `RgbUtxosTopUpResponse`
 
 ### POST `/api/v1/spontaneous/send`
 
@@ -411,11 +507,17 @@
 ### POST `/api/v1/wallet/new_address`
 
 * **Summary:** New on-chain address
-* **Description:** Generates a new Bitcoin on-chain receive address from the wallet.
+* **Description:** Generates a new receive/change address from the ordinary BTC wallet account. Use this for plain BTC funding, explicit change on RGB UTXO-management calls, and outputs that should later appear in `/wallet/utxos`. Do not use it for RGB-owned outputs; use `POST /rgb/new_address` for those.
 * **Response (200):** `WalletNewAddressResponse`
 
 ### POST `/api/v1/wallet/sync`
 
 * **Summary:** Sync wallet
-* **Description:** Synchronizes the wallet state with the configured chain source.
+* **Description:** Synchronizes the ordinary BTC wallet with the configured chain source and persists newly observed wallet outputs. Call this before selecting inputs from `GET /wallet/utxos`, or before expecting fresh receive/change outputs to appear in the ordinary wallet view.
 * **Response (200):** `OkResponse`
+
+### GET `/api/v1/wallet/utxos`
+
+* **Summary:** List ordinary L1 wallet UTXOs
+* **Description:** Returns only ordinary BTC-account outpoints according to txoscope classification, together with txoscope-backed lock metadata. Newly discovered wallet outputs appear here only after `POST /wallet/sync`. Pass `refresh=true` to reconcile txoscope state and refresh confirmation heights for already-known outputs; it does not discover new wallet outputs on its own.
+* **Response (200):** `WalletUtxosResponse`

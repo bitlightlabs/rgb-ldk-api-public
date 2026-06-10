@@ -1,8 +1,9 @@
 // Generated from rgb-ldk-node/src/http/dto/rgb.rs. Do not edit.
 
-use super::*;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+
+use super::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbOpenChannelRequest {
@@ -17,20 +18,31 @@ pub struct RgbOpenChannelRequest {
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbNewAddressResponse {
+	/// Address owned by the dedicated RGB wallet descriptor.
+	///
+	/// Use this for RGB wallet outputs created via `/rgb/utxos/fund`, `/rgb/utxos/top_up`, or as
+	/// RGB invoice beneficiaries. Outputs sent here appear in `/rgb/utxos` after `/rgb/sync`, not
+	/// in `/wallet/utxos`.
 	pub address: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbDerivedDescriptorDto {
+	/// BIP32 master fingerprint associated with this derived descriptor.
 	pub fingerprint: String,
+	/// BIP32 derivation path used for this derived public descriptor.
 	pub derivation_path: String,
+	/// Derived extended public key.
 	pub xpub: String,
+	/// Descriptor string that can derive the corresponding public scripts.
 	pub descriptor: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbDescriptorResponse {
+	/// Public RGB wallet root descriptor.
 	pub descriptor: String,
+	/// Derived public descriptors exposed for audits and interoperability tooling.
 	#[serde(default, skip_serializing_if = "Vec::is_empty")]
 	pub derived_descriptors: Vec<RgbDerivedDescriptorDto>,
 }
@@ -51,26 +63,41 @@ pub enum RgbSignMessageEncodingDto {
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbSignMessageRequest {
+	/// Message string to sign.
+	///
+	/// For `bitcoin_signed_message`, the server signs this UTF-8 string directly. For `ecdsa`,
+	/// this field must contain bytes encoded with the selected `encoding`.
 	pub message: String,
+	/// Signature mode. Defaults to `bitcoin_signed_message`.
 	#[serde(default)]
 	pub algorithm: Option<RgbSignMessageAlgorithmDto>,
+	/// When `algorithm=ecdsa`, request a compact ECDSA signature if supported.
 	#[serde(default)]
 	pub compact: Option<bool>,
+	/// Required when `algorithm=ecdsa`; ignored for `bitcoin_signed_message`.
 	#[serde(default)]
 	pub encoding: Option<RgbSignMessageEncodingDto>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbSignMessageResponse {
+	/// Original request message.
 	pub message: String,
+	/// Signature algorithm actually used.
 	pub algorithm: String,
+	/// Signature encoded according to `encoding` (or the Bitcoin signed-message format).
 	pub signature: String,
+	/// Encoding used for `signature`, when applicable.
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub encoding: Option<String>,
+	/// Whether the returned ECDSA signature is compact.
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub compact: Option<bool>,
+	/// Public key that produced the signature.
 	pub pubkey: String,
+	/// RGB descriptor derivation path used for signing.
 	pub derivation_path: String,
+	/// SHA-256 digest hex used by `ecdsa` mode.
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub digest_hex: Option<String>,
 }
@@ -96,23 +123,30 @@ pub struct RgbContractsResponse {
 	pub contracts: Vec<RgbContractDto>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbIssuersResponse {
+	/// Valid issuer names currently present in the local issuer registry.
 	pub issuers: Vec<String>,
+	/// Corrupt or unloadable issuer files skipped by the registry scan.
 	#[serde(default, skip_serializing_if = "Vec::is_empty")]
 	pub invalid_issuers: Vec<RgbInvalidIssuerDto>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbInvalidIssuerDto {
+	/// Issuer file base name.
 	pub name: String,
+	/// Error returned when attempting to load the issuer.
 	pub error: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbIssuersImportResponse {
+	/// Always `true` on success.
 	pub ok: bool,
+	/// Stored issuer name.
 	pub issuer_name: String,
+	/// Validation and storage checks performed during import.
 	#[serde(default)]
 	pub checks: Vec<HealthCheckDto>,
 }
@@ -123,6 +157,7 @@ pub struct RgbContractsImportResponse {
 	pub contract_id: String,
 	/// Storage key used by the RGB wallet to read the imported consignment.
 	pub consignment_key: String,
+	/// Validation and import checks performed during the request.
 	#[serde(default)]
 	pub checks: Vec<HealthCheckDto>,
 }
@@ -153,6 +188,7 @@ pub struct RgbContractsIssueResponse {
 	pub contract_id: String,
 	#[serde(with = "serde_u64_decimal_string")]
 	pub issued_supply: u64,
+	/// Validation and issuance checks performed during the request.
 	#[serde(default)]
 	pub checks: Vec<HealthCheckDto>,
 }
@@ -168,6 +204,7 @@ pub struct RgbContractsExportResponse {
 	pub contract_id: String,
 	/// Storage key used by the RGB wallet to read the exported consignment.
 	pub consignment_key: String,
+	/// Validation and export checks performed during the request.
 	#[serde(default)]
 	pub checks: Vec<HealthCheckDto>,
 }
@@ -202,7 +239,7 @@ pub struct RgbContractKnownResponse {
 pub struct RgbLnInvoiceCreateRequest {
 	/// RGB contract ID.
 	pub contract_id: String,
-	/// RGB asset amount.
+	/// RGB asset amount to request from the payer.
 	#[serde(with = "serde_u64_decimal_string")]
 	pub asset_amount: u64,
 	/// Human-readable description.
@@ -211,6 +248,8 @@ pub struct RgbLnInvoiceCreateRequest {
 	#[serde(default)]
 	pub expiry_secs: Option<u32>,
 	/// BTC carrier amount in msat embedded into the BOLT11 invoice.
+	///
+	/// This must stay above the RGB dust/carrier minimum or invoice creation will fail.
 	#[serde(with = "serde_u64_decimal_string")]
 	pub btc_carrier_amount_msat: u64,
 }
@@ -219,7 +258,7 @@ pub struct RgbLnInvoiceCreateRequest {
 pub struct RgbLnInvoiceCreateForHashRequest {
 	/// RGB contract ID.
 	pub contract_id: String,
-	/// RGB asset amount.
+	/// RGB asset amount to request from the payer.
 	#[serde(with = "serde_u64_decimal_string")]
 	pub asset_amount: u64,
 	/// Payment hash (64 hex chars) provided by caller.
@@ -230,36 +269,47 @@ pub struct RgbLnInvoiceCreateForHashRequest {
 	#[serde(default)]
 	pub expiry_secs: Option<u32>,
 	/// BTC carrier amount in msat embedded into the BOLT11 invoice.
+	///
+	/// This must stay above the RGB dust/carrier minimum or invoice creation will fail.
 	#[serde(with = "serde_u64_decimal_string")]
 	pub btc_carrier_amount_msat: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbLnInvoiceResponse {
+	/// Serialized BOLT11 invoice string.
 	pub invoice: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbLnInvoiceDecodeRequest {
+	/// Serialized BOLT11 invoice string to parse.
 	pub invoice: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbLnInvoiceDecodeResponse {
+	/// Payment hash embedded in the invoice.
 	pub payment_hash: String,
+	/// Payee node id recovered from the invoice signature.
 	pub destination: String,
+	/// BTC carrier amount, if the invoice specifies one.
 	#[serde(default, with = "serde_opt_u64_decimal_string")]
 	pub carrier_amount_msat: Option<u64>,
+	/// Invoice expiry in seconds.
 	#[serde(with = "serde_u64_decimal_string")]
 	pub expiry_secs: u64,
+	/// RGB contract id embedded in the invoice, if present.
 	#[serde(default)]
 	pub contract_id: Option<String>,
+	/// RGB asset amount embedded in the invoice, if present.
 	#[serde(default, with = "serde_opt_u64_decimal_string")]
 	pub asset_amount: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbLnPayRequest {
+	/// Serialized BOLT11 invoice string.
 	pub invoice: String,
 	/// Optional explicit contract ID for invoices that do not embed RGB fields.
 	#[serde(default)]
@@ -271,7 +321,9 @@ pub struct RgbLnPayRequest {
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbOnchainInvoiceCreateRequest {
+	/// RGB contract id to receive.
 	pub contract_id: String,
+	/// RGB amount to receive.
 	#[serde(with = "serde_u64_decimal_string")]
 	pub amount: u64,
 	/// Expiration time for the invoice in seconds.
@@ -297,6 +349,7 @@ pub struct RgbOnchainInvoiceCreateRequest {
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbOnchainInvoiceResponse {
+	/// Serialized RGB on-chain invoice string.
 	pub invoice: String,
 	/// Outpoint actually used for blinding when creating a blinded invoice (`use_witness_utxo=false`).
 	#[serde(default)]
@@ -305,36 +358,48 @@ pub struct RgbOnchainInvoiceResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbOnchainInvoiceDecodeRequest {
+	/// Serialized RGB on-chain invoice string to parse.
 	pub invoice: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbOnchainInvoiceDecodeResponse {
+	/// Contract id embedded in the invoice.
 	pub contract_id: String,
+	/// RGB amount embedded in the invoice.
 	#[serde(with = "serde_u64_decimal_string")]
 	pub amount: u64,
+	/// Beneficiary string (`wout:...` or `at:...`).
 	pub beneficiary: String,
+	/// Whether the beneficiary is witness-output based.
 	pub use_witness_utxo: bool,
+	/// Absolute expiry timestamp, if present.
 	#[serde(default, with = "serde_opt_u64_decimal_string")]
 	pub expiry_unix_secs: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbOnchainSendRequest {
+	/// RGB on-chain invoice to fulfill.
 	pub invoice: String,
+	/// Optional explicit BTC amount to provide for fee payment and carrier outputs.
 	#[serde(default, with = "serde_opt_u64_decimal_string")]
 	pub sats_for_fee_and_outputs: Option<u64>,
+	/// Positive fee rate in sat/vB.
 	pub fee_rate_sats_per_vb: f32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbOnchainSendResponse {
+	/// Broadcast Bitcoin transaction id.
 	pub txid: String,
+	/// Consignment cache key produced for the transfer.
 	pub consignment_key: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbOnchainReceiveRequest {
+	/// Stored consignment key previously returned by an RGB send/export endpoint.
 	pub consignment_key: String,
 	/// Optional invoice id (hex-encoded 32 bytes, i.e. `sha256(invoice_str)`).
 	///
@@ -352,18 +417,22 @@ pub struct RgbOnchainReceiveRequest {
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbOnchainReceiveResponse {
+	/// Contract id accepted from the consignment.
 	pub contract_id: String,
+	/// RGB amount accepted from the consignment.
 	#[serde(with = "serde_u64_decimal_string")]
 	pub amount: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbOnchainPaymentsResponse {
+	/// Recorded RGB on-chain payment entries.
 	pub payments: Vec<RgbOnchainPaymentDto>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbOnchainPaymentDto {
+	/// Stable payment id.
 	pub id: String,
 	/// Constant `onchain` (RGB L1 non-channel payment lifecycle).
 	pub kind: String,
@@ -391,10 +460,206 @@ pub struct RgbOnchainPaymentDto {
 	pub consignment_download_path: Option<String>,
 }
 
+/// Canonical RGB-wallet UTXO view.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbUtxosResponse {
-	/// RGB spend-domain UTXOs with semantic metadata.
+	/// RGB spend-domain UTXOs with semantic and lock metadata.
 	pub utxos: Vec<RgbUtxoDto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RgbUtxosFundInputDto {
+	/// Explicit ordinary BTC-wallet input to spend, formatted as `txid:vout`.
+	///
+	/// Source these from `GET /wallet/utxos` after `POST /wallet/sync`.
+	pub outpoint: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RgbUtxosFundOutputDto {
+	/// RGB wallet address returned by `/rgb/new_address`.
+	pub address: String,
+	/// BTC capacity to assign to the created RGB wallet output.
+	#[serde(with = "serde_u64_decimal_string")]
+	pub value_sats: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RgbUtxosFundRequest {
+	/// Exact ordinary BTC-wallet inputs to consume.
+	///
+	/// This endpoint does not auto-select inputs.
+	pub inputs: Vec<RgbUtxosFundInputDto>,
+	/// Exact RGB wallet outputs to create.
+	///
+	/// Generate each destination with `/rgb/new_address`.
+	pub outputs: Vec<RgbUtxosFundOutputDto>,
+	/// Explicit ordinary BTC-wallet change address returned by `/wallet/new_address`.
+	///
+	/// This must stay distinct from all RGB output scripts.
+	pub change_address: String,
+	/// Positive fee rate in sat/vB.
+	pub fee_rate_sats_per_vb: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RgbUtxosFundCreatedOutputDto {
+	/// RGB wallet address script used for the created output.
+	pub address: String,
+	#[serde(with = "serde_u64_decimal_string")]
+	pub value_sats: u64,
+	/// Output index inside the broadcast transaction.
+	pub vout: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RgbUtxosFundChangeDto {
+	/// Ordinary BTC-wallet change address.
+	pub address: String,
+	#[serde(with = "serde_u64_decimal_string")]
+	pub value_sats: u64,
+	/// Output index inside the broadcast transaction.
+	pub vout: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RgbUtxosFundResponse {
+	/// Broadcast Bitcoin transaction id.
+	pub txid: String,
+	/// Currently `broadcast` when the signed transaction has been handed to the broadcaster.
+	pub status: String,
+	/// Created RGB wallet outputs, in transaction order.
+	pub outputs: Vec<RgbUtxosFundCreatedOutputDto>,
+	/// Ordinary BTC-wallet change output, if any.
+	#[serde(default)]
+	pub change: Option<RgbUtxosFundChangeDto>,
+	/// Network fee paid by the transaction in sats.
+	#[serde(with = "serde_u64_decimal_string")]
+	pub fee_sats: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RgbUtxosSweepInputDto {
+	/// RGB wallet outpoint to spend, formatted as `txid:vout`.
+	///
+	/// Select this from `GET /rgb/utxos`.
+	pub outpoint: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RgbUtxosSweepRequest {
+	/// Empty RGB wallet outpoint to sweep.
+	pub input: RgbUtxosSweepInputDto,
+	/// Explicit ordinary BTC-wallet address returned by `/wallet/new_address`.
+	pub destination_address: String,
+	/// Positive fee rate in sat/vB.
+	pub fee_rate_sats_per_vb: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RgbUtxosSweepDestinationDto {
+	/// Ordinary BTC-wallet destination address.
+	pub address: String,
+	#[serde(with = "serde_u64_decimal_string")]
+	pub value_sats: u64,
+	/// Output index inside the broadcast transaction.
+	pub vout: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RgbUtxosSweepResponse {
+	/// Broadcast Bitcoin transaction id.
+	pub txid: String,
+	/// Currently `broadcast` when the signed transaction has been handed to the broadcaster.
+	pub status: String,
+	/// Swept RGB-wallet input.
+	pub input: RgbUtxosSweepInputDto,
+	/// Ordinary BTC-wallet destination created by the sweep.
+	pub destination: RgbUtxosSweepDestinationDto,
+	/// Network fee paid by the transaction in sats.
+	#[serde(with = "serde_u64_decimal_string")]
+	pub fee_sats: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RgbUtxosTopUpRgbInputDto {
+	/// RGB wallet outpoint to replace, formatted as `txid:vout`.
+	///
+	/// Select this from `GET /rgb/utxos`.
+	pub outpoint: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RgbUtxosTopUpL1InputDto {
+	/// Explicit ordinary BTC-wallet input to consume, formatted as `txid:vout`.
+	///
+	/// Source these from `GET /wallet/utxos` after `POST /wallet/sync`.
+	pub outpoint: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RgbUtxosTopUpRgbOutputDto {
+	/// RGB wallet address returned by `/rgb/new_address`.
+	pub address: String,
+	/// Target BTC capacity for the replacement RGB UTXO.
+	///
+	/// This must be greater than the old RGB UTXO's BTC value.
+	#[serde(with = "serde_u64_decimal_string")]
+	pub target_value_sats: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RgbUtxosTopUpRequest {
+	/// Confirmed unlocked RGB input to replace.
+	pub rgb_input: RgbUtxosTopUpRgbInputDto,
+	/// Extra ordinary BTC-wallet inputs used to enlarge the RGB output.
+	pub l1_inputs: Vec<RgbUtxosTopUpL1InputDto>,
+	/// Replacement RGB wallet output.
+	pub rgb_output: RgbUtxosTopUpRgbOutputDto,
+	/// Explicit ordinary BTC-wallet change address returned by `/wallet/new_address`.
+	pub change_address: String,
+	/// Positive fee rate in sat/vB.
+	pub fee_rate_sats_per_vb: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RgbUtxosTopUpCreatedOutputDto {
+	/// Replacement RGB wallet address.
+	pub address: String,
+	#[serde(with = "serde_u64_decimal_string")]
+	pub value_sats: u64,
+	/// Output index inside the broadcast transaction.
+	pub vout: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RgbUtxosTopUpChangeDto {
+	/// Ordinary BTC-wallet change address.
+	pub address: String,
+	#[serde(with = "serde_u64_decimal_string")]
+	pub value_sats: u64,
+	/// Output index inside the broadcast transaction.
+	pub vout: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RgbUtxosTopUpResponse {
+	/// Broadcast Bitcoin transaction id.
+	pub txid: String,
+	/// Currently `broadcast` when the signed transaction has been handed to the broadcaster.
+	pub status: String,
+	/// Replaced RGB outpoint.
+	pub old_outpoint: String,
+	/// Newly created replacement RGB output.
+	pub new_rgb_output: RgbUtxosTopUpCreatedOutputDto,
+	/// Ordinary BTC-wallet change output, if any.
+	#[serde(default)]
+	pub change: Option<RgbUtxosTopUpChangeDto>,
+	/// Network fee paid by the transaction in sats.
+	#[serde(with = "serde_u64_decimal_string")]
+	pub fee_sats: u64,
+	/// Consignment cache key produced for the replacement transfer.
+	pub consignment_key: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -437,26 +702,81 @@ pub struct RgbUtxoSummaryDto {
 pub struct RgbUtxoDto {
 	/// Outpoint formatted as `txid:vout`.
 	pub outpoint: String,
+	/// BTC value of the output in sats.
 	#[serde(with = "serde_u64_decimal_string")]
 	pub value_sats: u64,
+	/// Confirmation status from the node's wallet/chain view.
+	pub confirmation: RgbUtxoConfirmationDto,
+	/// RGB allocations and spend-role metadata anchored on this outpoint.
+	pub rgb: RgbUtxoRgbDto,
+	/// txoscope lock state for this RGB-wallet outpoint.
+	pub lock: RgbUtxoLockDto,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RgbUtxoConfirmationDto {
+	/// One of: confirmed | mempool.
+	pub status: RgbUtxoConfirmationStatusDto,
+	/// Confirmation block height, if known.
 	#[serde(default)]
-	pub confirmed_height: Option<u32>,
-	pub rgb_allocations: Vec<RgbAllocationDto>,
+	pub height: Option<u32>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum RgbUtxoConfirmationStatusDto {
+	Confirmed,
+	Mempool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RgbUtxoRgbDto {
+	/// RGB allocations grouped by contract/layer.
+	pub allocations: Vec<RgbAllocationDto>,
+	/// Whether this outpoint holds allocations from multiple contracts.
 	pub has_mixed_asset_allocations: bool,
+	/// Semantic spend roles advertised by the RGB runtime for this outpoint.
 	pub spend_roles: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbAllocationDto {
+	/// Contract id that owns this allocation.
 	pub contract_id: String,
+	/// Amount anchored on this UTXO for the given contract/layer.
 	#[serde(with = "serde_u64_decimal_string")]
 	pub amount: u64,
+	/// RGB state layer name (for example `base`, `active`, or `pending`).
 	pub layer: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RgbUtxoLockDto {
+	/// Whether this outpoint is currently unavailable for new flows.
+	pub locked: bool,
+	/// One of: none | manual_reservation | operation.
+	pub kind: RgbUtxoLockKindDto,
+	/// Reservation or selected operation id, if locked.
+	#[serde(default)]
+	pub operation_id: Option<String>,
+	/// Lock expiry in unix seconds, if txoscope exposes one.
+	#[serde(default, with = "serde_opt_u64_decimal_string")]
+	pub expires_at_unix_secs: Option<u64>,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum RgbUtxoLockKindDto {
+	None,
+	ManualReservation,
+	Operation,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbUtxosReserveRequest {
 	/// Optional explicit outpoint to reserve (`txid:vout`).
+	///
+	/// If omitted, the node auto-selects one available RGB-wallet UTXO.
 	#[serde(default)]
 	pub outpoint: Option<String>,
 	/// Optional reservation TTL in seconds (default: 300).
@@ -466,8 +786,11 @@ pub struct RgbUtxosReserveRequest {
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbUtxosReserveResponse {
+	/// Stable reservation id returned by the orchestrator.
 	pub reservation_id: String,
+	/// Reserved RGB-wallet outpoint.
 	pub outpoint: String,
+	/// Reservation expiry timestamp in unix seconds.
 	#[serde(with = "serde_u64_decimal_string")]
 	pub reserved_until_unix_secs: u64,
 }
@@ -477,13 +800,14 @@ pub struct RgbUtxosReleaseRequest {
 	/// Release by reservation id (preferred).
 	#[serde(default)]
 	pub reservation_id: Option<String>,
-	/// Release by outpoint (`txid:vout`).
+	/// Release by outpoint (`txid:vout`) when the reservation id is not available.
 	#[serde(default)]
 	pub outpoint: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbUtxosReleaseResponse {
+	/// Whether a matching reservation existed and was released.
 	pub released: bool,
 }
 

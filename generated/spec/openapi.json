@@ -11,7 +11,7 @@
       "name": "MIT OR Apache-2.0",
       "identifier": "MIT OR Apache-2.0"
     },
-    "version": "0.7.0+git"
+    "version": "0.7.0-bitlight.1"
   },
   "paths": {
     "/balances": {
@@ -20,7 +20,7 @@
           "wallet"
         ],
         "summary": "List balances",
-        "description": "Returns the aggregated BTC and RGB balances tracked by the node.",
+        "description": "Returns the aggregated BTC and RGB balances currently tracked by the node. For the freshest wallet/runtime view, callers typically run `POST /wallet/sync` and `POST /rgb/sync` first.",
         "operationId": "balances",
         "responses": {
           "200": {
@@ -747,6 +747,80 @@
         ]
       }
     },
+    "/channel/splice_in": {
+      "post": {
+        "tags": [
+          "channel"
+        ],
+        "summary": "Splice in funds (experimental)",
+        "description": "Adds additional funds from the on-chain wallet into an existing channel without closing it. Pure BTC channels only — RGB asset channels are not yet supported.",
+        "operationId": "channel_splice_in",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpliceInRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Splice-in initiated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/channel/splice_out": {
+      "post": {
+        "tags": [
+          "channel"
+        ],
+        "summary": "Splice out funds (experimental)",
+        "description": "Withdraws funds from an existing channel to an on-chain address without closing it. Pure BTC channels only — RGB asset channels are not yet supported.",
+        "operationId": "channel_splice_out",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpliceOutRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Splice-out initiated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
     "/channels": {
       "get": {
         "tags": [
@@ -880,6 +954,146 @@
         ]
       }
     },
+    "/network_graph/channel/{scid}": {
+      "get": {
+        "tags": [
+          "network_graph"
+        ],
+        "summary": "Get info for a channel by short channel ID",
+        "operationId": "network_graph_channel",
+        "parameters": [
+          {
+            "name": "scid",
+            "in": "path",
+            "description": "Short channel ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Channel info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NetworkGraphChannelInfoResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid scid"
+          },
+          "404": {
+            "description": "Channel not found in graph"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/network_graph/channels": {
+      "get": {
+        "tags": [
+          "network_graph"
+        ],
+        "summary": "List all short channel IDs in the network graph",
+        "operationId": "network_graph_channels",
+        "responses": {
+          "200": {
+            "description": "Known channel SCIDs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NetworkGraphChannelsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/network_graph/node/{node_id_hex}": {
+      "get": {
+        "tags": [
+          "network_graph"
+        ],
+        "summary": "Get info for a node by hex node_id",
+        "operationId": "network_graph_node",
+        "parameters": [
+          {
+            "name": "node_id_hex",
+            "in": "path",
+            "description": "Hex-encoded node public key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Node info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NetworkGraphNodeInfoResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid node_id_hex"
+          },
+          "404": {
+            "description": "Node not found in graph"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/network_graph/nodes": {
+      "get": {
+        "tags": [
+          "network_graph"
+        ],
+        "summary": "List all node IDs in the network graph",
+        "operationId": "network_graph_nodes",
+        "responses": {
+          "200": {
+            "description": "Known node IDs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NetworkGraphNodesResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
     "/node_id": {
       "get": {
         "tags": [
@@ -898,6 +1112,119 @@
                 }
               }
             }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/payment/bolt12/async/blinded_paths_for_recipient": {
+      "post": {
+        "tags": [
+          "async_payment"
+        ],
+        "summary": "Compute blinded paths for an async recipient (experimental)",
+        "description": "Returns BlindedMessagePaths for an async recipient identified by `recipient_id_hex`. Requires the node to be running in async-payments Server role.",
+        "operationId": "async_blinded_paths_for_recipient",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsyncBlindedPathsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Hex-encoded blinded paths",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AsyncBlindedPathsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid recipient_id_hex or other failure"
+          },
+          "503": {
+            "description": "Node is not in async-payments Server role"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/payment/bolt12/async/receive_offer": {
+      "post": {
+        "tags": [
+          "async_payment"
+        ],
+        "summary": "Get an async-payment offer (experimental)",
+        "description": "Returns a BOLT-12 offer that a static invoice server can serve invoices for on this node's behalf when offline. Available on any node; the offer is only produced after `set_static_invoice_server_paths` has been called and the static-invoice handshake completes.",
+        "operationId": "async_receive_offer",
+        "responses": {
+          "200": {
+            "description": "Async-payment offer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AsyncReceiveOfferResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Offer not yet available (handshake incomplete)"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/payment/bolt12/async/set_static_invoice_server_paths": {
+      "post": {
+        "tags": [
+          "async_payment"
+        ],
+        "summary": "Configure paths to a static-invoice server (experimental)",
+        "description": "Sets the BlindedMessagePaths used to interactively build offers with a static-invoice server. `paths_hex` is the Writeable serialization of `Vec<BlindedMessagePath>`, hex-encoded. Available on any node.",
+        "operationId": "async_set_static_invoice_server_paths",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AsyncSetStaticInvoiceServerPathsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Paths set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid hex or path encoding"
           }
         },
         "security": [
@@ -1206,7 +1533,7 @@
           "rgb-contracts"
         ],
         "summary": "Download consignment",
-        "description": "Returns a stored consignment by key. The response body is binary and can be encoded as raw, gzip, or zip.",
+        "description": "Returns a previously stored consignment by key. This is the follow-up download endpoint for `consignment_key` values returned by RGB export/send operations. The response body is binary and can be encoded as raw, gzip, or zip.",
         "operationId": "rgb_consignments_get",
         "parameters": [
           {
@@ -1249,7 +1576,7 @@
           "rgb-contracts"
         ],
         "summary": "Get RGB contract balance",
-        "description": "Returns the aggregated L1 balance view for a single RGB contract.",
+        "description": "Returns the aggregated L1 balance view for a single RGB contract. For the freshest view after transfers or confirmations, call `POST /rgb/sync` first.",
         "operationId": "rgb_contract_balance",
         "parameters": [
           {
@@ -1287,7 +1614,7 @@
           "rgb-contracts"
         ],
         "summary": "Check RGB contract known",
-        "description": "Returns whether the node currently knows a given RGB contract id.",
+        "description": "Returns whether the node currently knows a given RGB contract id. This is a lightweight public probe endpoint useful before attempting imports, transfers, or UI contract lookups.",
         "operationId": "rgb_contract_known",
         "parameters": [
           {
@@ -1320,7 +1647,7 @@
           "rgb-contracts"
         ],
         "summary": "List RGB contracts",
-        "description": "Returns RGB contracts known to the node together with best-effort metadata.",
+        "description": "Returns RGB contracts currently known to the local RGB runtime/stockpile together with best-effort metadata. This is the catalog view to inspect after imports, issuance, or runtime sync.",
         "operationId": "rgb_contracts",
         "responses": {
           "200": {
@@ -1347,7 +1674,7 @@
           "rgb-contracts"
         ],
         "summary": "Export RGB contract",
-        "description": "Exports a contract consignment. By default it returns JSON with a consignment key; when `download=true` it returns the encoded consignment bytes directly.",
+        "description": "Exports a contract consignment for transfer or archival. By default it returns JSON containing a stored `consignment_key`; when `download=true` it streams the encoded bytes directly so they can be forwarded or saved immediately.",
         "operationId": "rgb_contracts_export",
         "parameters": [
           {
@@ -1410,7 +1737,7 @@
           "rgb-contracts"
         ],
         "summary": "Import RGB contract",
-        "description": "Imports a contract consignment from the raw request body. The body may be raw, gzip, or zip depending on the `format` query parameter.",
+        "description": "Imports a contract consignment from the raw request body. Use this with bytes produced by `/rgb/contracts/export?download=true` or `/rgb/consignments/{consignment_key}`. The body may be raw, gzip, or zip depending on the `format` query parameter.",
         "operationId": "rgb_contracts_import",
         "parameters": [
           {
@@ -1469,7 +1796,7 @@
           "rgb-contracts"
         ],
         "summary": "Issue RGB contract",
-        "description": "Issues a new RGB contract using an imported issuer and an RGB wallet UTXO.",
+        "description": "Issues a new RGB contract using an imported issuer plus an RGB-wallet UTXO. Typical flow: `POST /rgb/issuers/import` -> fund the RGB wallet -> `POST /rgb/sync` -> `POST /rgb/contracts/issue`. If `utxo` is omitted, the node auto-selects a suitable RGB-wallet outpoint.",
         "operationId": "rgb_contracts_issue",
         "requestBody": {
           "content": {
@@ -1506,7 +1833,7 @@
           "rgb-wallet"
         ],
         "summary": "Get RGB wallet descriptor",
-        "description": "Returns the public RGB wallet root descriptor plus derived public descriptors used by signing/address workflows.",
+        "description": "Returns the public RGB wallet root descriptor plus derived public descriptors used by address/signing workflows. This is primarily for audits, interoperability, or descriptor inspection; it does not spend funds or change wallet state.",
         "operationId": "rgb_descriptor",
         "responses": {
           "200": {
@@ -1527,13 +1854,99 @@
         ]
       }
     },
+    "/rgb/issuers": {
+      "get": {
+        "tags": [
+          "rgb-issuers"
+        ],
+        "summary": "List RGB issuers",
+        "description": "Lists issuer files currently present in the local issuer registry. These names are used by `POST /rgb/contracts/issue`. Corrupt or unloadable issuer files are returned separately in `invalid_issuers` so callers can surface cleanup actions.",
+        "operationId": "rgb_issuers",
+        "responses": {
+          "200": {
+            "description": "Known RGB issuers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbIssuersResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/rgb/issuers/import": {
+      "post": {
+        "tags": [
+          "rgb-issuers"
+        ],
+        "summary": "Import RGB issuer",
+        "description": "Imports an issuer archive into the local issuer registry. Typical flow before contract issuance: `POST /rgb/issuers/import` -> `POST /rgb/contracts/issue`. The raw request body may be a raw `.issuer` file or a gzip/zip archive carrying one issuer entry, selected via the `format` query parameter.",
+        "operationId": "rgb_issuers_import",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "description": "Registry key / stored issuer name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "format",
+            "in": "query",
+            "description": "Upload format: auto, raw, gzip, or zip",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Issuer archive bytes",
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "RGB issuer imported",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbIssuersImportResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
     "/rgb/ln/invoice/create": {
       "post": {
         "tags": [
           "rgb-ln"
         ],
         "summary": "Create RGB Lightning invoice",
-        "description": "Creates an RGB-aware Lightning invoice using a contract id and asset amount.",
+        "description": "Creates an RGB-aware Lightning invoice using a contract id, asset amount, and BTC carrier amount. The invoice embeds both the RGB asset data and the BTC carrier value required to keep the RGB state spendable on Lightning.",
         "operationId": "rgb_ln_invoice_create",
         "requestBody": {
           "content": {
@@ -1570,7 +1983,7 @@
           "rgb-ln"
         ],
         "summary": "Create RGB hold invoice",
-        "description": "Creates an RGB-aware Lightning invoice bound to an explicit payment hash.",
+        "description": "Creates an RGB-aware hold invoice bound to an explicit payment hash. Use this when the caller must control the payment hash while still embedding RGB asset data and the BTC carrier amount.",
         "operationId": "rgb_ln_invoice_create_for_hash",
         "requestBody": {
           "content": {
@@ -1607,7 +2020,7 @@
           "rgb-ln"
         ],
         "summary": "Decode RGB Lightning invoice",
-        "description": "Decodes an RGB-aware Lightning invoice and returns both carrier and asset fields.",
+        "description": "Decodes an RGB-aware Lightning invoice and returns both BTC carrier fields and embedded RGB asset fields. Use this before `POST /rgb/ln/pay` when the caller needs to know whether the invoice already carries RGB metadata or whether explicit contract/asset fields must be supplied.",
         "operationId": "rgb_ln_invoice_decode",
         "requestBody": {
           "content": {
@@ -1644,7 +2057,7 @@
           "rgb-ln"
         ],
         "summary": "Pay RGB Lightning invoice",
-        "description": "Pays an RGB Lightning invoice, optionally accepting explicit contract and asset values when the invoice does not carry them.",
+        "description": "Pays an RGB Lightning invoice. When the invoice already embeds RGB fields, the request can contain just the invoice. When it does not, callers must also supply `contract_id` and `asset_amount`. The BTC carrier amount inside the invoice must still satisfy the RGB minimum carrier requirement.",
         "operationId": "rgb_ln_pay",
         "requestBody": {
           "content": {
@@ -1681,7 +2094,7 @@
           "rgb-wallet"
         ],
         "summary": "New RGB address",
-        "description": "Generates a new RGB wallet receive address.",
+        "description": "Generates a new address owned by the dedicated RGB wallet descriptor. Use this for `/rgb/utxos/fund`, `/rgb/utxos/top_up`, RGB invoice beneficiaries, and other outputs that should later appear in `/rgb/utxos` after `POST /rgb/sync`. Do not use it for ordinary BTC change; use `POST /wallet/new_address` for that.",
         "operationId": "rgb_new_address",
         "responses": {
           "200": {
@@ -1708,7 +2121,7 @@
           "rgb-onchain"
         ],
         "summary": "Create RGB on-chain invoice",
-        "description": "Creates an RGB on-chain invoice using either witness-out or blinded beneficiary mode.",
+        "description": "Creates an RGB on-chain invoice using either witness-out or blinded beneficiary mode. Set `use_witness_utxo=true` when you want an explicit witness-output beneficiary in the invoice. Set `use_witness_utxo=false` for blinded invoices; if `blinding_utxo` is omitted in that mode, the node auto-selects an available RGB-wallet outpoint, so callers should usually run `POST /rgb/sync` first.",
         "operationId": "rgb_onchain_invoice_create",
         "requestBody": {
           "content": {
@@ -1745,7 +2158,7 @@
           "rgb-onchain"
         ],
         "summary": "Decode RGB on-chain invoice",
-        "description": "Parses an RGB on-chain invoice and returns beneficiary and amount details.",
+        "description": "Parses an RGB on-chain invoice and returns beneficiary, amount, and expiry details. Use this before send/receive flows when a caller needs to inspect whether the invoice uses witness-out or blinded beneficiary mode.",
         "operationId": "rgb_onchain_invoice_decode",
         "requestBody": {
           "content": {
@@ -1782,7 +2195,7 @@
           "rgb-onchain"
         ],
         "summary": "List RGB on-chain payments",
-        "description": "Returns RGB on-chain payment history, optionally filtered by contract id.",
+        "description": "Returns RGB on-chain payment history, optionally filtered by contract id. This is the lifecycle log for invoices, sends, receives, and associated consignment keys/download paths.",
         "operationId": "rgb_onchain_payments",
         "parameters": [
           {
@@ -1820,7 +2233,7 @@
           "rgb-onchain"
         ],
         "summary": "Receive RGB on-chain payment",
-        "description": "Accepts an RGB on-chain consignment. The request can be either JSON metadata or raw/gzip/zip binary consignment bytes. Binary uploads require `payment_id` in the query string.",
+        "description": "Accepts an RGB on-chain consignment into the local wallet. JSON mode is best when the caller already has a `consignment_key` plus either `invoice` or `payment_id`. Binary mode is for raw/gzip/zip consignment uploads and requires `payment_id` in the query string so the node can map the upload to an existing payment record. When the invoice was created elsewhere, prefer JSON mode and pass the full invoice string.",
         "operationId": "rgb_onchain_receive",
         "parameters": [
           {
@@ -1883,7 +2296,7 @@
           "rgb-onchain"
         ],
         "summary": "Send RGB on-chain payment",
-        "description": "Builds and broadcasts an RGB on-chain payment transaction for an invoice.",
+        "description": "Builds and broadcasts an RGB on-chain payment transaction for an invoice. Use this for contract-bearing RGB transfers, not for empty RGB-UTXO lifecycle management (`/rgb/utxos/fund`, `/rgb/utxos/top_up`, `/rgb/utxos/sweep`). The response returns a `consignment_key`; receivers or follow-up tooling typically need that consignment to complete the transfer.",
         "operationId": "rgb_onchain_send",
         "requestBody": {
           "content": {
@@ -1957,7 +2370,7 @@
           "rgb-wallet"
         ],
         "summary": "Sync RGB runtime",
-        "description": "Synchronizes the RGB runtime state with the configured chain data and local wallet.",
+        "description": "Synchronizes the RGB runtime/stockpile with the configured chain data and then refreshes the node's ordinary wallet view without triggering a second RGB refresh. Call this after funding the RGB wallet, importing or issuing contracts, broadcasting RGB on-chain operations, or when confirmations change and you want `/rgb/utxos`, `/rgb/contracts`, and RGB balances to reflect the latest state.",
         "operationId": "rgb_sync",
         "responses": {
           "200": {
@@ -1984,8 +2397,19 @@
           "rgb-wallet"
         ],
         "summary": "List RGB UTXOs",
-        "description": "Returns the RGB wallet outpoints known to the node.",
+        "description": "Returns the canonical RGB spend-domain outpoint view, including RGB allocations, semantic spend roles, and txoscope-backed lock metadata. Newly created or newly confirmed RGB outputs usually require `POST /rgb/sync` before they appear here. By default this uses a fast cached view; pass `refresh=true` to reconcile txoscope state and refresh confirmation heights for already-known RGB outpoints.",
         "operationId": "rgb_utxos",
+        "parameters": [
+          {
+            "name": "refresh",
+            "in": "query",
+            "description": "When true, reconcile txoscope state and refresh chain confirmation heights before returning",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "RGB wallet UTXOs",
@@ -2005,13 +2429,50 @@
         ]
       }
     },
+    "/rgb/utxos/fund": {
+      "post": {
+        "tags": [
+          "rgb-wallet"
+        ],
+        "summary": "Fund RGB UTXOs",
+        "description": "Low-level, stateless primitive that converts exact ordinary BTC-wallet inputs into one or more empty RGB-wallet outputs. Typical flow: `POST /wallet/sync` -> `GET /wallet/utxos` (pick exact inputs) -> `POST /rgb/new_address` (one per RGB output) -> `POST /wallet/new_address` (change) -> `POST /rgb/utxos/fund` -> `POST /rgb/sync`. The handler does not auto-select inputs or change outputs.",
+        "operationId": "rgb_utxos_fund",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RgbUtxosFundRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "RGB UTXOs funded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbUtxosFundResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
     "/rgb/utxos/release": {
       "post": {
         "tags": [
           "rgb-wallet"
         ],
         "summary": "Release RGB UTXO reservation",
-        "description": "Releases an RGB UTXO reservation by reservation id or outpoint.",
+        "description": "Clears a manual reservation previously created by `POST /rgb/utxos/reserve`. Prefer releasing by `reservation_id`; `outpoint` is a convenience fallback when the id is unavailable.",
         "operationId": "rgb_utxos_release",
         "requestBody": {
           "content": {
@@ -2048,7 +2509,7 @@
           "rgb-wallet"
         ],
         "summary": "Reserve RGB UTXO",
-        "description": "Reserves an RGB wallet outpoint for temporary exclusive use.",
+        "description": "Temporarily marks an RGB-wallet outpoint unavailable for other flows. Use this around multi-step caller-driven sequences when you first select an outpoint from `GET /rgb/utxos` and need it to stay stable until a later operation. If `outpoint` is omitted, the node auto-selects one available RGB-wallet UTXO.",
         "operationId": "rgb_utxos_reserve",
         "requestBody": {
           "content": {
@@ -2085,8 +2546,19 @@
           "rgb-wallet"
         ],
         "summary": "Summarize RGB UTXOs",
-        "description": "Returns RGB wallet UTXOs with BTC value, reservation state, and per-contract allocations.",
+        "description": "Deprecated compatibility projection. Use `GET /rgb/utxos` for the canonical RGB UTXO view with allocations, spend roles, and lock metadata. By default this uses a fast cached view; pass `refresh=true` to reconcile txoscope state and refresh confirmation heights for already-known RGB outpoints.",
         "operationId": "rgb_utxos_summary",
+        "parameters": [
+          {
+            "name": "refresh",
+            "in": "query",
+            "description": "When true, reconcile txoscope state and refresh chain confirmation heights before returning",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Detailed RGB UTXO summary",
@@ -2094,6 +2566,81 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RgbUtxosSummaryResponse"
+                }
+              }
+            }
+          }
+        },
+        "deprecated": true,
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/rgb/utxos/sweep": {
+      "post": {
+        "tags": [
+          "rgb-wallet"
+        ],
+        "summary": "Sweep empty RGB UTXO",
+        "description": "Low-level primitive that spends one empty, confirmed, unlocked RGB-wallet output back to an ordinary BTC-wallet address. Use this only for RGB outpoints with no allocations; otherwise use normal RGB payment flows or `/rgb/utxos/top_up`. Typical flow: `POST /rgb/sync` -> `GET /rgb/utxos` -> `POST /wallet/new_address` -> `POST /rgb/utxos/sweep`.",
+        "operationId": "rgb_utxos_sweep",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RgbUtxosSweepRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "RGB UTXO swept",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbUtxosSweepResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/rgb/utxos/top_up": {
+      "post": {
+        "tags": [
+          "rgb-wallet"
+        ],
+        "summary": "Increase RGB UTXO capacity",
+        "description": "Low-level primitive that replaces one confirmed, unlocked RGB UTXO with a larger RGB-wallet output while preserving its anchored single-contract RGB state. Typical flow: `POST /rgb/sync` -> `GET /rgb/utxos` (pick the RGB input) -> `POST /wallet/sync` + `GET /wallet/utxos` (pick extra BTC inputs) -> `POST /rgb/new_address` (replacement output) -> `POST /wallet/new_address` (change) -> `POST /rgb/utxos/top_up`. The response includes a `consignment_key` for the replacement transfer.",
+        "operationId": "rgb_utxos_top_up",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RgbUtxosTopUpRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "RGB UTXO capacity increased",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbUtxosTopUpResponse"
                 }
               }
             }
@@ -2203,7 +2750,7 @@
           "wallet"
         ],
         "summary": "New on-chain address",
-        "description": "Generates a new Bitcoin on-chain receive address from the wallet.",
+        "description": "Generates a new receive/change address from the ordinary BTC wallet account. Use this for plain BTC funding, explicit change on RGB UTXO-management calls, and outputs that should later appear in `/wallet/utxos`. Do not use it for RGB-owned outputs; use `POST /rgb/new_address` for those.",
         "operationId": "wallet_new_address",
         "responses": {
           "200": {
@@ -2230,7 +2777,7 @@
           "wallet"
         ],
         "summary": "Sync wallet",
-        "description": "Synchronizes the wallet state with the configured chain source.",
+        "description": "Synchronizes the ordinary BTC wallet with the configured chain source and persists newly observed wallet outputs. Call this before selecting inputs from `GET /wallet/utxos`, or before expecting fresh receive/change outputs to appear in the ordinary wallet view.",
         "operationId": "wallet_sync",
         "responses": {
           "200": {
@@ -2250,10 +2797,99 @@
           }
         ]
       }
+    },
+    "/wallet/utxos": {
+      "get": {
+        "tags": [
+          "wallet"
+        ],
+        "summary": "List ordinary L1 wallet UTXOs",
+        "description": "Returns only ordinary BTC-account outpoints according to txoscope classification, together with txoscope-backed lock metadata. Newly discovered wallet outputs appear here only after `POST /wallet/sync`. Pass `refresh=true` to reconcile txoscope state and refresh confirmation heights for already-known outputs; it does not discover new wallet outputs on its own.",
+        "operationId": "wallet_utxos",
+        "parameters": [
+          {
+            "name": "refresh",
+            "in": "query",
+            "description": "When true, reconcile txoscope state and refresh chain confirmation heights before returning",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ordinary L1 wallet UTXOs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletUtxosResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
     }
   },
   "components": {
     "schemas": {
+      "AsyncBlindedPathsRequest": {
+        "type": "object",
+        "description": "Request body for `/payment/bolt12/async/blinded_paths_for_recipient`.",
+        "required": [
+          "recipient_id_hex"
+        ],
+        "properties": {
+          "recipient_id_hex": {
+            "type": "string",
+            "description": "Hex-encoded recipient identifier; opaque bytes chosen by the caller."
+          }
+        }
+      },
+      "AsyncBlindedPathsResponse": {
+        "type": "object",
+        "description": "Response of `/payment/bolt12/async/blinded_paths_for_recipient`.",
+        "required": [
+          "paths_hex"
+        ],
+        "properties": {
+          "paths_hex": {
+            "type": "string",
+            "description": "Hex-encoded `Writeable` serialization of the resulting `Vec<BlindedMessagePath>`."
+          }
+        }
+      },
+      "AsyncReceiveOfferResponse": {
+        "type": "object",
+        "description": "Response of `/payment/bolt12/async/receive_offer`.\n\n**Experimental**: BOLT-12 async payments support is experimental.",
+        "required": [
+          "offer"
+        ],
+        "properties": {
+          "offer": {
+            "type": "string",
+            "description": "The async-payment offer as a `lno1...` string."
+          }
+        }
+      },
+      "AsyncSetStaticInvoiceServerPathsRequest": {
+        "type": "object",
+        "description": "Request body for `/payment/bolt12/async/set_static_invoice_server_paths`.\n\n`paths_hex` is the hex-encoded `Writeable` serialization of `Vec<BlindedMessagePath>`,\nmatching the wire format used by the UniFFI bindings.",
+        "required": [
+          "paths_hex"
+        ],
+        "properties": {
+          "paths_hex": {
+            "type": "string"
+          }
+        }
+      },
       "BalancesDto": {
         "type": "object",
         "description": "Wallet and channel balance overview (BTC + RGB).",
@@ -2954,6 +3590,54 @@
           }
         }
       },
+      "ChannelUpdateInfoDto": {
+        "type": "object",
+        "description": "One direction's `channel_update` info.",
+        "required": [
+          "last_update",
+          "enabled",
+          "cltv_expiry_delta",
+          "htlc_minimum_msat",
+          "htlc_maximum_msat",
+          "fee_base_msat",
+          "fee_proportional_millionths"
+        ],
+        "properties": {
+          "cltv_expiry_delta": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "fee_base_msat": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "fee_proportional_millionths": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "htlc_maximum_msat": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "htlc_minimum_msat": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "last_update": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
       "CloseChannelRequest": {
         "type": "object",
         "description": "Request to close or force-close a channel.",
@@ -3033,6 +3717,12 @@
                 "type": "object",
                 "properties": {
                   "payment_id": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "reason": {
                     "type": [
                       "string",
                       "null"
@@ -3205,6 +3895,88 @@
               "data": {
                 "type": "object",
                 "required": [
+                  "channel_id",
+                  "user_channel_id",
+                  "counterparty_node_id",
+                  "new_funding_txo"
+                ],
+                "properties": {
+                  "channel_id": {
+                    "type": "string"
+                  },
+                  "counterparty_node_id": {
+                    "type": "string"
+                  },
+                  "new_funding_txo": {
+                    "$ref": "#/components/schemas/OutPointDto"
+                  },
+                  "user_channel_id": {
+                    "type": "string"
+                  }
+                }
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "SplicePending"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "data",
+              "type"
+            ],
+            "properties": {
+              "data": {
+                "type": "object",
+                "required": [
+                  "channel_id",
+                  "user_channel_id",
+                  "counterparty_node_id"
+                ],
+                "properties": {
+                  "abandoned_funding_txo": {
+                    "oneOf": [
+                      {
+                        "type": "null"
+                      },
+                      {
+                        "$ref": "#/components/schemas/OutPointDto"
+                      }
+                    ]
+                  },
+                  "channel_id": {
+                    "type": "string"
+                  },
+                  "counterparty_node_id": {
+                    "type": "string"
+                  },
+                  "user_channel_id": {
+                    "type": "string"
+                  }
+                }
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "SpliceFailed"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "data",
+              "type"
+            ],
+            "properties": {
+              "data": {
+                "type": "object",
+                "required": [
                   "kind"
                 ],
                 "properties": {
@@ -3264,6 +4036,134 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "NetworkGraphChannelInfoResponse": {
+        "type": "object",
+        "description": "Information about a channel (both directions), as observed via channel_announcement and\nchannel_update gossip messages.",
+        "required": [
+          "node_one",
+          "node_two"
+        ],
+        "properties": {
+          "capacity_sats": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "minimum": 0
+          },
+          "node_one": {
+            "type": "string"
+          },
+          "node_two": {
+            "type": "string"
+          },
+          "one_to_two": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ChannelUpdateInfoDto"
+              }
+            ]
+          },
+          "two_to_one": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ChannelUpdateInfoDto"
+              }
+            ]
+          }
+        }
+      },
+      "NetworkGraphChannelsResponse": {
+        "type": "object",
+        "description": "List of short channel IDs currently known in the network graph.",
+        "required": [
+          "channels"
+        ],
+        "properties": {
+          "channels": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          }
+        }
+      },
+      "NetworkGraphNodeInfoResponse": {
+        "type": "object",
+        "description": "Information about a node, derived from channel announcements and (optionally) a node\nannouncement.",
+        "required": [
+          "channels"
+        ],
+        "properties": {
+          "announcement_info": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/NodeAnnouncementInfoDto"
+              }
+            ]
+          },
+          "channels": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          }
+        }
+      },
+      "NetworkGraphNodesResponse": {
+        "type": "object",
+        "description": "List of node IDs (hex) currently known in the network graph.",
+        "required": [
+          "nodes"
+        ],
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "NodeAnnouncementInfoDto": {
+        "type": "object",
+        "description": "Information from a node's most recent node_announcement.",
+        "required": [
+          "last_update",
+          "alias",
+          "addresses"
+        ],
+        "properties": {
+          "addresses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "alias": {
+            "type": "string"
+          },
+          "last_update": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
           }
         }
       },
@@ -3526,13 +4426,16 @@
         "properties": {
           "amount": {
             "type": "string",
-            "pattern": "^[0-9]+$"
+            "pattern": "^[0-9]+$",
+            "description": "Amount anchored on this UTXO for the given contract/layer."
           },
           "contract_id": {
-            "type": "string"
+            "type": "string",
+            "description": "Contract id that owns this allocation."
           },
           "layer": {
-            "type": "string"
+            "type": "string",
+            "description": "RGB state layer name (for example `base`, `active`, or `pending`)."
           }
         }
       },
@@ -3719,7 +4622,8 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/HealthCheckDto"
-            }
+            },
+            "description": "Validation and export checks performed during the request."
           },
           "consignment_key": {
             "type": "string",
@@ -3745,7 +4649,8 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/HealthCheckDto"
-            }
+            },
+            "description": "Validation and import checks performed during the request."
           },
           "consignment_key": {
             "type": "string",
@@ -3817,7 +4722,8 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/HealthCheckDto"
-            }
+            },
+            "description": "Validation and issuance checks performed during the request."
           },
           "contract_id": {
             "type": "string"
@@ -3855,16 +4761,20 @@
         ],
         "properties": {
           "derivation_path": {
-            "type": "string"
+            "type": "string",
+            "description": "BIP32 derivation path used for this derived public descriptor."
           },
           "descriptor": {
-            "type": "string"
+            "type": "string",
+            "description": "Descriptor string that can derive the corresponding public scripts."
           },
           "fingerprint": {
-            "type": "string"
+            "type": "string",
+            "description": "BIP32 master fingerprint associated with this derived descriptor."
           },
           "xpub": {
-            "type": "string"
+            "type": "string",
+            "description": "Derived extended public key."
           }
         }
       },
@@ -3878,10 +4788,75 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/RgbDerivedDescriptorDto"
-            }
+            },
+            "description": "Derived public descriptors exposed for audits and interoperability tooling."
           },
           "descriptor": {
-            "type": "string"
+            "type": "string",
+            "description": "Public RGB wallet root descriptor."
+          }
+        }
+      },
+      "RgbInvalidIssuerDto": {
+        "type": "object",
+        "required": [
+          "name",
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error returned when attempting to load the issuer."
+          },
+          "name": {
+            "type": "string",
+            "description": "Issuer file base name."
+          }
+        }
+      },
+      "RgbIssuersImportResponse": {
+        "type": "object",
+        "required": [
+          "ok",
+          "issuer_name"
+        ],
+        "properties": {
+          "checks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HealthCheckDto"
+            },
+            "description": "Validation and storage checks performed during import."
+          },
+          "issuer_name": {
+            "type": "string",
+            "description": "Stored issuer name."
+          },
+          "ok": {
+            "type": "boolean",
+            "description": "Always `true` on success."
+          }
+        }
+      },
+      "RgbIssuersResponse": {
+        "type": "object",
+        "required": [
+          "issuers"
+        ],
+        "properties": {
+          "invalid_issuers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RgbInvalidIssuerDto"
+            },
+            "description": "Corrupt or unloadable issuer files skipped by the registry scan."
+          },
+          "issuers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Valid issuer names currently present in the local issuer registry."
           }
         }
       },
@@ -3971,12 +4946,12 @@
           "asset_amount": {
             "type": "string",
             "pattern": "^[0-9]+$",
-            "description": "RGB asset amount."
+            "description": "RGB asset amount to request from the payer."
           },
           "btc_carrier_amount_msat": {
             "type": "string",
             "pattern": "^[0-9]+$",
-            "description": "BTC carrier amount in msat embedded into the BOLT11 invoice."
+            "description": "BTC carrier amount in msat embedded into the BOLT11 invoice.\n\nThis must stay above the RGB dust/carrier minimum or invoice creation will fail."
           },
           "contract_id": {
             "type": "string",
@@ -4013,12 +4988,12 @@
           "asset_amount": {
             "type": "string",
             "pattern": "^[0-9]+$",
-            "description": "RGB asset amount."
+            "description": "RGB asset amount to request from the payer."
           },
           "btc_carrier_amount_msat": {
             "type": "string",
             "pattern": "^[0-9]+$",
-            "description": "BTC carrier amount in msat embedded into the BOLT11 invoice."
+            "description": "BTC carrier amount in msat embedded into the BOLT11 invoice.\n\nThis must stay above the RGB dust/carrier minimum or invoice creation will fail."
           },
           "contract_id": {
             "type": "string",
@@ -4046,7 +5021,8 @@
         ],
         "properties": {
           "invoice": {
-            "type": "string"
+            "type": "string",
+            "description": "Serialized BOLT11 invoice string to parse."
           }
         }
       },
@@ -4063,30 +5039,36 @@
               "string",
               "null"
             ],
-            "pattern": "^[0-9]+$"
+            "pattern": "^[0-9]+$",
+            "description": "RGB asset amount embedded in the invoice, if present."
           },
           "carrier_amount_msat": {
             "type": [
               "string",
               "null"
             ],
-            "pattern": "^[0-9]+$"
+            "pattern": "^[0-9]+$",
+            "description": "BTC carrier amount, if the invoice specifies one."
           },
           "contract_id": {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "RGB contract id embedded in the invoice, if present."
           },
           "destination": {
-            "type": "string"
+            "type": "string",
+            "description": "Payee node id recovered from the invoice signature."
           },
           "expiry_secs": {
             "type": "string",
-            "pattern": "^[0-9]+$"
+            "pattern": "^[0-9]+$",
+            "description": "Invoice expiry in seconds."
           },
           "payment_hash": {
-            "type": "string"
+            "type": "string",
+            "description": "Payment hash embedded in the invoice."
           }
         }
       },
@@ -4097,7 +5079,8 @@
         ],
         "properties": {
           "invoice": {
-            "type": "string"
+            "type": "string",
+            "description": "Serialized BOLT11 invoice string."
           }
         }
       },
@@ -4123,7 +5106,8 @@
             "description": "Optional explicit contract ID for invoices that do not embed RGB fields."
           },
           "invoice": {
-            "type": "string"
+            "type": "string",
+            "description": "Serialized BOLT11 invoice string."
           }
         }
       },
@@ -4134,7 +5118,8 @@
         ],
         "properties": {
           "address": {
-            "type": "string"
+            "type": "string",
+            "description": "Address owned by the dedicated RGB wallet descriptor.\n\nUse this for RGB wallet outputs created via `/rgb/utxos/fund`, `/rgb/utxos/top_up`, or as\nRGB invoice beneficiaries. Outputs sent here appear in `/rgb/utxos` after `/rgb/sync`, not\nin `/wallet/utxos`."
           }
         }
       },
@@ -4147,7 +5132,8 @@
         "properties": {
           "amount": {
             "type": "string",
-            "pattern": "^[0-9]+$"
+            "pattern": "^[0-9]+$",
+            "description": "RGB amount to receive."
           },
           "blinding_utxo": {
             "type": [
@@ -4157,7 +5143,8 @@
             "description": "Outpoint used for blinding when `use_witness_utxo=false`.\n\nIf omitted and `use_witness_utxo=false`, the node will auto-select a wallet UTXO."
           },
           "contract_id": {
-            "type": "string"
+            "type": "string",
+            "description": "RGB contract id to receive."
           },
           "expiry_secs": {
             "type": [
@@ -4190,7 +5177,8 @@
         ],
         "properties": {
           "invoice": {
-            "type": "string"
+            "type": "string",
+            "description": "Serialized RGB on-chain invoice string to parse."
           }
         }
       },
@@ -4205,23 +5193,28 @@
         "properties": {
           "amount": {
             "type": "string",
-            "pattern": "^[0-9]+$"
+            "pattern": "^[0-9]+$",
+            "description": "RGB amount embedded in the invoice."
           },
           "beneficiary": {
-            "type": "string"
+            "type": "string",
+            "description": "Beneficiary string (`wout:...` or `at:...`)."
           },
           "contract_id": {
-            "type": "string"
+            "type": "string",
+            "description": "Contract id embedded in the invoice."
           },
           "expiry_unix_secs": {
             "type": [
               "string",
               "null"
             ],
-            "pattern": "^[0-9]+$"
+            "pattern": "^[0-9]+$",
+            "description": "Absolute expiry timestamp, if present."
           },
           "use_witness_utxo": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether the beneficiary is witness-output based."
           }
         }
       },
@@ -4239,7 +5232,8 @@
             "description": "Outpoint actually used for blinding when creating a blinded invoice (`use_witness_utxo=false`)."
           },
           "invoice": {
-            "type": "string"
+            "type": "string",
+            "description": "Serialized RGB on-chain invoice string."
           }
         }
       },
@@ -4290,7 +5284,8 @@
             "pattern": "^[0-9]+$"
           },
           "id": {
-            "type": "string"
+            "type": "string",
+            "description": "Stable payment id."
           },
           "invoice": {
             "type": [
@@ -4328,7 +5323,8 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/RgbOnchainPaymentDto"
-            }
+            },
+            "description": "Recorded RGB on-chain payment entries."
           }
         }
       },
@@ -4339,7 +5335,8 @@
         ],
         "properties": {
           "consignment_key": {
-            "type": "string"
+            "type": "string",
+            "description": "Stored consignment key previously returned by an RGB send/export endpoint."
           },
           "invoice": {
             "type": [
@@ -4366,10 +5363,12 @@
         "properties": {
           "amount": {
             "type": "string",
-            "pattern": "^[0-9]+$"
+            "pattern": "^[0-9]+$",
+            "description": "RGB amount accepted from the consignment."
           },
           "contract_id": {
-            "type": "string"
+            "type": "string",
+            "description": "Contract id accepted from the consignment."
           }
         }
       },
@@ -4382,17 +5381,20 @@
         "properties": {
           "fee_rate_sats_per_vb": {
             "type": "number",
-            "format": "float"
+            "format": "float",
+            "description": "Positive fee rate in sat/vB."
           },
           "invoice": {
-            "type": "string"
+            "type": "string",
+            "description": "RGB on-chain invoice to fulfill."
           },
           "sats_for_fee_and_outputs": {
             "type": [
               "string",
               "null"
             ],
-            "pattern": "^[0-9]+$"
+            "pattern": "^[0-9]+$",
+            "description": "Optional explicit BTC amount to provide for fee payment and carrier outputs."
           }
         }
       },
@@ -4404,10 +5406,12 @@
         ],
         "properties": {
           "consignment_key": {
-            "type": "string"
+            "type": "string",
+            "description": "Consignment cache key produced for the transfer."
           },
           "txid": {
-            "type": "string"
+            "type": "string",
+            "description": "Broadcast Bitcoin transaction id."
           }
         }
       },
@@ -4489,7 +5493,8 @@
                 "type": "null"
               },
               {
-                "$ref": "#/components/schemas/RgbSignMessageAlgorithmDto"
+                "$ref": "#/components/schemas/RgbSignMessageAlgorithmDto",
+                "description": "Signature mode. Defaults to `bitcoin_signed_message`."
               }
             ]
           },
@@ -4497,7 +5502,8 @@
             "type": [
               "boolean",
               "null"
-            ]
+            ],
+            "description": "When `algorithm=ecdsa`, request a compact ECDSA signature if supported."
           },
           "encoding": {
             "oneOf": [
@@ -4505,12 +5511,14 @@
                 "type": "null"
               },
               {
-                "$ref": "#/components/schemas/RgbSignMessageEncodingDto"
+                "$ref": "#/components/schemas/RgbSignMessageEncodingDto",
+                "description": "Required when `algorithm=ecdsa`; ignored for `bitcoin_signed_message`."
               }
             ]
           },
           "message": {
-            "type": "string"
+            "type": "string",
+            "description": "Message string to sign.\n\nFor `bitcoin_signed_message`, the server signs this UTF-8 string directly. For `ecdsa`,\nthis field must contain bytes encoded with the selected `encoding`."
           }
         }
       },
@@ -4525,37 +5533,45 @@
         ],
         "properties": {
           "algorithm": {
-            "type": "string"
+            "type": "string",
+            "description": "Signature algorithm actually used."
           },
           "compact": {
             "type": [
               "boolean",
               "null"
-            ]
+            ],
+            "description": "Whether the returned ECDSA signature is compact."
           },
           "derivation_path": {
-            "type": "string"
+            "type": "string",
+            "description": "RGB descriptor derivation path used for signing."
           },
           "digest_hex": {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "SHA-256 digest hex used by `ecdsa` mode."
           },
           "encoding": {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "Encoding used for `signature`, when applicable."
           },
           "message": {
-            "type": "string"
+            "type": "string",
+            "description": "Original request message."
           },
           "pubkey": {
-            "type": "string"
+            "type": "string",
+            "description": "Public key that produced the signature."
           },
           "signature": {
-            "type": "string"
+            "type": "string",
+            "description": "Signature encoded according to `encoding` (or the Bitcoin signed-message format)."
           }
         }
       },
@@ -4577,46 +5593,132 @@
           }
         }
       },
-      "RgbUtxoDto": {
+      "RgbUtxoConfirmationDto": {
         "type": "object",
         "required": [
-          "outpoint",
-          "value_sats",
-          "rgb_allocations",
-          "has_mixed_asset_allocations",
-          "spend_roles"
+          "status"
         ],
         "properties": {
-          "confirmed_height": {
+          "height": {
             "type": [
               "integer",
               "null"
             ],
             "format": "int32",
+            "description": "Confirmation block height, if known.",
             "minimum": 0
           },
-          "has_mixed_asset_allocations": {
-            "type": "boolean"
+          "status": {
+            "$ref": "#/components/schemas/RgbUtxoConfirmationStatusDto",
+            "description": "One of: confirmed | mempool."
+          }
+        }
+      },
+      "RgbUtxoConfirmationStatusDto": {
+        "type": "string",
+        "enum": [
+          "confirmed",
+          "mempool"
+        ]
+      },
+      "RgbUtxoDto": {
+        "type": "object",
+        "required": [
+          "outpoint",
+          "value_sats",
+          "confirmation",
+          "rgb",
+          "lock"
+        ],
+        "properties": {
+          "confirmation": {
+            "$ref": "#/components/schemas/RgbUtxoConfirmationDto",
+            "description": "Confirmation status from the node's wallet/chain view."
+          },
+          "lock": {
+            "$ref": "#/components/schemas/RgbUtxoLockDto",
+            "description": "txoscope lock state for this RGB-wallet outpoint."
           },
           "outpoint": {
             "type": "string",
             "description": "Outpoint formatted as `txid:vout`."
           },
-          "rgb_allocations": {
+          "rgb": {
+            "$ref": "#/components/schemas/RgbUtxoRgbDto",
+            "description": "RGB allocations and spend-role metadata anchored on this outpoint."
+          },
+          "value_sats": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "BTC value of the output in sats."
+          }
+        }
+      },
+      "RgbUtxoLockDto": {
+        "type": "object",
+        "required": [
+          "locked",
+          "kind"
+        ],
+        "properties": {
+          "expires_at_unix_secs": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$",
+            "description": "Lock expiry in unix seconds, if txoscope exposes one."
+          },
+          "kind": {
+            "$ref": "#/components/schemas/RgbUtxoLockKindDto",
+            "description": "One of: none | manual_reservation | operation."
+          },
+          "locked": {
+            "type": "boolean",
+            "description": "Whether this outpoint is currently unavailable for new flows."
+          },
+          "operation_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Reservation or selected operation id, if locked."
+          }
+        }
+      },
+      "RgbUtxoLockKindDto": {
+        "type": "string",
+        "enum": [
+          "none",
+          "manual_reservation",
+          "operation"
+        ]
+      },
+      "RgbUtxoRgbDto": {
+        "type": "object",
+        "required": [
+          "allocations",
+          "has_mixed_asset_allocations",
+          "spend_roles"
+        ],
+        "properties": {
+          "allocations": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/RgbAllocationDto"
-            }
+            },
+            "description": "RGB allocations grouped by contract/layer."
+          },
+          "has_mixed_asset_allocations": {
+            "type": "boolean",
+            "description": "Whether this outpoint holds allocations from multiple contracts."
           },
           "spend_roles": {
             "type": "array",
             "items": {
               "type": "string"
-            }
-          },
-          "value_sats": {
-            "type": "string",
-            "pattern": "^[0-9]+$"
+            },
+            "description": "Semantic spend roles advertised by the RGB runtime for this outpoint."
           }
         }
       },
@@ -4669,6 +5771,160 @@
           }
         }
       },
+      "RgbUtxosFundChangeDto": {
+        "type": "object",
+        "required": [
+          "address",
+          "value_sats",
+          "vout"
+        ],
+        "properties": {
+          "address": {
+            "type": "string",
+            "description": "Ordinary BTC-wallet change address."
+          },
+          "value_sats": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "vout": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Output index inside the broadcast transaction.",
+            "minimum": 0
+          }
+        }
+      },
+      "RgbUtxosFundCreatedOutputDto": {
+        "type": "object",
+        "required": [
+          "address",
+          "value_sats",
+          "vout"
+        ],
+        "properties": {
+          "address": {
+            "type": "string",
+            "description": "RGB wallet address script used for the created output."
+          },
+          "value_sats": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "vout": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Output index inside the broadcast transaction.",
+            "minimum": 0
+          }
+        }
+      },
+      "RgbUtxosFundInputDto": {
+        "type": "object",
+        "required": [
+          "outpoint"
+        ],
+        "properties": {
+          "outpoint": {
+            "type": "string",
+            "description": "Explicit ordinary BTC-wallet input to spend, formatted as `txid:vout`.\n\nSource these from `GET /wallet/utxos` after `POST /wallet/sync`."
+          }
+        }
+      },
+      "RgbUtxosFundOutputDto": {
+        "type": "object",
+        "required": [
+          "address",
+          "value_sats"
+        ],
+        "properties": {
+          "address": {
+            "type": "string",
+            "description": "RGB wallet address returned by `/rgb/new_address`."
+          },
+          "value_sats": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "BTC capacity to assign to the created RGB wallet output."
+          }
+        }
+      },
+      "RgbUtxosFundRequest": {
+        "type": "object",
+        "required": [
+          "inputs",
+          "outputs",
+          "change_address",
+          "fee_rate_sats_per_vb"
+        ],
+        "properties": {
+          "change_address": {
+            "type": "string",
+            "description": "Explicit ordinary BTC-wallet change address returned by `/wallet/new_address`.\n\nThis must stay distinct from all RGB output scripts."
+          },
+          "fee_rate_sats_per_vb": {
+            "type": "number",
+            "format": "float",
+            "description": "Positive fee rate in sat/vB."
+          },
+          "inputs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RgbUtxosFundInputDto"
+            },
+            "description": "Exact ordinary BTC-wallet inputs to consume.\n\nThis endpoint does not auto-select inputs."
+          },
+          "outputs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RgbUtxosFundOutputDto"
+            },
+            "description": "Exact RGB wallet outputs to create.\n\nGenerate each destination with `/rgb/new_address`."
+          }
+        }
+      },
+      "RgbUtxosFundResponse": {
+        "type": "object",
+        "required": [
+          "txid",
+          "status",
+          "outputs",
+          "fee_sats"
+        ],
+        "properties": {
+          "change": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RgbUtxosFundChangeDto",
+                "description": "Ordinary BTC-wallet change output, if any."
+              }
+            ]
+          },
+          "fee_sats": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Network fee paid by the transaction in sats."
+          },
+          "outputs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RgbUtxosFundCreatedOutputDto"
+            },
+            "description": "Created RGB wallet outputs, in transaction order."
+          },
+          "status": {
+            "type": "string",
+            "description": "Currently `broadcast` when the signed transaction has been handed to the broadcaster."
+          },
+          "txid": {
+            "type": "string",
+            "description": "Broadcast Bitcoin transaction id."
+          }
+        }
+      },
       "RgbUtxosReleaseRequest": {
         "type": "object",
         "properties": {
@@ -4677,7 +5933,7 @@
               "string",
               "null"
             ],
-            "description": "Release by outpoint (`txid:vout`)."
+            "description": "Release by outpoint (`txid:vout`) when the reservation id is not available."
           },
           "reservation_id": {
             "type": [
@@ -4695,7 +5951,8 @@
         ],
         "properties": {
           "released": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Whether a matching reservation existed and was released."
           }
         }
       },
@@ -4707,7 +5964,7 @@
               "string",
               "null"
             ],
-            "description": "Optional explicit outpoint to reserve (`txid:vout`)."
+            "description": "Optional explicit outpoint to reserve (`txid:vout`).\n\nIf omitted, the node auto-selects one available RGB-wallet UTXO."
           },
           "ttl_secs": {
             "type": [
@@ -4728,19 +5985,23 @@
         ],
         "properties": {
           "outpoint": {
-            "type": "string"
+            "type": "string",
+            "description": "Reserved RGB-wallet outpoint."
           },
           "reservation_id": {
-            "type": "string"
+            "type": "string",
+            "description": "Stable reservation id returned by the orchestrator."
           },
           "reserved_until_unix_secs": {
             "type": "string",
-            "pattern": "^[0-9]+$"
+            "pattern": "^[0-9]+$",
+            "description": "Reservation expiry timestamp in unix seconds."
           }
         }
       },
       "RgbUtxosResponse": {
         "type": "object",
+        "description": "Canonical RGB-wallet UTXO view.",
         "required": [
           "utxos"
         ],
@@ -4750,7 +6011,7 @@
             "items": {
               "$ref": "#/components/schemas/RgbUtxoDto"
             },
-            "description": "RGB spend-domain UTXOs with semantic metadata."
+            "description": "RGB spend-domain UTXOs with semantic and lock metadata."
           }
         }
       },
@@ -4768,6 +6029,273 @@
           }
         }
       },
+      "RgbUtxosSweepDestinationDto": {
+        "type": "object",
+        "required": [
+          "address",
+          "value_sats",
+          "vout"
+        ],
+        "properties": {
+          "address": {
+            "type": "string",
+            "description": "Ordinary BTC-wallet destination address."
+          },
+          "value_sats": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "vout": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Output index inside the broadcast transaction.",
+            "minimum": 0
+          }
+        }
+      },
+      "RgbUtxosSweepInputDto": {
+        "type": "object",
+        "required": [
+          "outpoint"
+        ],
+        "properties": {
+          "outpoint": {
+            "type": "string",
+            "description": "RGB wallet outpoint to spend, formatted as `txid:vout`.\n\nSelect this from `GET /rgb/utxos`."
+          }
+        }
+      },
+      "RgbUtxosSweepRequest": {
+        "type": "object",
+        "required": [
+          "input",
+          "destination_address",
+          "fee_rate_sats_per_vb"
+        ],
+        "properties": {
+          "destination_address": {
+            "type": "string",
+            "description": "Explicit ordinary BTC-wallet address returned by `/wallet/new_address`."
+          },
+          "fee_rate_sats_per_vb": {
+            "type": "number",
+            "format": "float",
+            "description": "Positive fee rate in sat/vB."
+          },
+          "input": {
+            "$ref": "#/components/schemas/RgbUtxosSweepInputDto",
+            "description": "Empty RGB wallet outpoint to sweep."
+          }
+        }
+      },
+      "RgbUtxosSweepResponse": {
+        "type": "object",
+        "required": [
+          "txid",
+          "status",
+          "input",
+          "destination",
+          "fee_sats"
+        ],
+        "properties": {
+          "destination": {
+            "$ref": "#/components/schemas/RgbUtxosSweepDestinationDto",
+            "description": "Ordinary BTC-wallet destination created by the sweep."
+          },
+          "fee_sats": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Network fee paid by the transaction in sats."
+          },
+          "input": {
+            "$ref": "#/components/schemas/RgbUtxosSweepInputDto",
+            "description": "Swept RGB-wallet input."
+          },
+          "status": {
+            "type": "string",
+            "description": "Currently `broadcast` when the signed transaction has been handed to the broadcaster."
+          },
+          "txid": {
+            "type": "string",
+            "description": "Broadcast Bitcoin transaction id."
+          }
+        }
+      },
+      "RgbUtxosTopUpChangeDto": {
+        "type": "object",
+        "required": [
+          "address",
+          "value_sats",
+          "vout"
+        ],
+        "properties": {
+          "address": {
+            "type": "string",
+            "description": "Ordinary BTC-wallet change address."
+          },
+          "value_sats": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "vout": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Output index inside the broadcast transaction.",
+            "minimum": 0
+          }
+        }
+      },
+      "RgbUtxosTopUpCreatedOutputDto": {
+        "type": "object",
+        "required": [
+          "address",
+          "value_sats",
+          "vout"
+        ],
+        "properties": {
+          "address": {
+            "type": "string",
+            "description": "Replacement RGB wallet address."
+          },
+          "value_sats": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "vout": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Output index inside the broadcast transaction.",
+            "minimum": 0
+          }
+        }
+      },
+      "RgbUtxosTopUpL1InputDto": {
+        "type": "object",
+        "required": [
+          "outpoint"
+        ],
+        "properties": {
+          "outpoint": {
+            "type": "string",
+            "description": "Explicit ordinary BTC-wallet input to consume, formatted as `txid:vout`.\n\nSource these from `GET /wallet/utxos` after `POST /wallet/sync`."
+          }
+        }
+      },
+      "RgbUtxosTopUpRequest": {
+        "type": "object",
+        "required": [
+          "rgb_input",
+          "l1_inputs",
+          "rgb_output",
+          "change_address",
+          "fee_rate_sats_per_vb"
+        ],
+        "properties": {
+          "change_address": {
+            "type": "string",
+            "description": "Explicit ordinary BTC-wallet change address returned by `/wallet/new_address`."
+          },
+          "fee_rate_sats_per_vb": {
+            "type": "number",
+            "format": "float",
+            "description": "Positive fee rate in sat/vB."
+          },
+          "l1_inputs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RgbUtxosTopUpL1InputDto"
+            },
+            "description": "Extra ordinary BTC-wallet inputs used to enlarge the RGB output."
+          },
+          "rgb_input": {
+            "$ref": "#/components/schemas/RgbUtxosTopUpRgbInputDto",
+            "description": "Confirmed unlocked RGB input to replace."
+          },
+          "rgb_output": {
+            "$ref": "#/components/schemas/RgbUtxosTopUpRgbOutputDto",
+            "description": "Replacement RGB wallet output."
+          }
+        }
+      },
+      "RgbUtxosTopUpResponse": {
+        "type": "object",
+        "required": [
+          "txid",
+          "status",
+          "old_outpoint",
+          "new_rgb_output",
+          "fee_sats",
+          "consignment_key"
+        ],
+        "properties": {
+          "change": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RgbUtxosTopUpChangeDto",
+                "description": "Ordinary BTC-wallet change output, if any."
+              }
+            ]
+          },
+          "consignment_key": {
+            "type": "string",
+            "description": "Consignment cache key produced for the replacement transfer."
+          },
+          "fee_sats": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Network fee paid by the transaction in sats."
+          },
+          "new_rgb_output": {
+            "$ref": "#/components/schemas/RgbUtxosTopUpCreatedOutputDto",
+            "description": "Newly created replacement RGB output."
+          },
+          "old_outpoint": {
+            "type": "string",
+            "description": "Replaced RGB outpoint."
+          },
+          "status": {
+            "type": "string",
+            "description": "Currently `broadcast` when the signed transaction has been handed to the broadcaster."
+          },
+          "txid": {
+            "type": "string",
+            "description": "Broadcast Bitcoin transaction id."
+          }
+        }
+      },
+      "RgbUtxosTopUpRgbInputDto": {
+        "type": "object",
+        "required": [
+          "outpoint"
+        ],
+        "properties": {
+          "outpoint": {
+            "type": "string",
+            "description": "RGB wallet outpoint to replace, formatted as `txid:vout`.\n\nSelect this from `GET /rgb/utxos`."
+          }
+        }
+      },
+      "RgbUtxosTopUpRgbOutputDto": {
+        "type": "object",
+        "required": [
+          "address",
+          "target_value_sats"
+        ],
+        "properties": {
+          "address": {
+            "type": "string",
+            "description": "RGB wallet address returned by `/rgb/new_address`."
+          },
+          "target_value_sats": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Target BTC capacity for the replacement RGB UTXO.\n\nThis must be greater than the old RGB UTXO's BTC value."
+          }
+        }
+      },
       "SendResponse": {
         "type": "object",
         "description": "Response containing the id of a sent payment.",
@@ -4776,6 +6304,54 @@
         ],
         "properties": {
           "payment_id": {
+            "type": "string"
+          }
+        }
+      },
+      "SpliceInRequest": {
+        "type": "object",
+        "description": "Request to splice additional on-chain funds into an existing channel (splice-in).\n\n**Experimental**: this API mirrors `Node::splice_in` and the underlying\nbehavior may change in future releases. Currently only supported on pure\nBTC channels — RGB asset channels are not yet covered.",
+        "required": [
+          "user_channel_id",
+          "counterparty_node_id",
+          "splice_amount_sats"
+        ],
+        "properties": {
+          "counterparty_node_id": {
+            "type": "string"
+          },
+          "splice_amount_sats": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "user_channel_id": {
+            "type": "string"
+          }
+        }
+      },
+      "SpliceOutRequest": {
+        "type": "object",
+        "description": "Request to splice funds out of an existing channel to an on-chain address (splice-out).\n\n**Experimental**: see [`SpliceInRequest`].",
+        "required": [
+          "user_channel_id",
+          "counterparty_node_id",
+          "address",
+          "splice_amount_sats"
+        ],
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "counterparty_node_id": {
+            "type": "string"
+          },
+          "splice_amount_sats": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "user_channel_id": {
             "type": "string"
           }
         }
@@ -4856,7 +6432,121 @@
         ],
         "properties": {
           "address": {
-            "type": "string"
+            "type": "string",
+            "description": "Receive/change address from the ordinary BTC wallet account.\n\nUse this for plain BTC funding, `/wallet/utxos` change outputs, and the explicit\n`change_address` field on RGB UTXO-management endpoints. Do not use it for RGB-owned\noutputs; use `/rgb/new_address` for those."
+          }
+        }
+      },
+      "WalletUtxoConfirmationDto": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "height": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Confirmation block height, if known.",
+            "minimum": 0
+          },
+          "status": {
+            "$ref": "#/components/schemas/WalletUtxoConfirmationStatusDto",
+            "description": "One of: confirmed | mempool."
+          }
+        }
+      },
+      "WalletUtxoConfirmationStatusDto": {
+        "type": "string",
+        "enum": [
+          "confirmed",
+          "mempool"
+        ]
+      },
+      "WalletUtxoDto": {
+        "type": "object",
+        "description": "Ordinary L1 wallet UTXO with confirmation and lock metadata.",
+        "required": [
+          "outpoint",
+          "value_sats",
+          "confirmation",
+          "lock"
+        ],
+        "properties": {
+          "confirmation": {
+            "$ref": "#/components/schemas/WalletUtxoConfirmationDto",
+            "description": "Confirmation status from the node's wallet/chain view."
+          },
+          "lock": {
+            "$ref": "#/components/schemas/WalletUtxoLockDto",
+            "description": "txoscope lock state for this ordinary BTC-wallet outpoint."
+          },
+          "outpoint": {
+            "type": "string",
+            "description": "Outpoint formatted as `txid:vout`."
+          },
+          "value_sats": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "BTC value of the output in sats."
+          }
+        }
+      },
+      "WalletUtxoLockDto": {
+        "type": "object",
+        "required": [
+          "locked",
+          "kind"
+        ],
+        "properties": {
+          "expires_at_unix_secs": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$",
+            "description": "Lock expiry in unix seconds, if txoscope exposes one."
+          },
+          "kind": {
+            "$ref": "#/components/schemas/WalletUtxoLockKindDto",
+            "description": "One of: none | manual_reservation | operation."
+          },
+          "locked": {
+            "type": "boolean",
+            "description": "Whether this outpoint is currently unavailable for new flows."
+          },
+          "operation_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Reservation or selected operation id, if locked."
+          }
+        }
+      },
+      "WalletUtxoLockKindDto": {
+        "type": "string",
+        "enum": [
+          "none",
+          "manual_reservation",
+          "operation"
+        ]
+      },
+      "WalletUtxosResponse": {
+        "type": "object",
+        "description": "Response containing the ordinary L1 wallet UTXO view.",
+        "required": [
+          "utxos"
+        ],
+        "properties": {
+          "utxos": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WalletUtxoDto"
+            },
+            "description": "Ordinary BTC-account outpoints known to txoscope.\n\nRGB wallet outputs are intentionally excluded from this view."
           }
         }
       }
@@ -4880,7 +6570,7 @@
     },
     {
       "name": "wallet",
-      "description": "On-chain wallet and balance endpoints."
+      "description": "Ordinary BTC-wallet endpoints. Typical flow: `POST /wallet/sync` before selecting from `GET /wallet/utxos`, and `POST /wallet/new_address` for plain BTC receive/change outputs."
     },
     {
       "name": "channel",
@@ -4904,7 +6594,7 @@
     },
     {
       "name": "rgb-wallet",
-      "description": "RGB wallet, UTXO, and reservation endpoints."
+      "description": "Dedicated RGB-wallet descriptor endpoints. Use `POST /rgb/sync` to refresh runtime state, `POST /rgb/new_address` for RGB-owned outputs, and `/rgb/utxos*` for low-level RGB UTXO lifecycle management."
     },
     {
       "name": "rgb-ln",
@@ -4912,11 +6602,19 @@
     },
     {
       "name": "rgb-contracts",
-      "description": "RGB contract catalog and issuance endpoints."
+      "description": "RGB contract catalog, import/export, and issuance endpoints."
+    },
+    {
+      "name": "rgb-issuers",
+      "description": "Local RGB issuer-registry endpoints used before contract issuance."
     },
     {
       "name": "rgb-onchain",
       "description": "RGB on-chain invoice and payment endpoints."
+    },
+    {
+      "name": "network_graph",
+      "description": "Network graph (gossip) inspection endpoints."
     }
   ]
 }

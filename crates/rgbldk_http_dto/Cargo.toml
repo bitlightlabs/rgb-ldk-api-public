@@ -1,6 +1,6 @@
 [package]
 name = "rgbldk_http_dto"
-version = "0.7.0+git"
+version = "0.7.0-bitlight.1"
 edition = "2021"
 license = "UNLICENSED"
 publish = false
