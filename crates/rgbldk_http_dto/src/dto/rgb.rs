@@ -249,7 +249,7 @@ pub struct RgbLnInvoiceCreateRequest {
 	pub expiry_secs: Option<u32>,
 	/// BTC carrier amount in msat embedded into the BOLT11 invoice.
 	///
-	/// This must stay above the RGB dust/carrier minimum or invoice creation will fail.
+	/// This must satisfy the RGB carrier admission policy or invoice creation will fail.
 	#[serde(with = "serde_u64_decimal_string")]
 	pub btc_carrier_amount_msat: u64,
 }
@@ -270,7 +270,7 @@ pub struct RgbLnInvoiceCreateForHashRequest {
 	pub expiry_secs: Option<u32>,
 	/// BTC carrier amount in msat embedded into the BOLT11 invoice.
 	///
-	/// This must stay above the RGB dust/carrier minimum or invoice creation will fail.
+	/// This must satisfy the RGB carrier admission policy or invoice creation will fail.
 	#[serde(with = "serde_u64_decimal_string")]
 	pub btc_carrier_amount_msat: u64,
 }

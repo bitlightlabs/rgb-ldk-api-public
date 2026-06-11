@@ -1946,7 +1946,7 @@
           "rgb-ln"
         ],
         "summary": "Create RGB Lightning invoice",
-        "description": "Creates an RGB-aware Lightning invoice using a contract id, asset amount, and BTC carrier amount. The invoice embeds both the RGB asset data and the BTC carrier value required to keep the RGB state spendable on Lightning.",
+        "description": "Creates an RGB-aware Lightning invoice using a contract id, asset amount, and BTC carrier amount. The invoice embeds both the RGB asset data and the BTC carrier value checked by the RGB carrier admission policy.",
         "operationId": "rgb_ln_invoice_create",
         "requestBody": {
           "content": {
@@ -2057,7 +2057,7 @@
           "rgb-ln"
         ],
         "summary": "Pay RGB Lightning invoice",
-        "description": "Pays an RGB Lightning invoice. When the invoice already embeds RGB fields, the request can contain just the invoice. When it does not, callers must also supply `contract_id` and `asset_amount`. The BTC carrier amount inside the invoice must still satisfy the RGB minimum carrier requirement.",
+        "description": "Pays an RGB Lightning invoice. When the invoice already embeds RGB fields, the request can contain just the invoice. When it does not, callers must also supply `contract_id` and `asset_amount`. The BTC carrier amount inside the invoice must still satisfy the RGB carrier admission policy.",
         "operationId": "rgb_ln_pay",
         "requestBody": {
           "content": {
@@ -4951,7 +4951,7 @@
           "btc_carrier_amount_msat": {
             "type": "string",
             "pattern": "^[0-9]+$",
-            "description": "BTC carrier amount in msat embedded into the BOLT11 invoice.\n\nThis must stay above the RGB dust/carrier minimum or invoice creation will fail."
+            "description": "BTC carrier amount in msat embedded into the BOLT11 invoice.\n\nThis must satisfy the RGB carrier admission policy or invoice creation will fail."
           },
           "contract_id": {
             "type": "string",
@@ -4993,7 +4993,7 @@
           "btc_carrier_amount_msat": {
             "type": "string",
             "pattern": "^[0-9]+$",
-            "description": "BTC carrier amount in msat embedded into the BOLT11 invoice.\n\nThis must stay above the RGB dust/carrier minimum or invoice creation will fail."
+            "description": "BTC carrier amount in msat embedded into the BOLT11 invoice.\n\nThis must satisfy the RGB carrier admission policy or invoice creation will fail."
           },
           "contract_id": {
             "type": "string",

@@ -360,7 +360,7 @@
 ### POST `/api/v1/rgb/ln/invoice/create`
 
 * **Summary:** Create RGB Lightning invoice
-* **Description:** Creates an RGB-aware Lightning invoice using a contract id, asset amount, and BTC carrier amount. The invoice embeds both the RGB asset data and the BTC carrier value required to keep the RGB state spendable on Lightning.
+* **Description:** Creates an RGB-aware Lightning invoice using a contract id, asset amount, and BTC carrier amount. The invoice embeds both the RGB asset data and the BTC carrier value checked by the RGB carrier admission policy.
 * **Request Body:** `RgbLnInvoiceCreateRequest`
 * **Response (200):** `RgbLnInvoiceResponse`
 
@@ -381,7 +381,7 @@
 ### POST `/api/v1/rgb/ln/pay`
 
 * **Summary:** Pay RGB Lightning invoice
-* **Description:** Pays an RGB Lightning invoice. When the invoice already embeds RGB fields, the request can contain just the invoice. When it does not, callers must also supply `contract_id` and `asset_amount`. The BTC carrier amount inside the invoice must still satisfy the RGB minimum carrier requirement.
+* **Description:** Pays an RGB Lightning invoice. When the invoice already embeds RGB fields, the request can contain just the invoice. When it does not, callers must also supply `contract_id` and `asset_amount`. The BTC carrier amount inside the invoice must still satisfy the RGB carrier admission policy.
 * **Request Body:** `RgbLnPayRequest`
 * **Response (200):** `SendResponse`
 
