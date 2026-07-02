@@ -471,13 +471,43 @@ export interface RgbL2BalanceDto {
   remote_amount: U64String;
 }
 
+export interface RgbLnCarrierEstimateChannelDto {
+  channel_id: string;
+  user_channel_id: string;
+  is_usable: boolean;
+  inbound_capacity_msat: U64String;
+  inbound_htlc_minimum_msat: U64String;
+  inbound_htlc_maximum_msat?: U64String;
+  local_balance_output_sats: U64String;
+  has_holder_reserve: boolean;
+  receive_available: boolean;
+  minimum_viable_carrier_amount_msat?: U64String;
+  minimum_viable_reason?: string;
+  default_create_carrier_amount_msat?: U64String;
+  default_create_reason?: string;
+}
+
+export interface RgbLnCarrierEstimateResponse {
+  receive_available: boolean;
+  minimum_viable_carrier_amount_msat: U64String;
+  minimum_viable_reason: string;
+  default_create_carrier_amount_msat: U64String;
+  default_create_reason: string;
+  carrier_admission_threshold_msat: U64String;
+  minimum_allowed_carrier_amount_msat: U64String;
+  holder_reserve_threshold_msat: U64String;
+  channels: RgbLnCarrierEstimateChannelDto[];
+  estimate_only: boolean;
+  warning: string;
+}
+
 export interface RgbLnInvoiceCreateForHashRequest {
   contract_id: string;
   asset_amount: U64String;
   payment_hash: string;
   description: string;
   expiry_secs?: number;
-  btc_carrier_amount_msat: U64String;
+  btc_carrier_amount_msat?: U64String;
 }
 
 export interface RgbLnInvoiceCreateRequest {
@@ -485,7 +515,7 @@ export interface RgbLnInvoiceCreateRequest {
   asset_amount: U64String;
   description: string;
   expiry_secs?: number;
-  btc_carrier_amount_msat: U64String;
+  btc_carrier_amount_msat?: U64String;
 }
 
 export interface RgbLnInvoiceDecodeRequest {
@@ -503,6 +533,7 @@ export interface RgbLnInvoiceDecodeResponse {
 
 export interface RgbLnInvoiceResponse {
   invoice: string;
+  btc_carrier_amount_msat: U64String;
 }
 
 export interface RgbLnPayRequest {

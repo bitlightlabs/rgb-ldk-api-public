@@ -57,7 +57,7 @@ pub struct WalletNewAddressResponse {
 	///
 	/// Use this for plain BTC funding, `/wallet/utxos` change outputs, and the explicit
 	/// `change_address` field on RGB UTXO-management endpoints. Do not use it for RGB-owned
-	/// outputs; use `/rgb/new_address` for those.
+	/// outputs; use `/rgb/address/new` for those.
 	pub address: String,
 }
 

@@ -1527,6 +1527,63 @@
         }
       }
     },
+    "/rgb/address/current": {
+      "get": {
+        "tags": [
+          "rgb-wallet"
+        ],
+        "summary": "Current RGB address",
+        "description": "Returns the most recently generated RGB wallet address without advancing the RGB wallet derivation index. Returns `404 address_not_initialized` until an address has been generated with `POST /rgb/address/new` or the deprecated `POST /rgb/new_address` alias.",
+        "operationId": "rgb_address_current",
+        "responses": {
+          "200": {
+            "description": "Current RGB address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbNewAddressResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No RGB address has been generated yet"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/rgb/address/new": {
+      "post": {
+        "tags": [
+          "rgb-wallet"
+        ],
+        "summary": "New RGB address",
+        "description": "Generates and persists a new address owned by the dedicated RGB wallet descriptor. This advances the RGB wallet outer address index. Use `GET /rgb/address/current` when refreshing an existing receive screen.",
+        "operationId": "rgb_address_new",
+        "responses": {
+          "200": {
+            "description": "New RGB address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbNewAddressResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
     "/rgb/consignments/{consignment_key}": {
       "get": {
         "tags": [
@@ -1946,7 +2003,7 @@
           "rgb-ln"
         ],
         "summary": "Create RGB Lightning invoice",
-        "description": "Creates an RGB-aware Lightning invoice using a contract id, asset amount, and BTC carrier amount. The invoice embeds both the RGB asset data and the BTC carrier value checked by the RGB carrier admission policy.",
+        "description": "Creates an RGB-aware Lightning invoice using a contract id, asset amount, and optional BTC carrier amount. Explicit `btc_carrier_amount_msat` values are allowed down to 1 sat. If the field is omitted, the server starts from the active RGB carrier default floor and may auto-raise the invoice carrier to satisfy inbound HTLC limits or the 354-sat holder reserve threshold. A true 1-sat trimmed carrier still requires the selected receiving channel to already hold the non-dust holder reserve locally, otherwise the request is auto-raised or rejected with `HolderReserveTooLow`. The response returns the actual carrier embedded in the invoice.",
         "operationId": "rgb_ln_invoice_create",
         "requestBody": {
           "content": {
@@ -1983,7 +2040,7 @@
           "rgb-ln"
         ],
         "summary": "Create RGB hold invoice",
-        "description": "Creates an RGB-aware hold invoice bound to an explicit payment hash. Use this when the caller must control the payment hash while still embedding RGB asset data and the BTC carrier amount.",
+        "description": "Creates an RGB-aware hold invoice bound to an explicit payment hash. Explicit `btc_carrier_amount_msat` values are allowed down to 1 sat. If the field is omitted, the server starts from the active RGB carrier default floor and may auto-raise the invoice carrier to satisfy inbound HTLC limits or the 354-sat holder reserve threshold. A true 1-sat trimmed carrier still requires the selected receiving channel to already hold the non-dust holder reserve locally, otherwise the request is auto-raised or rejected with `HolderReserveTooLow`. The response returns the actual carrier embedded in the invoice.",
         "operationId": "rgb_ln_invoice_create_for_hash",
         "requestBody": {
           "content": {
@@ -2051,13 +2108,40 @@
         ]
       }
     },
+    "/rgb/ln/invoice/estimate_carrier": {
+      "post": {
+        "tags": [
+          "rgb-ln"
+        ],
+        "summary": "Estimate RGB Lightning carrier",
+        "description": "Returns a current-state, non-binding estimate for RGB Lightning invoice carrier amounts. The top-level amounts are conservative for invoices that do not bind a specific receiving channel. `channels[]` exposes per-channel estimates because different channels can require different carriers due to inbound HTLC limits, inbound capacity, or the RGB holder-reserve invariant. Explicit `btc_carrier_amount_msat` values are allowed down to 1 sat; `carrier_admission_threshold_msat` is only the default used when invoice creation omits the field. The final claim path still revalidates the actual receiving channels when payment arrives, so this endpoint is for UI disclosure and confirmation, not a settlement guarantee.",
+        "operationId": "rgb_ln_invoice_estimate_carrier",
+        "responses": {
+          "200": {
+            "description": "Estimated RGB Lightning carrier amounts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbLnCarrierEstimateResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
     "/rgb/ln/pay": {
       "post": {
         "tags": [
           "rgb-ln"
         ],
         "summary": "Pay RGB Lightning invoice",
-        "description": "Pays an RGB Lightning invoice. When the invoice already embeds RGB fields, the request can contain just the invoice. When it does not, callers must also supply `contract_id` and `asset_amount`. The BTC carrier amount inside the invoice must still satisfy the RGB carrier admission policy.",
+        "description": "Pays an RGB Lightning invoice. When the invoice already embeds RGB fields, the request can contain just the invoice. When it does not, callers must also supply `contract_id` and `asset_amount`. The BTC carrier amount inside an RGB invoice must be a fixed non-zero amount of at least 1 sat.",
         "operationId": "rgb_ln_pay",
         "requestBody": {
           "content": {
@@ -2094,7 +2178,7 @@
           "rgb-wallet"
         ],
         "summary": "New RGB address",
-        "description": "Generates a new address owned by the dedicated RGB wallet descriptor. Use this for `/rgb/utxos/fund`, `/rgb/utxos/top_up`, RGB invoice beneficiaries, and other outputs that should later appear in `/rgb/utxos` after `POST /rgb/sync`. Do not use it for ordinary BTC change; use `POST /wallet/new_address` for that.",
+        "description": "Deprecated compatibility alias for `POST /rgb/address/new`. Generates a new address owned by the dedicated RGB wallet descriptor. Use this for `/rgb/utxos/fund`, `/rgb/utxos/top_up`, RGB invoice beneficiaries, and other outputs that should later appear in `/rgb/utxos` after `POST /rgb/sync`. Do not use it for ordinary BTC change; use `POST /wallet/address/new` for that.",
         "operationId": "rgb_new_address",
         "responses": {
           "200": {
@@ -2108,6 +2192,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "bearer_auth": []
@@ -2435,7 +2520,7 @@
           "rgb-wallet"
         ],
         "summary": "Fund RGB UTXOs",
-        "description": "Low-level, stateless primitive that converts exact ordinary BTC-wallet inputs into one or more empty RGB-wallet outputs. Typical flow: `POST /wallet/sync` -> `GET /wallet/utxos` (pick exact inputs) -> `POST /rgb/new_address` (one per RGB output) -> `POST /wallet/new_address` (change) -> `POST /rgb/utxos/fund` -> `POST /rgb/sync`. The handler does not auto-select inputs or change outputs.",
+        "description": "Low-level, stateless primitive that converts exact ordinary BTC-wallet inputs into one or more empty RGB-wallet outputs. Typical flow: `POST /wallet/sync` -> `GET /wallet/utxos` (pick exact inputs) -> `POST /rgb/address/new` (one per RGB output) -> `POST /wallet/address/new` (change) -> `POST /rgb/utxos/fund` -> `POST /rgb/sync`. The handler does not auto-select inputs or change outputs.",
         "operationId": "rgb_utxos_fund",
         "requestBody": {
           "content": {
@@ -2585,7 +2670,7 @@
           "rgb-wallet"
         ],
         "summary": "Sweep empty RGB UTXO",
-        "description": "Low-level primitive that spends one empty, confirmed, unlocked RGB-wallet output back to an ordinary BTC-wallet address. Use this only for RGB outpoints with no allocations; otherwise use normal RGB payment flows or `/rgb/utxos/top_up`. Typical flow: `POST /rgb/sync` -> `GET /rgb/utxos` -> `POST /wallet/new_address` -> `POST /rgb/utxos/sweep`.",
+        "description": "Low-level primitive that spends one empty, confirmed, unlocked RGB-wallet output back to an ordinary BTC-wallet address. Use this only for RGB outpoints with no allocations; otherwise use normal RGB payment flows or `/rgb/utxos/top_up`. Typical flow: `POST /rgb/sync` -> `GET /rgb/utxos` -> `POST /wallet/address/new` -> `POST /rgb/utxos/sweep`.",
         "operationId": "rgb_utxos_sweep",
         "requestBody": {
           "content": {
@@ -2622,7 +2707,7 @@
           "rgb-wallet"
         ],
         "summary": "Increase RGB UTXO capacity",
-        "description": "Low-level primitive that replaces one confirmed, unlocked RGB UTXO with a larger RGB-wallet output while preserving its anchored single-contract RGB state. Typical flow: `POST /rgb/sync` -> `GET /rgb/utxos` (pick the RGB input) -> `POST /wallet/sync` + `GET /wallet/utxos` (pick extra BTC inputs) -> `POST /rgb/new_address` (replacement output) -> `POST /wallet/new_address` (change) -> `POST /rgb/utxos/top_up`. The response includes a `consignment_key` for the replacement transfer.",
+        "description": "Low-level primitive that replaces one confirmed, unlocked RGB UTXO with a larger RGB-wallet output while preserving its anchored single-contract RGB state. Typical flow: `POST /rgb/sync` -> `GET /rgb/utxos` (pick the RGB input) -> `POST /wallet/sync` + `GET /wallet/utxos` (pick extra BTC inputs) -> `POST /rgb/address/new` (replacement output) -> `POST /wallet/address/new` (change) -> `POST /rgb/utxos/top_up`. The response includes a `consignment_key` for the replacement transfer.",
         "operationId": "rgb_utxos_top_up",
         "requestBody": {
           "content": {
@@ -2744,13 +2829,70 @@
         ]
       }
     },
+    "/wallet/address/current": {
+      "get": {
+        "tags": [
+          "wallet"
+        ],
+        "summary": "Current on-chain address",
+        "description": "Returns the most recently generated ordinary BTC wallet address without advancing the derivation index. Returns `404 address_not_initialized` until an address has been generated with `POST /wallet/address/new` or the deprecated `POST /wallet/new_address` alias.",
+        "operationId": "wallet_current_address",
+        "responses": {
+          "200": {
+            "description": "Current wallet address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletNewAddressResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No wallet address has been generated yet"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/wallet/address/new": {
+      "post": {
+        "tags": [
+          "wallet"
+        ],
+        "summary": "New on-chain address",
+        "description": "Generates and persists a new receive/change address from the ordinary BTC wallet account. This advances the external address index. Use `GET /wallet/address/current` when refreshing an existing receive screen.",
+        "operationId": "wallet_address_new",
+        "responses": {
+          "200": {
+            "description": "New wallet address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletNewAddressResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
     "/wallet/new_address": {
       "post": {
         "tags": [
           "wallet"
         ],
         "summary": "New on-chain address",
-        "description": "Generates a new receive/change address from the ordinary BTC wallet account. Use this for plain BTC funding, explicit change on RGB UTXO-management calls, and outputs that should later appear in `/wallet/utxos`. Do not use it for RGB-owned outputs; use `POST /rgb/new_address` for those.",
+        "description": "Deprecated compatibility alias for `POST /wallet/address/new`. Generates a new receive/change address from the ordinary BTC wallet account. Use this for plain BTC funding, explicit change on RGB UTXO-management calls, and outputs that should later appear in `/wallet/utxos`. Do not use it for RGB-owned outputs; use `POST /rgb/address/new` for those.",
         "operationId": "wallet_new_address",
         "responses": {
           "200": {
@@ -2764,6 +2906,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "bearer_auth": []
@@ -4933,14 +5076,171 @@
           }
         }
       },
+      "RgbLnCarrierEstimateChannelDto": {
+        "type": "object",
+        "required": [
+          "channel_id",
+          "user_channel_id",
+          "is_usable",
+          "inbound_capacity_msat",
+          "inbound_htlc_minimum_msat",
+          "local_balance_output_sats",
+          "has_holder_reserve",
+          "receive_available"
+        ],
+        "properties": {
+          "channel_id": {
+            "type": "string",
+            "description": "Channel id (32-byte hex)."
+          },
+          "default_create_carrier_amount_msat": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$",
+            "description": "Suggested carrier for this channel when invoice creation omits `btc_carrier_amount_msat`."
+          },
+          "default_create_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why `default_create_carrier_amount_msat` was selected."
+          },
+          "has_holder_reserve": {
+            "type": "boolean",
+            "description": "Whether this channel already satisfies the non-dust RGB holder reserve locally."
+          },
+          "inbound_capacity_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Available inbound capacity in millisatoshis."
+          },
+          "inbound_htlc_maximum_msat": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$",
+            "description": "Largest inbound HTLC this channel currently accepts, if known."
+          },
+          "inbound_htlc_minimum_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Smallest inbound HTLC this channel currently accepts."
+          },
+          "is_usable": {
+            "type": "boolean",
+            "description": "Whether this channel can currently send/receive HTLCs."
+          },
+          "local_balance_output_sats": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Estimated local BTC output on this channel that can host RGB, in satoshis."
+          },
+          "minimum_viable_carrier_amount_msat": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$",
+            "description": "Suggested minimum viable carrier for this channel, if currently receive-capable."
+          },
+          "minimum_viable_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why `minimum_viable_carrier_amount_msat` was selected."
+          },
+          "receive_available": {
+            "type": "boolean",
+            "description": "Whether this channel can currently receive at least the hard minimum RGB carrier."
+          },
+          "user_channel_id": {
+            "type": "string",
+            "description": "Local user channel id (hex-encoded 16 bytes BIG-ENDIAN)."
+          }
+        }
+      },
+      "RgbLnCarrierEstimateResponse": {
+        "type": "object",
+        "required": [
+          "receive_available",
+          "minimum_viable_carrier_amount_msat",
+          "minimum_viable_reason",
+          "default_create_carrier_amount_msat",
+          "default_create_reason",
+          "carrier_admission_threshold_msat",
+          "minimum_allowed_carrier_amount_msat",
+          "holder_reserve_threshold_msat",
+          "channels",
+          "estimate_only",
+          "warning"
+        ],
+        "properties": {
+          "carrier_admission_threshold_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Default RGB carrier floor in msat used only when invoice creation omits the carrier field."
+          },
+          "channels": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RgbLnCarrierEstimateChannelDto"
+            },
+            "description": "Per-channel estimates from the same channel snapshot."
+          },
+          "default_create_carrier_amount_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Carrier the backend would currently use if invoice creation omitted `btc_carrier_amount_msat`."
+          },
+          "default_create_reason": {
+            "type": "string",
+            "description": "Why `default_create_carrier_amount_msat` was selected."
+          },
+          "estimate_only": {
+            "type": "boolean",
+            "description": "Whether this response is only a current-state estimate."
+          },
+          "holder_reserve_threshold_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Non-dust holder reserve threshold in msat."
+          },
+          "minimum_allowed_carrier_amount_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Hard minimum explicit RGB carrier amount in msat."
+          },
+          "minimum_viable_carrier_amount_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Lowest carrier that looks viable from the node's current channel snapshot.\n\nThis top-level estimate is conservative for invoices that do not bind a specific receiving\nchannel. Use `channels[]` to show per-channel suggestions."
+          },
+          "minimum_viable_reason": {
+            "type": "string",
+            "description": "Why `minimum_viable_carrier_amount_msat` was selected."
+          },
+          "receive_available": {
+            "type": "boolean",
+            "description": "Whether at least one channel can currently receive an RGB LN carrier."
+          },
+          "warning": {
+            "type": "string",
+            "description": "Human-readable warning about the estimate boundary."
+          }
+        }
+      },
       "RgbLnInvoiceCreateForHashRequest": {
         "type": "object",
         "required": [
           "contract_id",
           "asset_amount",
           "payment_hash",
-          "description",
-          "btc_carrier_amount_msat"
+          "description"
         ],
         "properties": {
           "asset_amount": {
@@ -4949,9 +5249,12 @@
             "description": "RGB asset amount to request from the payer."
           },
           "btc_carrier_amount_msat": {
-            "type": "string",
+            "type": [
+              "string",
+              "null"
+            ],
             "pattern": "^[0-9]+$",
-            "description": "BTC carrier amount in msat embedded into the BOLT11 invoice.\n\nThis must satisfy the RGB carrier admission policy or invoice creation will fail."
+            "description": "Optional BTC carrier amount in msat embedded into the BOLT11 invoice.\n\nExplicit values are allowed down to the hard 1-sat minimum. They are still checked against\nthe receiver's current channel safety constraints and may be raised or rejected if the\nchannel cannot safely host RGB.\n\nWhen omitted, the server starts from the active RGB carrier default floor and, if needed,\nraises the invoice carrier to satisfy inbound HTLC limits or the 354-sat non-dust holder\nreserve threshold so the receiver can host the incoming RGB without extra client-side logic.\n\nA trimmed 1-sat carrier only remains valid when the selected receiving channel already holds\na non-dust BTC holder reserve locally. Otherwise the server auto-raises the carrier or\nrejects the request with `HolderReserveTooLow`."
           },
           "contract_id": {
             "type": "string",
@@ -4981,8 +5284,7 @@
         "required": [
           "contract_id",
           "asset_amount",
-          "description",
-          "btc_carrier_amount_msat"
+          "description"
         ],
         "properties": {
           "asset_amount": {
@@ -4991,9 +5293,12 @@
             "description": "RGB asset amount to request from the payer."
           },
           "btc_carrier_amount_msat": {
-            "type": "string",
+            "type": [
+              "string",
+              "null"
+            ],
             "pattern": "^[0-9]+$",
-            "description": "BTC carrier amount in msat embedded into the BOLT11 invoice.\n\nThis must satisfy the RGB carrier admission policy or invoice creation will fail."
+            "description": "Optional BTC carrier amount in msat embedded into the BOLT11 invoice.\n\nExplicit values are allowed down to the hard 1-sat minimum. They are still checked against\nthe receiver's current channel safety constraints and may be raised or rejected if the\nchannel cannot safely host RGB.\n\nWhen omitted, the server starts from the active RGB carrier default floor and, if needed,\nraises the invoice carrier to satisfy inbound HTLC limits or the 354-sat non-dust holder\nreserve threshold so the receiver can host the incoming RGB without extra client-side logic.\n\nA trimmed 1-sat carrier only remains valid when the selected receiving channel already holds\na non-dust BTC holder reserve locally. Otherwise the server auto-raises the carrier or\nrejects the request with `HolderReserveTooLow`."
           },
           "contract_id": {
             "type": "string",
@@ -5075,9 +5380,15 @@
       "RgbLnInvoiceResponse": {
         "type": "object",
         "required": [
-          "invoice"
+          "invoice",
+          "btc_carrier_amount_msat"
         ],
         "properties": {
+          "btc_carrier_amount_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Actual BTC carrier amount embedded into the BOLT11 invoice.\n\nThis is the authoritative value the payer must send. It may be higher than the omitted or\nrequested amount when the server auto-raises the carrier to satisfy the receiver's holder\nreserve requirement."
+          },
           "invoice": {
             "type": "string",
             "description": "Serialized BOLT11 invoice string."
@@ -5840,7 +6151,7 @@
         "properties": {
           "address": {
             "type": "string",
-            "description": "RGB wallet address returned by `/rgb/new_address`."
+            "description": "RGB wallet address returned by `/rgb/address/new`."
           },
           "value_sats": {
             "type": "string",
@@ -5860,7 +6171,7 @@
         "properties": {
           "change_address": {
             "type": "string",
-            "description": "Explicit ordinary BTC-wallet change address returned by `/wallet/new_address`.\n\nThis must stay distinct from all RGB output scripts."
+            "description": "Explicit ordinary BTC-wallet change address returned by `/wallet/address/new`.\n\nThis must stay distinct from all RGB output scripts."
           },
           "fee_rate_sats_per_vb": {
             "type": "number",
@@ -5879,7 +6190,7 @@
             "items": {
               "$ref": "#/components/schemas/RgbUtxosFundOutputDto"
             },
-            "description": "Exact RGB wallet outputs to create.\n\nGenerate each destination with `/rgb/new_address`."
+            "description": "Exact RGB wallet outputs to create.\n\nGenerate each destination with `/rgb/address/new`."
           }
         }
       },
@@ -6075,7 +6386,7 @@
         "properties": {
           "destination_address": {
             "type": "string",
-            "description": "Explicit ordinary BTC-wallet address returned by `/wallet/new_address`."
+            "description": "Explicit ordinary BTC-wallet address returned by `/wallet/address/new`."
           },
           "fee_rate_sats_per_vb": {
             "type": "number",
@@ -6193,7 +6504,7 @@
         "properties": {
           "change_address": {
             "type": "string",
-            "description": "Explicit ordinary BTC-wallet change address returned by `/wallet/new_address`."
+            "description": "Explicit ordinary BTC-wallet change address returned by `/wallet/address/new`."
           },
           "fee_rate_sats_per_vb": {
             "type": "number",
@@ -6287,7 +6598,7 @@
         "properties": {
           "address": {
             "type": "string",
-            "description": "RGB wallet address returned by `/rgb/new_address`."
+            "description": "RGB wallet address returned by `/rgb/address/new`."
           },
           "target_value_sats": {
             "type": "string",
@@ -6433,7 +6744,7 @@
         "properties": {
           "address": {
             "type": "string",
-            "description": "Receive/change address from the ordinary BTC wallet account.\n\nUse this for plain BTC funding, `/wallet/utxos` change outputs, and the explicit\n`change_address` field on RGB UTXO-management endpoints. Do not use it for RGB-owned\noutputs; use `/rgb/new_address` for those."
+            "description": "Receive/change address from the ordinary BTC wallet account.\n\nUse this for plain BTC funding, `/wallet/utxos` change outputs, and the explicit\n`change_address` field on RGB UTXO-management endpoints. Do not use it for RGB-owned\noutputs; use `/rgb/address/new` for those."
           }
         }
       },
@@ -6570,7 +6881,7 @@
     },
     {
       "name": "wallet",
-      "description": "Ordinary BTC-wallet endpoints. Typical flow: `POST /wallet/sync` before selecting from `GET /wallet/utxos`, and `POST /wallet/new_address` for plain BTC receive/change outputs."
+      "description": "Ordinary BTC-wallet endpoints. Typical flow: `POST /wallet/sync` before selecting from `GET /wallet/utxos`, `GET /wallet/address/current` to redisplay the current receive address, and `POST /wallet/address/new` for explicit plain BTC receive/change outputs."
     },
     {
       "name": "channel",
@@ -6594,7 +6905,7 @@
     },
     {
       "name": "rgb-wallet",
-      "description": "Dedicated RGB-wallet descriptor endpoints. Use `POST /rgb/sync` to refresh runtime state, `POST /rgb/new_address` for RGB-owned outputs, and `/rgb/utxos*` for low-level RGB UTXO lifecycle management."
+      "description": "Dedicated RGB-wallet descriptor endpoints. Use `POST /rgb/sync` to refresh runtime state, `GET /rgb/address/current` to redisplay the current RGB receive address, `POST /rgb/address/new` for explicit RGB-owned outputs, and `/rgb/utxos*` for low-level RGB UTXO lifecycle management."
     },
     {
       "name": "rgb-ln",

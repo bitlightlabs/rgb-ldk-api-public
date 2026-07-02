@@ -247,11 +247,21 @@ pub struct RgbLnInvoiceCreateRequest {
 	/// Invoice expiry in seconds. If omitted, the BOLT11 default expiry is used.
 	#[serde(default)]
 	pub expiry_secs: Option<u32>,
-	/// BTC carrier amount in msat embedded into the BOLT11 invoice.
+	/// Optional BTC carrier amount in msat embedded into the BOLT11 invoice.
 	///
-	/// This must satisfy the RGB carrier admission policy or invoice creation will fail.
-	#[serde(with = "serde_u64_decimal_string")]
-	pub btc_carrier_amount_msat: u64,
+	/// Explicit values are allowed down to the hard 1-sat minimum. They are still checked against
+	/// the receiver's current channel safety constraints and may be raised or rejected if the
+	/// channel cannot safely host RGB.
+	///
+	/// When omitted, the server starts from the active RGB carrier default floor and, if needed,
+	/// raises the invoice carrier to satisfy inbound HTLC limits or the 354-sat non-dust holder
+	/// reserve threshold so the receiver can host the incoming RGB without extra client-side logic.
+	///
+	/// A trimmed 1-sat carrier only remains valid when the selected receiving channel already holds
+	/// a non-dust BTC holder reserve locally. Otherwise the server auto-raises the carrier or
+	/// rejects the request with `HolderReserveTooLow`.
+	#[serde(default, with = "serde_opt_u64_decimal_string")]
+	pub btc_carrier_amount_msat: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -268,17 +278,106 @@ pub struct RgbLnInvoiceCreateForHashRequest {
 	/// Invoice expiry in seconds. If omitted, the BOLT11 default expiry is used.
 	#[serde(default)]
 	pub expiry_secs: Option<u32>,
-	/// BTC carrier amount in msat embedded into the BOLT11 invoice.
+	/// Optional BTC carrier amount in msat embedded into the BOLT11 invoice.
 	///
-	/// This must satisfy the RGB carrier admission policy or invoice creation will fail.
+	/// Explicit values are allowed down to the hard 1-sat minimum. They are still checked against
+	/// the receiver's current channel safety constraints and may be raised or rejected if the
+	/// channel cannot safely host RGB.
+	///
+	/// When omitted, the server starts from the active RGB carrier default floor and, if needed,
+	/// raises the invoice carrier to satisfy inbound HTLC limits or the 354-sat non-dust holder
+	/// reserve threshold so the receiver can host the incoming RGB without extra client-side logic.
+	///
+	/// A trimmed 1-sat carrier only remains valid when the selected receiving channel already holds
+	/// a non-dust BTC holder reserve locally. Otherwise the server auto-raises the carrier or
+	/// rejects the request with `HolderReserveTooLow`.
+	#[serde(default, with = "serde_opt_u64_decimal_string")]
+	pub btc_carrier_amount_msat: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RgbLnCarrierEstimateChannelDto {
+	/// Channel id (32-byte hex).
+	pub channel_id: String,
+	/// Local user channel id (hex-encoded 16 bytes BIG-ENDIAN).
+	pub user_channel_id: String,
+	/// Whether this channel can currently send/receive HTLCs.
+	pub is_usable: bool,
+	/// Available inbound capacity in millisatoshis.
 	#[serde(with = "serde_u64_decimal_string")]
-	pub btc_carrier_amount_msat: u64,
+	pub inbound_capacity_msat: u64,
+	/// Smallest inbound HTLC this channel currently accepts.
+	#[serde(with = "serde_u64_decimal_string")]
+	pub inbound_htlc_minimum_msat: u64,
+	/// Largest inbound HTLC this channel currently accepts, if known.
+	#[serde(default, with = "serde_opt_u64_decimal_string")]
+	pub inbound_htlc_maximum_msat: Option<u64>,
+	/// Estimated local BTC output on this channel that can host RGB, in satoshis.
+	#[serde(with = "serde_u64_decimal_string")]
+	pub local_balance_output_sats: u64,
+	/// Whether this channel already satisfies the non-dust RGB holder reserve locally.
+	pub has_holder_reserve: bool,
+	/// Whether this channel can currently receive at least the hard minimum RGB carrier.
+	pub receive_available: bool,
+	/// Suggested minimum viable carrier for this channel, if currently receive-capable.
+	#[serde(default, with = "serde_opt_u64_decimal_string")]
+	pub minimum_viable_carrier_amount_msat: Option<u64>,
+	/// Why `minimum_viable_carrier_amount_msat` was selected.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub minimum_viable_reason: Option<String>,
+	/// Suggested carrier for this channel when invoice creation omits `btc_carrier_amount_msat`.
+	#[serde(default, with = "serde_opt_u64_decimal_string")]
+	pub default_create_carrier_amount_msat: Option<u64>,
+	/// Why `default_create_carrier_amount_msat` was selected.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub default_create_reason: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RgbLnCarrierEstimateResponse {
+	/// Whether at least one channel can currently receive an RGB LN carrier.
+	pub receive_available: bool,
+	/// Lowest carrier that looks viable from the node's current channel snapshot.
+	///
+	/// This top-level estimate is conservative for invoices that do not bind a specific receiving
+	/// channel. Use `channels[]` to show per-channel suggestions.
+	#[serde(with = "serde_u64_decimal_string")]
+	pub minimum_viable_carrier_amount_msat: u64,
+	/// Why `minimum_viable_carrier_amount_msat` was selected.
+	pub minimum_viable_reason: String,
+	/// Carrier the backend would currently use if invoice creation omitted `btc_carrier_amount_msat`.
+	#[serde(with = "serde_u64_decimal_string")]
+	pub default_create_carrier_amount_msat: u64,
+	/// Why `default_create_carrier_amount_msat` was selected.
+	pub default_create_reason: String,
+	/// Default RGB carrier floor in msat used only when invoice creation omits the carrier field.
+	#[serde(with = "serde_u64_decimal_string")]
+	pub carrier_admission_threshold_msat: u64,
+	/// Hard minimum explicit RGB carrier amount in msat.
+	#[serde(with = "serde_u64_decimal_string")]
+	pub minimum_allowed_carrier_amount_msat: u64,
+	/// Non-dust holder reserve threshold in msat.
+	#[serde(with = "serde_u64_decimal_string")]
+	pub holder_reserve_threshold_msat: u64,
+	/// Per-channel estimates from the same channel snapshot.
+	pub channels: Vec<RgbLnCarrierEstimateChannelDto>,
+	/// Whether this response is only a current-state estimate.
+	pub estimate_only: bool,
+	/// Human-readable warning about the estimate boundary.
+	pub warning: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbLnInvoiceResponse {
 	/// Serialized BOLT11 invoice string.
 	pub invoice: String,
+	/// Actual BTC carrier amount embedded into the BOLT11 invoice.
+	///
+	/// This is the authoritative value the payer must send. It may be higher than the omitted or
+	/// requested amount when the server auto-raises the carrier to satisfy the receiver's holder
+	/// reserve requirement.
+	#[serde(with = "serde_u64_decimal_string")]
+	pub btc_carrier_amount_msat: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -477,7 +576,7 @@ pub struct RgbUtxosFundInputDto {
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbUtxosFundOutputDto {
-	/// RGB wallet address returned by `/rgb/new_address`.
+	/// RGB wallet address returned by `/rgb/address/new`.
 	pub address: String,
 	/// BTC capacity to assign to the created RGB wallet output.
 	#[serde(with = "serde_u64_decimal_string")]
@@ -492,9 +591,9 @@ pub struct RgbUtxosFundRequest {
 	pub inputs: Vec<RgbUtxosFundInputDto>,
 	/// Exact RGB wallet outputs to create.
 	///
-	/// Generate each destination with `/rgb/new_address`.
+	/// Generate each destination with `/rgb/address/new`.
 	pub outputs: Vec<RgbUtxosFundOutputDto>,
-	/// Explicit ordinary BTC-wallet change address returned by `/wallet/new_address`.
+	/// Explicit ordinary BTC-wallet change address returned by `/wallet/address/new`.
 	///
 	/// This must stay distinct from all RGB output scripts.
 	pub change_address: String,
@@ -550,7 +649,7 @@ pub struct RgbUtxosSweepInputDto {
 pub struct RgbUtxosSweepRequest {
 	/// Empty RGB wallet outpoint to sweep.
 	pub input: RgbUtxosSweepInputDto,
-	/// Explicit ordinary BTC-wallet address returned by `/wallet/new_address`.
+	/// Explicit ordinary BTC-wallet address returned by `/wallet/address/new`.
 	pub destination_address: String,
 	/// Positive fee rate in sat/vB.
 	pub fee_rate_sats_per_vb: f32,
@@ -599,7 +698,7 @@ pub struct RgbUtxosTopUpL1InputDto {
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbUtxosTopUpRgbOutputDto {
-	/// RGB wallet address returned by `/rgb/new_address`.
+	/// RGB wallet address returned by `/rgb/address/new`.
 	pub address: String,
 	/// Target BTC capacity for the replacement RGB UTXO.
 	///
@@ -616,7 +715,7 @@ pub struct RgbUtxosTopUpRequest {
 	pub l1_inputs: Vec<RgbUtxosTopUpL1InputDto>,
 	/// Replacement RGB wallet output.
 	pub rgb_output: RgbUtxosTopUpRgbOutputDto,
-	/// Explicit ordinary BTC-wallet change address returned by `/wallet/new_address`.
+	/// Explicit ordinary BTC-wallet change address returned by `/wallet/address/new`.
 	pub change_address: String,
 	/// Positive fee rate in sat/vB.
 	pub fee_rate_sats_per_vb: f32,

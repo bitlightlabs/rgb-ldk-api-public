@@ -293,6 +293,19 @@
 * **Response (200):** `OkResponse`
 * **Response (503):** `OkResponse`
 
+### GET `/api/v1/rgb/address/current`
+
+* **Summary:** Current RGB address
+* **Description:** Returns the most recently generated RGB wallet address without advancing the RGB wallet derivation index. Returns `404 address_not_initialized` until an address has been generated with `POST /rgb/address/new` or the deprecated `POST /rgb/new_address` alias.
+* **Response (200):** `RgbNewAddressResponse`
+* **Response (404):** No RGB address has been generated yet
+
+### POST `/api/v1/rgb/address/new`
+
+* **Summary:** New RGB address
+* **Description:** Generates and persists a new address owned by the dedicated RGB wallet descriptor. This advances the RGB wallet outer address index. Use `GET /rgb/address/current` when refreshing an existing receive screen.
+* **Response (200):** `RgbNewAddressResponse`
+
 ### GET `/api/v1/rgb/consignments/{consignment_key}`
 
 * **Summary:** Download consignment
@@ -360,14 +373,14 @@
 ### POST `/api/v1/rgb/ln/invoice/create`
 
 * **Summary:** Create RGB Lightning invoice
-* **Description:** Creates an RGB-aware Lightning invoice using a contract id, asset amount, and BTC carrier amount. The invoice embeds both the RGB asset data and the BTC carrier value checked by the RGB carrier admission policy.
+* **Description:** Creates an RGB-aware Lightning invoice using a contract id, asset amount, and optional BTC carrier amount. Explicit `btc_carrier_amount_msat` values are allowed down to 1 sat. If the field is omitted, the server starts from the active RGB carrier default floor and may auto-raise the invoice carrier to satisfy inbound HTLC limits or the 354-sat holder reserve threshold. A true 1-sat trimmed carrier still requires the selected receiving channel to already hold the non-dust holder reserve locally, otherwise the request is auto-raised or rejected with `HolderReserveTooLow`. The response returns the actual carrier embedded in the invoice.
 * **Request Body:** `RgbLnInvoiceCreateRequest`
 * **Response (200):** `RgbLnInvoiceResponse`
 
 ### POST `/api/v1/rgb/ln/invoice/create_for_hash`
 
 * **Summary:** Create RGB hold invoice
-* **Description:** Creates an RGB-aware hold invoice bound to an explicit payment hash. Use this when the caller must control the payment hash while still embedding RGB asset data and the BTC carrier amount.
+* **Description:** Creates an RGB-aware hold invoice bound to an explicit payment hash. Explicit `btc_carrier_amount_msat` values are allowed down to 1 sat. If the field is omitted, the server starts from the active RGB carrier default floor and may auto-raise the invoice carrier to satisfy inbound HTLC limits or the 354-sat holder reserve threshold. A true 1-sat trimmed carrier still requires the selected receiving channel to already hold the non-dust holder reserve locally, otherwise the request is auto-raised or rejected with `HolderReserveTooLow`. The response returns the actual carrier embedded in the invoice.
 * **Request Body:** `RgbLnInvoiceCreateForHashRequest`
 * **Response (200):** `RgbLnInvoiceResponse`
 
@@ -378,17 +391,23 @@
 * **Request Body:** `RgbLnInvoiceDecodeRequest`
 * **Response (200):** `RgbLnInvoiceDecodeResponse`
 
+### POST `/api/v1/rgb/ln/invoice/estimate_carrier`
+
+* **Summary:** Estimate RGB Lightning carrier
+* **Description:** Returns a current-state, non-binding estimate for RGB Lightning invoice carrier amounts. The top-level amounts are conservative for invoices that do not bind a specific receiving channel. `channels[]` exposes per-channel estimates because different channels can require different carriers due to inbound HTLC limits, inbound capacity, or the RGB holder-reserve invariant. Explicit `btc_carrier_amount_msat` values are allowed down to 1 sat; `carrier_admission_threshold_msat` is only the default used when invoice creation omits the field. The final claim path still revalidates the actual receiving channels when payment arrives, so this endpoint is for UI disclosure and confirmation, not a settlement guarantee.
+* **Response (200):** `RgbLnCarrierEstimateResponse`
+
 ### POST `/api/v1/rgb/ln/pay`
 
 * **Summary:** Pay RGB Lightning invoice
-* **Description:** Pays an RGB Lightning invoice. When the invoice already embeds RGB fields, the request can contain just the invoice. When it does not, callers must also supply `contract_id` and `asset_amount`. The BTC carrier amount inside the invoice must still satisfy the RGB carrier admission policy.
+* **Description:** Pays an RGB Lightning invoice. When the invoice already embeds RGB fields, the request can contain just the invoice. When it does not, callers must also supply `contract_id` and `asset_amount`. The BTC carrier amount inside an RGB invoice must be a fixed non-zero amount of at least 1 sat.
 * **Request Body:** `RgbLnPayRequest`
 * **Response (200):** `SendResponse`
 
 ### POST `/api/v1/rgb/new_address`
 
 * **Summary:** New RGB address
-* **Description:** Generates a new address owned by the dedicated RGB wallet descriptor. Use this for `/rgb/utxos/fund`, `/rgb/utxos/top_up`, RGB invoice beneficiaries, and other outputs that should later appear in `/rgb/utxos` after `POST /rgb/sync`. Do not use it for ordinary BTC change; use `POST /wallet/new_address` for that.
+* **Description:** Deprecated compatibility alias for `POST /rgb/address/new`. Generates a new address owned by the dedicated RGB wallet descriptor. Use this for `/rgb/utxos/fund`, `/rgb/utxos/top_up`, RGB invoice beneficiaries, and other outputs that should later appear in `/rgb/utxos` after `POST /rgb/sync`. Do not use it for ordinary BTC change; use `POST /wallet/address/new` for that.
 * **Response (200):** `RgbNewAddressResponse`
 
 ### POST `/api/v1/rgb/onchain/invoice/create`
@@ -447,7 +466,7 @@
 ### POST `/api/v1/rgb/utxos/fund`
 
 * **Summary:** Fund RGB UTXOs
-* **Description:** Low-level, stateless primitive that converts exact ordinary BTC-wallet inputs into one or more empty RGB-wallet outputs. Typical flow: `POST /wallet/sync` -> `GET /wallet/utxos` (pick exact inputs) -> `POST /rgb/new_address` (one per RGB output) -> `POST /wallet/new_address` (change) -> `POST /rgb/utxos/fund` -> `POST /rgb/sync`. The handler does not auto-select inputs or change outputs.
+* **Description:** Low-level, stateless primitive that converts exact ordinary BTC-wallet inputs into one or more empty RGB-wallet outputs. Typical flow: `POST /wallet/sync` -> `GET /wallet/utxos` (pick exact inputs) -> `POST /rgb/address/new` (one per RGB output) -> `POST /wallet/address/new` (change) -> `POST /rgb/utxos/fund` -> `POST /rgb/sync`. The handler does not auto-select inputs or change outputs.
 * **Request Body:** `RgbUtxosFundRequest`
 * **Response (200):** `RgbUtxosFundResponse`
 
@@ -474,14 +493,14 @@
 ### POST `/api/v1/rgb/utxos/sweep`
 
 * **Summary:** Sweep empty RGB UTXO
-* **Description:** Low-level primitive that spends one empty, confirmed, unlocked RGB-wallet output back to an ordinary BTC-wallet address. Use this only for RGB outpoints with no allocations; otherwise use normal RGB payment flows or `/rgb/utxos/top_up`. Typical flow: `POST /rgb/sync` -> `GET /rgb/utxos` -> `POST /wallet/new_address` -> `POST /rgb/utxos/sweep`.
+* **Description:** Low-level primitive that spends one empty, confirmed, unlocked RGB-wallet output back to an ordinary BTC-wallet address. Use this only for RGB outpoints with no allocations; otherwise use normal RGB payment flows or `/rgb/utxos/top_up`. Typical flow: `POST /rgb/sync` -> `GET /rgb/utxos` -> `POST /wallet/address/new` -> `POST /rgb/utxos/sweep`.
 * **Request Body:** `RgbUtxosSweepRequest`
 * **Response (200):** `RgbUtxosSweepResponse`
 
 ### POST `/api/v1/rgb/utxos/top_up`
 
 * **Summary:** Increase RGB UTXO capacity
-* **Description:** Low-level primitive that replaces one confirmed, unlocked RGB UTXO with a larger RGB-wallet output while preserving its anchored single-contract RGB state. Typical flow: `POST /rgb/sync` -> `GET /rgb/utxos` (pick the RGB input) -> `POST /wallet/sync` + `GET /wallet/utxos` (pick extra BTC inputs) -> `POST /rgb/new_address` (replacement output) -> `POST /wallet/new_address` (change) -> `POST /rgb/utxos/top_up`. The response includes a `consignment_key` for the replacement transfer.
+* **Description:** Low-level primitive that replaces one confirmed, unlocked RGB UTXO with a larger RGB-wallet output while preserving its anchored single-contract RGB state. Typical flow: `POST /rgb/sync` -> `GET /rgb/utxos` (pick the RGB input) -> `POST /wallet/sync` + `GET /wallet/utxos` (pick extra BTC inputs) -> `POST /rgb/address/new` (replacement output) -> `POST /wallet/address/new` (change) -> `POST /rgb/utxos/top_up`. The response includes a `consignment_key` for the replacement transfer.
 * **Request Body:** `RgbUtxosTopUpRequest`
 * **Response (200):** `RgbUtxosTopUpResponse`
 
@@ -504,10 +523,23 @@
 * **Description:** Returns HTTP API versioning metadata for compatibility checks.
 * **Response (200):** `VersionResponse`
 
+### GET `/api/v1/wallet/address/current`
+
+* **Summary:** Current on-chain address
+* **Description:** Returns the most recently generated ordinary BTC wallet address without advancing the derivation index. Returns `404 address_not_initialized` until an address has been generated with `POST /wallet/address/new` or the deprecated `POST /wallet/new_address` alias.
+* **Response (200):** `WalletNewAddressResponse`
+* **Response (404):** No wallet address has been generated yet
+
+### POST `/api/v1/wallet/address/new`
+
+* **Summary:** New on-chain address
+* **Description:** Generates and persists a new receive/change address from the ordinary BTC wallet account. This advances the external address index. Use `GET /wallet/address/current` when refreshing an existing receive screen.
+* **Response (200):** `WalletNewAddressResponse`
+
 ### POST `/api/v1/wallet/new_address`
 
 * **Summary:** New on-chain address
-* **Description:** Generates a new receive/change address from the ordinary BTC wallet account. Use this for plain BTC funding, explicit change on RGB UTXO-management calls, and outputs that should later appear in `/wallet/utxos`. Do not use it for RGB-owned outputs; use `POST /rgb/new_address` for those.
+* **Description:** Deprecated compatibility alias for `POST /wallet/address/new`. Generates a new receive/change address from the ordinary BTC wallet account. Use this for plain BTC funding, explicit change on RGB UTXO-management calls, and outputs that should later appear in `/wallet/utxos`. Do not use it for RGB-owned outputs; use `POST /rgb/address/new` for those.
 * **Response (200):** `WalletNewAddressResponse`
 
 ### POST `/api/v1/wallet/sync`
