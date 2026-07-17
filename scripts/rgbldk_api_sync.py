@@ -86,6 +86,18 @@ def _generated_header(source: str) -> str:
     return f"// Generated from {source}. Do not edit.\n\n"
 
 
+def _api_dto_source(path: Path) -> str:
+    content = path.read_text(encoding="utf-8")
+    # The node's swap DTO module also contains the node-only `From<crate::swap::SwapInfo>`
+    # adapter and tests. The mirror crate intentionally contains DTOs only, so those sections
+    # would refer to a module that does not exist in rgbldk_http_dto and make the generated crate
+    # fail to compile.
+    if path.name == "swap.rs":
+        content = content.split("\nimpl From<crate::swap::SwapInfo>", 1)[0]
+        return content.rstrip()
+    return content
+
+
 def _write_dto_sources(node_repo: Path, crate_dir: Path) -> None:
     src_dir = crate_dir / "src"
     legacy_dto = node_repo / "src" / "http" / "dto.rs"
@@ -94,7 +106,7 @@ def _write_dto_sources(node_repo: Path, crate_dir: Path) -> None:
     if legacy_dto.exists():
         _write_text(
             src_dir / "dto.rs",
-            _generated_header("rgb-ldk-node/src/http/dto.rs") + legacy_dto.read_text(encoding="utf-8") + "\n",
+            _generated_header("rgb-ldk-node/src/http/dto.rs") + _api_dto_source(legacy_dto) + "\n",
         )
         return
 
@@ -107,7 +119,7 @@ def _write_dto_sources(node_repo: Path, crate_dir: Path) -> None:
         _write_text(
             out,
             _generated_header(f"rgb-ldk-node/src/http/dto/{rel.as_posix()}")
-            + path.read_text(encoding="utf-8")
+            + _api_dto_source(path)
             + "\n",
         )
 

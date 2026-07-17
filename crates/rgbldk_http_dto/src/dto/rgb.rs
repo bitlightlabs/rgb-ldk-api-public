@@ -319,6 +319,25 @@ pub struct RgbLnCarrierEstimateChannelDto {
 	pub has_holder_reserve: bool,
 	/// Whether this channel can currently receive at least the hard minimum RGB carrier.
 	pub receive_available: bool,
+	/// Whether invoice creation can currently use this channel when the carrier is omitted.
+	#[serde(default)]
+	pub can_receive_rgb_invoice: bool,
+	/// Why default invoice creation is currently blocked on this channel.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub blocking_reason: Option<String>,
+	/// Carrier this channel would need for default invoice creation, if known.
+	#[serde(default, with = "serde_opt_u64_decimal_string")]
+	pub required_carrier_msat: Option<u64>,
+	/// Why `required_carrier_msat` was selected, if known.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub required_carrier_reason: Option<String>,
+	/// Available inbound BTC carrier capacity in millisatoshis.
+	#[serde(default)]
+	#[serde(with = "serde_u64_decimal_string")]
+	pub available_inbound_capacity_msat: u64,
+	/// Suggested action when default invoice creation is blocked on this channel.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub suggested_action: Option<String>,
 	/// Suggested minimum viable carrier for this channel, if currently receive-capable.
 	#[serde(default, with = "serde_opt_u64_decimal_string")]
 	pub minimum_viable_carrier_amount_msat: Option<u64>,
@@ -337,6 +356,24 @@ pub struct RgbLnCarrierEstimateChannelDto {
 pub struct RgbLnCarrierEstimateResponse {
 	/// Whether at least one channel can currently receive an RGB LN carrier.
 	pub receive_available: bool,
+	/// Whether invoice creation can currently succeed when the carrier is omitted.
+	#[serde(default)]
+	pub can_create_rgb_invoice: bool,
+	/// Why default invoice creation is currently blocked.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub blocking_reason: Option<String>,
+	/// Carrier required for default invoice creation, if known.
+	#[serde(default, with = "serde_opt_u64_decimal_string")]
+	pub required_carrier_msat: Option<u64>,
+	/// Why `required_carrier_msat` was selected, if known.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub required_carrier_reason: Option<String>,
+	/// Best available inbound BTC carrier capacity from the current snapshot, if known.
+	#[serde(default, with = "serde_opt_u64_decimal_string")]
+	pub available_inbound_capacity_msat: Option<u64>,
+	/// Suggested action when default invoice creation is blocked.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub suggested_action: Option<String>,
 	/// Lowest carrier that looks viable from the node's current channel snapshot.
 	///
 	/// This top-level estimate is conservative for invoices that do not bind a specific receiving

@@ -517,6 +517,66 @@
 * **Description:** Returns the current runtime, listener, and best-block status of the node.
 * **Response (200):** `StatusDto`
 
+### POST `/api/v1/swap/accept`
+
+* **Summary:** Accept swap offer
+* **Description:** Taker accepts an out-of-band offer string, registering the intercept whitelist so the maker's circular payment can be forwarded once executed.
+
+Note: acceptance is currently local to the taker — the maker is NOT notified over the network, so the maker's own swap record stays `Offered` until it calls `/swap/execute`. Coordinate out-of-band: the taker must accept BEFORE the maker executes, otherwise the maker's forwarded HTLC is rejected (unknown payment hash) and the swap fails asynchronously.
+* **Request Body:** `SwapStringRequest`
+* **Response (200):** `SwapInfoDto`
+
+### POST `/api/v1/swap/decode`
+
+* **Summary:** Preview swap offer
+* **Description:** Decodes an out-of-band offer string without persisting it, so a prospective taker can preview its terms before calling /swap/accept.
+* **Request Body:** `SwapStringRequest`
+* **Response (200):** `SwapInfoDto`
+
+### POST `/api/v1/swap/execute`
+
+* **Summary:** Execute swap
+* **Description:** Maker *initiates* the circular payment for a previously created offer. Accepts `swap_string` (preferred — required for multi-hop offers) or `payment_hash` (single-hop only — rejected with an error for multi-hop swaps, since the full path isn't stored under the payment hash alone).
+
+**A 200 response means the payment was initiated, NOT that the swap settled.** Settlement is asynchronous. The returned `status` is normally `InFlight`; poll `GET /swap/{payment_hash}` until it reaches `Settled` (success — channel balances have moved) or `Failed` (see `last_error` there).
+
+Execute is gated on acceptance: it refuses with `SwapNotAcceptedYet` until the taker's `/swap/accept` has reached this node over the network (the swap shows `Accepted`). Poll `GET /swap/{payment_hash}` for `Accepted` first, or pass `force: true` to bypass the gate (acceptance coordinated out-of-band, or an older taker that doesn't signal). Execute is also rejected up front if the taker lacks the channel BTC capacity to forward the BTC leg (`SwapInsufficientCounterpartyCapacity`) or the peer is offline.
+* **Request Body:** `SwapExecuteRequest`
+* **Response (200):** `SwapExecuteResponse`
+
+### GET `/api/v1/swap/list`
+
+* **Summary:** List swaps
+* **Description:** Returns all swaps this node is participating in, as either maker or taker.
+* **Response (200):** `SwapInfoDto[]`
+
+### POST `/api/v1/swap/offers`
+
+* **Summary:** Create swap offer
+* **Description:** Maker creates a single-hop BTC<->RGB swap offer and returns the out-of-band offer string to hand to the counterparty (e.g. via QR code or chat).
+* **Request Body:** `SwapCreateOfferRequest`
+* **Response (200):** `SwapOfferResponse`
+
+### POST `/api/v1/swap/offers/multihop`
+
+* **Summary:** Create multi-hop swap offer
+* **Description:** Maker creates a multi-hop BTC<->RGB swap offer, providing the full circular route explicitly (rgb_path: maker -> ... -> taker; btc_path: taker -> ... -> maker).
+* **Request Body:** `SwapCreateMultihopOfferRequest`
+* **Response (200):** `SwapOfferResponse`
+
+### DELETE `/api/v1/swap/{payment_hash}`
+
+* **Summary:** Cancel swap
+* **Description:** Cancels a swap locally by removing it from the store. This is a local-only operation — the counterparty is not notified. Only the maker may cancel, and only before the swap enters the in-flight state.
+* **Response (200):** `OkResponse`
+
+### GET `/api/v1/swap/{payment_hash}`
+
+* **Summary:** Get swap
+* **Description:** Returns the full details of a single swap by payment hash. **This is the source of truth for whether a swap actually completed** — poll it after `/swap/execute`: the swap succeeded only once `status` is `Settled` (channel balances have moved). If `status` is `Failed`, `last_error` carries the reason (e.g. `RetriesExhausted`). A swap stuck at `InFlight`/`Accepted` has not completed.
+* **Response (200):** `SwapInfoDto`
+* **Response (404):** Unknown swap
+
 ### GET `/api/v1/version`
 
 * **Summary:** API version

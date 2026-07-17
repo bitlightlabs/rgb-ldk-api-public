@@ -307,6 +307,18 @@ pub struct PaymentDetailsDto {
 	pub amount_msat: Option<u64>,
 	/// Payment kind label.
 	pub kind: String,
+	/// Payment hash (hex-encoded 32 bytes), surfaced at the top level for convenient matching.
+	///
+	/// Present for all payment kinds that carry a hash; `None` for on-chain payments and for
+	/// BOLT 12 payments whose hash is not yet known.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub payment_hash: Option<String>,
+	/// Whether an inbound HTLC is currently locked in for this payment, awaiting resolution.
+	///
+	/// For hold invoices this distinguishes "the invoice was created but nobody has paid yet"
+	/// (`false`) from "the payer locked in an HTLC pending a manual claim/fail" (`true`). Always
+	/// `false` for outbound payments.
+	pub htlc_locked: bool,
 	/// Fee paid in millisatoshis, if known.
 	#[serde(default, with = "serde_opt_u64_decimal_string")]
 	pub fee_paid_msat: Option<u64>,
@@ -339,6 +351,36 @@ pub struct ChannelDetailsExtendedDto {
 	pub counterparty_node_id: String,
 	/// Funding outpoint formatted as `txid:vout` if known.
 	pub channel_point: Option<String>,
+	/// The channel's short channel id, used to identify the channel in routing hops and onion
+	/// paths.
+	///
+	/// `None` until the funding transaction has reached the required number of confirmations.
+	#[serde(
+		default,
+		with = "serde_opt_u64_decimal_string",
+		skip_serializing_if = "Option::is_none"
+	)]
+	pub short_channel_id: Option<u64>,
+	/// A locally-generated alias for [`short_channel_id`], usable in place of it in outbound
+	/// routing hops while the channel is usable but not yet confirmed on-chain.
+	///
+	/// [`short_channel_id`]: Self::short_channel_id
+	#[serde(
+		default,
+		with = "serde_opt_u64_decimal_string",
+		skip_serializing_if = "Option::is_none"
+	)]
+	pub outbound_scid_alias: Option<u64>,
+	/// A counterparty-generated alias for [`short_channel_id`], usable in place of it in
+	/// inbound routing hints.
+	///
+	/// [`short_channel_id`]: Self::short_channel_id
+	#[serde(
+		default,
+		with = "serde_opt_u64_decimal_string",
+		skip_serializing_if = "Option::is_none"
+	)]
+	pub inbound_scid_alias: Option<u64>,
 	/// Total channel capacity in satoshis.
 	#[serde(with = "serde_u64_decimal_string")]
 	pub channel_value_sats: u64,

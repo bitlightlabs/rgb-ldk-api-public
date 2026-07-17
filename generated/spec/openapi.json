@@ -11,7 +11,7 @@
       "name": "MIT OR Apache-2.0",
       "identifier": "MIT OR Apache-2.0"
     },
-    "version": "0.7.0-bitlight.1"
+    "version": "0.7.0-bitlight.2"
   },
   "paths": {
     "/balances": {
@@ -2802,6 +2802,298 @@
         ]
       }
     },
+    "/swap/accept": {
+      "post": {
+        "tags": [
+          "swap"
+        ],
+        "summary": "Accept swap offer",
+        "description": "Taker accepts an out-of-band offer string, registering the intercept whitelist so the maker's circular payment can be forwarded once executed.\n\nNote: acceptance is currently local to the taker — the maker is NOT notified over the network, so the maker's own swap record stays `Offered` until it calls `/swap/execute`. Coordinate out-of-band: the taker must accept BEFORE the maker executes, otherwise the maker's forwarded HTLC is rejected (unknown payment hash) and the swap fails asynchronously.",
+        "operationId": "accept",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwapStringRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Offer accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SwapInfoDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/swap/decode": {
+      "post": {
+        "tags": [
+          "swap"
+        ],
+        "summary": "Preview swap offer",
+        "description": "Decodes an out-of-band offer string without persisting it, so a prospective taker can preview its terms before calling /swap/accept.",
+        "operationId": "decode",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwapStringRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Decoded offer terms",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SwapInfoDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/swap/execute": {
+      "post": {
+        "tags": [
+          "swap"
+        ],
+        "summary": "Execute swap",
+        "description": "Maker *initiates* the circular payment for a previously created offer. Accepts `swap_string` (preferred — required for multi-hop offers) or `payment_hash` (single-hop only — rejected with an error for multi-hop swaps, since the full path isn't stored under the payment hash alone).\n\n**A 200 response means the payment was initiated, NOT that the swap settled.** Settlement is asynchronous. The returned `status` is normally `InFlight`; poll `GET /swap/{payment_hash}` until it reaches `Settled` (success — channel balances have moved) or `Failed` (see `last_error` there).\n\nExecute is gated on acceptance: it refuses with `SwapNotAcceptedYet` until the taker's `/swap/accept` has reached this node over the network (the swap shows `Accepted`). Poll `GET /swap/{payment_hash}` for `Accepted` first, or pass `force: true` to bypass the gate (acceptance coordinated out-of-band, or an older taker that doesn't signal). Execute is also rejected up front if the taker lacks the channel BTC capacity to forward the BTC leg (`SwapInsufficientCounterpartyCapacity`) or the peer is offline.",
+        "operationId": "execute",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwapExecuteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Swap execution initiated (not settled)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SwapExecuteResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/swap/list": {
+      "get": {
+        "tags": [
+          "swap"
+        ],
+        "summary": "List swaps",
+        "description": "Returns all swaps this node is participating in, as either maker or taker.",
+        "operationId": "list",
+        "responses": {
+          "200": {
+            "description": "Known swaps",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SwapInfoDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/swap/offers": {
+      "post": {
+        "tags": [
+          "swap"
+        ],
+        "summary": "Create swap offer",
+        "description": "Maker creates a single-hop BTC<->RGB swap offer and returns the out-of-band offer string to hand to the counterparty (e.g. via QR code or chat).",
+        "operationId": "create_offer",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwapCreateOfferRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Offer created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SwapOfferResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/swap/offers/multihop": {
+      "post": {
+        "tags": [
+          "swap"
+        ],
+        "summary": "Create multi-hop swap offer",
+        "description": "Maker creates a multi-hop BTC<->RGB swap offer, providing the full circular route explicitly (rgb_path: maker -> ... -> taker; btc_path: taker -> ... -> maker).",
+        "operationId": "create_offer_multihop",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwapCreateMultihopOfferRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Offer created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SwapOfferResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/swap/{payment_hash}": {
+      "get": {
+        "tags": [
+          "swap"
+        ],
+        "summary": "Get swap",
+        "description": "Returns the full details of a single swap by payment hash. **This is the source of truth for whether a swap actually completed** — poll it after `/swap/execute`: the swap succeeded only once `status` is `Settled` (channel balances have moved). If `status` is `Failed`, `last_error` carries the reason (e.g. `RetriesExhausted`). A swap stuck at `InFlight`/`Accepted` has not completed.",
+        "operationId": "get_one",
+        "parameters": [
+          {
+            "name": "payment_hash",
+            "in": "path",
+            "description": "Hex-encoded 32-byte payment hash",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Swap details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SwapInfoDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown swap"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "swap"
+        ],
+        "summary": "Cancel swap",
+        "description": "Cancels a swap locally by removing it from the store. This is a local-only operation — the counterparty is not notified. Only the maker may cancel, and only before the swap enters the in-flight state.",
+        "operationId": "cancel",
+        "parameters": [
+          {
+            "name": "payment_hash",
+            "in": "path",
+            "description": "Hex-encoded 32-byte payment hash",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Swap cancelled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
     "/version": {
       "get": {
         "tags": [
@@ -3670,6 +3962,14 @@
             "pattern": "^[0-9]+$",
             "description": "Receivable capacity in millisatoshis."
           },
+          "inbound_scid_alias": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$",
+            "description": "A counterparty-generated alias for [`short_channel_id`], usable in place of it in\ninbound routing hints.\n\n[`short_channel_id`]: Self::short_channel_id"
+          },
           "is_announced": {
             "type": "boolean",
             "description": "Whether channel is announced."
@@ -3703,6 +4003,14 @@
             "pattern": "^[0-9]+$",
             "description": "Sendable capacity in millisatoshis."
           },
+          "outbound_scid_alias": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$",
+            "description": "A locally-generated alias for [`short_channel_id`], usable in place of it in outbound\nrouting hops while the channel is usable but not yet confirmed on-chain.\n\n[`short_channel_id`]: Self::short_channel_id"
+          },
           "remote_balance_msat": {
             "type": [
               "string",
@@ -3726,6 +4034,14 @@
                 "description": "RGB asset balance in this channel, if any."
               }
             ]
+          },
+          "short_channel_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$",
+            "description": "The channel's short channel id, used to identify the channel in routing hops and onion\npaths.\n\n`None` until the funding transaction has reached the required number of confirmations."
           },
           "user_channel_id": {
             "type": "string",
@@ -4421,7 +4737,8 @@
           "id",
           "direction",
           "status",
-          "kind"
+          "kind",
+          "htlc_locked"
         ],
         "properties": {
           "amount_msat": {
@@ -4444,6 +4761,10 @@
             "pattern": "^[0-9]+$",
             "description": "Fee paid in millisatoshis, if known."
           },
+          "htlc_locked": {
+            "type": "boolean",
+            "description": "Whether an inbound HTLC is currently locked in for this payment, awaiting resolution.\n\nFor hold invoices this distinguishes \"the invoice was created but nobody has paid yet\"\n(`false`) from \"the payer locked in an HTLC pending a manual claim/fail\" (`true`). Always\n`false` for outbound payments."
+          },
           "id": {
             "type": "string",
             "description": "Payment id (hex-encoded 32 bytes)."
@@ -4454,6 +4775,13 @@
           },
           "kind_details": {
             "description": "Kind-specific details (when available)."
+          },
+          "payment_hash": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Payment hash (hex-encoded 32 bytes), surfaced at the top level for convenient matching.\n\nPresent for all payment kinds that carry a hash; `None` for on-chain payments and for\nBOLT 12 payments whose hash is not yet known."
           },
           "status": {
             "type": "string",
@@ -5089,6 +5417,22 @@
           "receive_available"
         ],
         "properties": {
+          "available_inbound_capacity_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Available inbound BTC carrier capacity in millisatoshis."
+          },
+          "blocking_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why default invoice creation is currently blocked on this channel."
+          },
+          "can_receive_rgb_invoice": {
+            "type": "boolean",
+            "description": "Whether invoice creation can currently use this channel when the carrier is omitted."
+          },
           "channel_id": {
             "type": "string",
             "description": "Channel id (32-byte hex)."
@@ -5158,6 +5502,28 @@
             "type": "boolean",
             "description": "Whether this channel can currently receive at least the hard minimum RGB carrier."
           },
+          "required_carrier_msat": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$",
+            "description": "Carrier this channel would need for default invoice creation, if known."
+          },
+          "required_carrier_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why `required_carrier_msat` was selected, if known."
+          },
+          "suggested_action": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Suggested action when default invoice creation is blocked on this channel."
+          },
           "user_channel_id": {
             "type": "string",
             "description": "Local user channel id (hex-encoded 16 bytes BIG-ENDIAN)."
@@ -5180,6 +5546,25 @@
           "warning"
         ],
         "properties": {
+          "available_inbound_capacity_msat": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$",
+            "description": "Best available inbound BTC carrier capacity from the current snapshot, if known."
+          },
+          "blocking_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why default invoice creation is currently blocked."
+          },
+          "can_create_rgb_invoice": {
+            "type": "boolean",
+            "description": "Whether invoice creation can currently succeed when the carrier is omitted."
+          },
           "carrier_admission_threshold_msat": {
             "type": "string",
             "pattern": "^[0-9]+$",
@@ -5227,6 +5612,28 @@
           "receive_available": {
             "type": "boolean",
             "description": "Whether at least one channel can currently receive an RGB LN carrier."
+          },
+          "required_carrier_msat": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$",
+            "description": "Carrier required for default invoice creation, if known."
+          },
+          "required_carrier_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Why `required_carrier_msat` was selected, if known."
+          },
+          "suggested_action": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Suggested action when default invoice creation is blocked."
           },
           "warning": {
             "type": "string",
@@ -6715,6 +7122,290 @@
           }
         }
       },
+      "SwapCreateMultihopOfferRequest": {
+        "type": "object",
+        "description": "Request to create a multi-hop swap offer (maker side).\n\nUnlike [`SwapCreateOfferRequest`], the caller supplies the full circular route explicitly:\n`rgb_path` (maker -> ... -> taker) and `btc_path` (taker -> ... -> maker). The first hop of\n`btc_path` is marked as the swap-intercept hop on execution.",
+        "required": [
+          "rgb_path",
+          "btc_path",
+          "contract_id",
+          "asset_amount",
+          "btc_amount_msat",
+          "btc_carrier_amount_msat",
+          "maker_gives_rgb",
+          "expiry_secs"
+        ],
+        "properties": {
+          "asset_amount": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "btc_amount_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "btc_carrier_amount_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "btc_path": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SwapHopDto"
+            }
+          },
+          "contract_id": {
+            "type": "string"
+          },
+          "expiry_secs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "maker_gives_rgb": {
+            "type": "boolean"
+          },
+          "rgb_path": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SwapHopDto"
+            }
+          }
+        }
+      },
+      "SwapCreateOfferRequest": {
+        "type": "object",
+        "description": "Request to create a single-hop swap offer (maker side).",
+        "required": [
+          "counterparty_node_id",
+          "channel_scid",
+          "contract_id",
+          "asset_amount",
+          "btc_amount_msat",
+          "btc_carrier_amount_msat",
+          "maker_gives_rgb",
+          "expiry_secs"
+        ],
+        "properties": {
+          "asset_amount": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "btc_amount_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "btc_carrier_amount_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "channel_scid": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "The short_channel_id (or alias) used in the outgoing onion for the forwarding hop."
+          },
+          "contract_id": {
+            "type": "string",
+            "description": "RGB contract id."
+          },
+          "counterparty_node_id": {
+            "type": "string",
+            "description": "Counterparty node public key, hex-encoded."
+          },
+          "expiry_secs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "maker_gives_rgb": {
+            "type": "boolean",
+            "description": "If true: maker gives RGB, taker gives BTC. If false: maker gives BTC, taker gives RGB."
+          }
+        }
+      },
+      "SwapExecuteRequest": {
+        "type": "object",
+        "description": "Request to execute a previously created offer (maker side). Provide either `swap_string`\n(required for multi-hop offers, and preferred in general) or `payment_hash` (single-hop only).",
+        "properties": {
+          "force": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Skip the \"taker has accepted\" gate. By default execute refuses until a `SWAP_ACCEPT` has\nadvanced the swap to `Accepted`; set this when acceptance was coordinated out-of-band or the\ntaker runs an older node that does not send the message. Defaults to `false`."
+          },
+          "payment_hash": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Hex-encoded 32-byte payment hash."
+          },
+          "swap_string": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "SwapExecuteResponse": {
+        "type": "object",
+        "description": "Response to `POST /swap/execute`.\n\n**Important:** `ok: true` only means the circular payment was successfully *initiated*. It does\nNOT mean the swap has settled or that any channel balance has moved yet. Settlement is\nasynchronous — poll `GET /swap/{payment_hash}` until `status` reaches `\"Settled\"` (success) or\n`\"Failed\"` (see `last_error` there for the reason).",
+        "required": [
+          "ok",
+          "payment_hash",
+          "status"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "description": "True when the payment was accepted for sending. Not a settlement guarantee — see the type\ndocs."
+          },
+          "payment_hash": {
+            "type": "string",
+            "description": "The swap's primary key, hex-encoded."
+          },
+          "status": {
+            "type": "string",
+            "description": "Swap status immediately after initiation — normally `\"InFlight\"`. Poll the swap until it\nreaches `\"Settled\"` / `\"Failed\"` to learn the real outcome."
+          }
+        }
+      },
+      "SwapHopDto": {
+        "type": "object",
+        "description": "One hop in a multi-hop swap path: a node id and the channel SCID used to reach it.",
+        "required": [
+          "node_id",
+          "channel_scid"
+        ],
+        "properties": {
+          "channel_scid": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "node_id": {
+            "type": "string",
+            "description": "Node public key, hex-encoded."
+          }
+        }
+      },
+      "SwapInfoDto": {
+        "type": "object",
+        "description": "A swap's full details, as returned by the create/accept/decode/list/get endpoints.",
+        "required": [
+          "payment_hash",
+          "role",
+          "status",
+          "counterparty_node_id",
+          "channel_scid",
+          "contract_id",
+          "asset_amount",
+          "btc_amount_msat",
+          "btc_carrier_amount_msat",
+          "maker_gives_rgb",
+          "expiry_secs",
+          "created_at_unix_secs",
+          "is_multihop"
+        ],
+        "properties": {
+          "asset_amount": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "btc_amount_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "btc_carrier_amount_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "channel_scid": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "contract_id": {
+            "type": "string",
+            "description": "RGB contract id (RGB-native `contract:…` string). Feed this into contract-info / precision\nlookups (e.g. `GET /rgb/contracts`) to resolve the asset's divisibility before formatting\n`asset_amount`."
+          },
+          "counterparty_node_id": {
+            "type": "string",
+            "description": "Counterparty node public key, hex-encoded."
+          },
+          "created_at_unix_secs": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "expiry_secs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "is_multihop": {
+            "type": "boolean",
+            "description": "True if this is a multi-hop swap. `POST /swap/execute` cannot execute these by\n`payment_hash` alone — pass the original `swap_string` instead."
+          },
+          "last_error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Human-readable reason for the most recent failure (e.g. \"RetriesExhausted\"); `null` unless\nthe swap has failed. Lets a client show *why* a swap failed without scraping logs."
+          },
+          "maker_gives_rgb": {
+            "type": "boolean",
+            "description": "If true: maker gives RGB, taker gives BTC. If false: maker gives BTC, taker gives RGB."
+          },
+          "payment_hash": {
+            "type": "string",
+            "description": "Hex-encoded 32-byte payment hash — the swap's primary key."
+          },
+          "role": {
+            "type": "string",
+            "description": "\"Maker\" or \"Taker\"."
+          },
+          "status": {
+            "type": "string",
+            "description": "One of \"Offered\", \"Accepted\", \"InFlight\", \"Forwarded\", \"Settled\", \"Failed\".\n\n`InFlight` means work was accepted for processing — including a taker enqueueing an\nintercepted HTLC — not that it succeeded. `Forwarded` is retained for legacy persisted\nrecords. Only `Settled` proves the circular payment completed."
+          }
+        }
+      },
+      "SwapOfferResponse": {
+        "type": "object",
+        "description": "Response to a successful offer creation (single- or multi-hop).",
+        "required": [
+          "swap_string",
+          "payment_hash",
+          "info"
+        ],
+        "properties": {
+          "info": {
+            "$ref": "#/components/schemas/SwapInfoDto",
+            "description": "The freshly created swap's details."
+          },
+          "payment_hash": {
+            "type": "string",
+            "description": "The swap's primary key, hex-encoded."
+          },
+          "swap_string": {
+            "type": "string",
+            "description": "Out-of-band offer string (`rgb-swap:v1:...` or `rgb-swap:v2:...`) to hand to the\ncounterparty (e.g. via QR code or chat)."
+          }
+        }
+      },
+      "SwapStringRequest": {
+        "type": "object",
+        "description": "Request carrying an out-of-band offer string — used to accept an offer (taker side) or to\npreview one without persisting it.",
+        "required": [
+          "swap_string"
+        ],
+        "properties": {
+          "swap_string": {
+            "type": "string"
+          }
+        }
+      },
       "VersionResponse": {
         "type": "object",
         "description": "Version metadata.",
@@ -6926,6 +7617,10 @@
     {
       "name": "network_graph",
       "description": "Network graph (gossip) inspection endpoints."
+    },
+    {
+      "name": "swap",
+      "description": "BTC<->RGB atomic swap endpoints (circular payment over Lightning)."
     }
   ]
 }
