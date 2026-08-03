@@ -86,6 +86,39 @@ def _generated_header(source: str) -> str:
     return f"// Generated from {source}. Do not edit.\n\n"
 
 
+def _strip_domain_from_impls(content: str) -> str:
+    """Remove `impl From<crate::…>` adapters that only compile inside rgb-ldk-node."""
+    out: list[str] = []
+    i = 0
+    marker = "\nimpl From<crate::"
+    while True:
+        j = content.find(marker, i)
+        if j < 0:
+            out.append(content[i:])
+            break
+        out.append(content[i:j])
+        brace = content.find("{", j + 1)
+        if brace < 0:
+            out.append(content[j:])
+            break
+        depth = 0
+        p = brace
+        while p < len(content):
+            ch = content[p]
+            if ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    p += 1
+                    break
+            p += 1
+        if p < len(content) and content[p] == "\n":
+            p += 1
+        i = p
+    return "".join(out)
+
+
 def _api_dto_source(path: Path) -> str:
     content = path.read_text(encoding="utf-8")
     # The node's swap DTO module also contains the node-only `From<crate::swap::SwapInfo>`
@@ -95,7 +128,11 @@ def _api_dto_source(path: Path) -> str:
     if path.name == "swap.rs":
         content = content.split("\nimpl From<crate::swap::SwapInfo>", 1)[0]
         return content.rstrip()
-    return content
+
+    # Other DTO modules may include node-domain `From<crate::…>` adapters (e.g. closing
+    # observability maps domain enums into DTO enums). Strip those: the mirror crate has no
+    # domain types at `crate::`.
+    return _strip_domain_from_impls(content).rstrip()
 
 
 def _write_dto_sources(node_repo: Path, crate_dir: Path) -> None:

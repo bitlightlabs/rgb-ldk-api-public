@@ -480,51 +480,6 @@ pub enum RgbSweepStatusDto {
 	Done,
 }
 
-impl From<crate::ClosingChannelStatus> for ClosingChannelStatusDto {
-	fn from(value: crate::ClosingChannelStatus) -> Self {
-		match value {
-			crate::ClosingChannelStatus::Negotiating => Self::Negotiating,
-			crate::ClosingChannelStatus::Broadcasting => Self::Broadcasting,
-			crate::ClosingChannelStatus::Confirming => Self::Confirming,
-			crate::ClosingChannelStatus::Contested => Self::Contested,
-			crate::ClosingChannelStatus::Sweeping => Self::Sweeping,
-		}
-	}
-}
-
-impl From<crate::ClosingSource> for ClosingSourceDto {
-	fn from(value: crate::ClosingSource) -> Self {
-		match value {
-			crate::ClosingSource::Coop => Self::Coop,
-			crate::ClosingSource::HolderForce => Self::HolderForce,
-			crate::ClosingSource::CounterpartyForce => Self::CounterpartyForce,
-			crate::ClosingSource::Unknown => Self::Unknown,
-		}
-	}
-}
-
-impl From<crate::RgbSweepStatus> for RgbSweepStatusDto {
-	fn from(value: crate::RgbSweepStatus) -> Self {
-		match value {
-			crate::RgbSweepStatus::Parked => Self::Parked,
-			crate::RgbSweepStatus::InFlight => Self::InFlight,
-			crate::RgbSweepStatus::Done => Self::Done,
-		}
-	}
-}
-
-impl From<crate::ClosingRgbDetails> for ClosingRgbDto {
-	fn from(value: crate::ClosingRgbDetails) -> Self {
-		Self {
-			contract_id: value.contract_id,
-			local_amount: value.local_amount,
-			remote_amount: value.remote_amount,
-			sweep_status: value.sweep_status.map(Into::into),
-			sweep_txid: value.sweep_txid.map(|t| t.to_string()),
-		}
-	}
-}
-
 /// One claimable BTC balance of a closing channel.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct ClosingBtcBalanceDto {
@@ -596,4 +551,3 @@ pub struct ClosingChannelDto {
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub rgb: Option<ClosingRgbDto>,
 }
-
