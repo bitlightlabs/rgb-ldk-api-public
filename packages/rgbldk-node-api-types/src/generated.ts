@@ -210,6 +210,33 @@ export interface CloseChannelRequest {
   counterparty_node_id: string;
 }
 
+export interface ClosingBtcBalanceDto {
+  kind: string;
+  amount_sats: U64String;
+  maturity_height?: number;
+  blocks_remaining?: number;
+}
+
+export interface ClosingChannelDto {
+  channel_id: string;
+  counterparty_node_id: string;
+  user_channel_id?: string;
+  status: ClosingChannelStatusDto;
+  close_source: ClosingSourceDto;
+  closing_txid?: string;
+  btc_balances: ClosingBtcBalanceDto[];
+  sweeping_balances: ClosingBtcBalanceDto[];
+  rgb?: ClosingRgbDto;
+}
+
+export interface ClosingRgbDto {
+  contract_id: string;
+  local_amount: U64String;
+  remote_amount: U64String;
+  sweep_status?: RgbSweepStatusDto;
+  sweep_txid?: string;
+}
+
 export interface ControlLockRequest {
   yes: boolean;
   force?: boolean;
@@ -960,6 +987,10 @@ export interface WalletUtxosResponse {
   utxos: WalletUtxoDto[];
 }
 
+export type ClosingChannelStatusDto = "negotiating" | "broadcasting" | "confirming" | "contested" | "sweeping";
+
+export type ClosingSourceDto = "coop" | "holder_force" | "counterparty_force" | "unknown";
+
 export type EventDto =
   | { type: "PaymentSuccessful"; data: {
       payment_id?: string;
@@ -1013,6 +1044,8 @@ export type MainStatusResponse =
 export type RgbSignMessageAlgorithmDto = "bitcoin_signed_message" | "ecdsa";
 
 export type RgbSignMessageEncodingDto = "hex" | "base64";
+
+export type RgbSweepStatusDto = "parked" | "in_flight" | "done";
 
 export type RgbUtxoConfirmationStatusDto = "confirmed" | "mempool";
 

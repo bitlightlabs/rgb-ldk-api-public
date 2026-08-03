@@ -851,6 +851,36 @@
         ]
       }
     },
+    "/channels/closing": {
+      "get": {
+        "tags": [
+          "channel"
+        ],
+        "summary": "List closing channels",
+        "description": "Returns channels between close initiation and funds landing back in the wallet, covering negotiating, broadcasting, confirming, contested and sweeping stages for both BTC-only and RGB channels. A channel absent from both /channels and /channels/closing has settled entirely.",
+        "operationId": "channels_closing",
+        "responses": {
+          "200": {
+            "description": "Channels currently closing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClosingChannelDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
     "/events/handled": {
       "post": {
         "tags": [
@@ -2986,7 +3016,7 @@
           "swap"
         ],
         "summary": "Create multi-hop swap offer",
-        "description": "Maker creates a multi-hop BTC<->RGB swap offer, providing the full circular route explicitly (rgb_path: maker -> ... -> taker; btc_path: taker -> ... -> maker).",
+        "description": "Maker creates a multi-hop BTC<->RGB swap offer, providing the full circular route explicitly (rgb_path: maker -> ... -> taker; btc_path: taker -> ... -> maker). The path names are historical route halves: for maker_gives_rgb=false, rgb_path carries BTC and btc_path carries RGB.",
         "operationId": "create_offer_multihop",
         "requestBody": {
           "content": {
@@ -4112,6 +4142,176 @@
             "type": "string"
           }
         }
+      },
+      "ClosingBtcBalanceDto": {
+        "type": "object",
+        "description": "One claimable BTC balance of a closing channel.",
+        "required": [
+          "kind",
+          "amount_sats"
+        ],
+        "properties": {
+          "amount_sats": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Amount in satoshis."
+          },
+          "blocks_remaining": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Blocks remaining until `maturity_height`, computed against the monitor's best block.",
+            "minimum": 0
+          },
+          "kind": {
+            "type": "string",
+            "description": "The balance kind (LDK balance variant name, e.g. `claimable_awaiting_confirmations`)."
+          },
+          "maturity_height": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Height at which this balance matures (becomes spendable / generates a spendable\noutput), when applicable.",
+            "minimum": 0
+          }
+        }
+      },
+      "ClosingChannelDto": {
+        "type": "object",
+        "description": "A channel between close initiation and funds landing back in the wallet.\n\nA channel absent from both `/channels` and `/channels/closing` has settled entirely.",
+        "required": [
+          "channel_id",
+          "counterparty_node_id",
+          "status",
+          "close_source",
+          "btc_balances",
+          "sweeping_balances"
+        ],
+        "properties": {
+          "btc_balances": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClosingBtcBalanceDto"
+            },
+            "description": "Claimable BTC balances still tracked for this channel (a force close may list several:\nmain output plus individual HTLCs)."
+          },
+          "channel_id": {
+            "type": "string",
+            "description": "Channel id (32-byte hex)."
+          },
+          "close_source": {
+            "$ref": "#/components/schemas/ClosingSourceDto",
+            "description": "How the channel was closed, when determinable."
+          },
+          "closing_txid": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Txid of the closing/commitment transaction. Populated from the first confirmation\nonward; `null` while the spend is unconfirmed or the close is still negotiating."
+          },
+          "counterparty_node_id": {
+            "type": "string",
+            "description": "Counterparty node id (hex pubkey)."
+          },
+          "rgb": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ClosingRgbDto",
+                "description": "RGB details, present for RGB channels."
+              }
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/ClosingChannelStatusDto",
+            "description": "Current closing stage."
+          },
+          "sweeping_balances": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClosingBtcBalanceDto"
+            },
+            "description": "BTC amounts currently being swept back to the on-chain wallet."
+          },
+          "user_channel_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "User channel id (hex-encoded 16 bytes big-endian). Only known while the channel is\nstill tracked by the channel manager (negotiating stage)."
+          }
+        }
+      },
+      "ClosingChannelStatusDto": {
+        "type": "string",
+        "description": "Stage of a closing channel.",
+        "enum": [
+          "negotiating",
+          "broadcasting",
+          "confirming",
+          "contested",
+          "sweeping"
+        ]
+      },
+      "ClosingRgbDto": {
+        "type": "object",
+        "description": "RGB details of a closing channel.",
+        "required": [
+          "contract_id",
+          "local_amount",
+          "remote_amount"
+        ],
+        "properties": {
+          "contract_id": {
+            "type": "string",
+            "description": "Contract ID of the asset held in the channel (`contract:...`), same identifier as\n`/channels` `rgb_balance.contract_id`."
+          },
+          "local_amount": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Our RGB amount at last channel state (final Lightning-side balance, not settlement\nprogress)."
+          },
+          "remote_amount": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Counterparty RGB amount at last channel state."
+          },
+          "sweep_status": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RgbSweepStatusDto",
+                "description": "RGB sweep progress; absent for channels without RGB or without a sweep record. Observed\nfor both cooperative and force closes of RGB channels. Single per-channel value:\nmulti-sweep closes (RGB-carrying HTLCs) surface sequentially with null gaps, and\n`done` is transient — treat the closing entry's disappearance as the terminal signal."
+              }
+            ]
+          },
+          "sweep_txid": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Txid of the RGB sweep transaction once broadcast."
+          }
+        }
+      },
+      "ClosingSourceDto": {
+        "type": "string",
+        "description": "How the channel was closed, as derivable from on-chain state.",
+        "enum": [
+          "coop",
+          "holder_force",
+          "counterparty_force",
+          "unknown"
+        ]
       },
       "CustomTlvDto": {
         "type": "object",
@@ -6293,6 +6493,15 @@
           }
         }
       },
+      "RgbSweepStatusDto": {
+        "type": "string",
+        "description": "Progress of the RGB static-output sweep for a closing channel.",
+        "enum": [
+          "parked",
+          "in_flight",
+          "done"
+        ]
+      },
       "RgbUtxoAssetAllocationDto": {
         "type": "object",
         "required": [
@@ -7124,7 +7333,7 @@
       },
       "SwapCreateMultihopOfferRequest": {
         "type": "object",
-        "description": "Request to create a multi-hop swap offer (maker side).\n\nUnlike [`SwapCreateOfferRequest`], the caller supplies the full circular route explicitly:\n`rgb_path` (maker -> ... -> taker) and `btc_path` (taker -> ... -> maker). The first hop of\n`btc_path` is marked as the swap-intercept hop on execution.",
+        "description": "Request to create a multi-hop swap offer (maker side).\n\nUnlike [`SwapCreateOfferRequest`], the caller supplies the full circular route explicitly:\n`rgb_path` (maker -> ... -> taker) and `btc_path` (taker -> ... -> maker). The first hop of\n`btc_path` is marked as the swap-intercept hop on execution. These names describe the\nhistorical route halves, not the channel type: with `maker_gives_rgb=false`, `rgb_path`\ncarries the BTC counter-value and `btc_path` carries RGB. In a direct one-hop sell,\n`btc_path.channel_scid` must therefore identify the RGB channel.",
         "required": [
           "rgb_path",
           "btc_path",

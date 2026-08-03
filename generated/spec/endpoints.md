@@ -162,6 +162,12 @@
 * **Description:** Returns the current Lightning channels with extended BTC and RGB balance details.
 * **Response (200):** `ChannelDetailsExtendedDto[]`
 
+### GET `/api/v1/channels/closing`
+
+* **Summary:** List closing channels
+* **Description:** Returns channels between close initiation and funds landing back in the wallet, covering negotiating, broadcasting, confirming, contested and sweeping stages for both BTC-only and RGB channels. A channel absent from both /channels and /channels/closing has settled entirely.
+* **Response (200):** `ClosingChannelDto[]`
+
 ### POST `/api/v1/events/handled`
 
 * **Summary:** Mark event handled
@@ -560,7 +566,7 @@ Execute is gated on acceptance: it refuses with `SwapNotAcceptedYet` until the t
 ### POST `/api/v1/swap/offers/multihop`
 
 * **Summary:** Create multi-hop swap offer
-* **Description:** Maker creates a multi-hop BTC<->RGB swap offer, providing the full circular route explicitly (rgb_path: maker -> ... -> taker; btc_path: taker -> ... -> maker).
+* **Description:** Maker creates a multi-hop BTC<->RGB swap offer, providing the full circular route explicitly (rgb_path: maker -> ... -> taker; btc_path: taker -> ... -> maker). The path names are historical route halves: for maker_gives_rgb=false, rgb_path carries BTC and btc_path carries RGB.
 * **Request Body:** `SwapCreateMultihopOfferRequest`
 * **Response (200):** `SwapOfferResponse`
 

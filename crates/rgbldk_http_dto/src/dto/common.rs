@@ -434,3 +434,166 @@ pub struct ChannelDetailsExtendedDto {
 	pub rgb_balance: Option<RgbChannelBalanceDto>,
 }
 
+/// Stage of a closing channel.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ClosingChannelStatusDto {
+	/// Shutdown initiated; closing negotiation not yet complete (peer may be offline or
+	/// in-flight HTLCs are still resolving).
+	Negotiating,
+	/// Closing/commitment transaction broadcast but not yet confirmed.
+	Broadcasting,
+	/// Funding spend confirmed; balances maturing (anti-reorg wait or force-close CSV delay).
+	Confirming,
+	/// One or more outputs are genuinely contested (preimage-claimable HTLC the counterparty
+	/// could time out, or counterparty revoked state). Routine unresolved HTLCs report as
+	/// `confirming`.
+	Contested,
+	/// Matured balances are being swept back into the wallet.
+	Sweeping,
+}
+
+/// How the channel was closed, as derivable from on-chain state.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ClosingSourceDto {
+	/// Cooperative close.
+	Coop,
+	/// We broadcast our commitment transaction.
+	HolderForce,
+	/// The counterparty broadcast a commitment transaction.
+	CounterpartyForce,
+	/// Not determinable (yet).
+	Unknown,
+}
+
+/// Progress of the RGB static-output sweep for a closing channel.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum RgbSweepStatusDto {
+	/// Sweep cannot be funded (no spare uncolored UTXO for fees); parked for retry. Fund the
+	/// wallet with BTC to unblock.
+	Parked,
+	/// Sweep transaction broadcast, awaiting confirmations.
+	InFlight,
+	/// Sweep reached the anti-reorg depth; RGB funds are back under wallet control.
+	Done,
+}
+
+impl From<crate::ClosingChannelStatus> for ClosingChannelStatusDto {
+	fn from(value: crate::ClosingChannelStatus) -> Self {
+		match value {
+			crate::ClosingChannelStatus::Negotiating => Self::Negotiating,
+			crate::ClosingChannelStatus::Broadcasting => Self::Broadcasting,
+			crate::ClosingChannelStatus::Confirming => Self::Confirming,
+			crate::ClosingChannelStatus::Contested => Self::Contested,
+			crate::ClosingChannelStatus::Sweeping => Self::Sweeping,
+		}
+	}
+}
+
+impl From<crate::ClosingSource> for ClosingSourceDto {
+	fn from(value: crate::ClosingSource) -> Self {
+		match value {
+			crate::ClosingSource::Coop => Self::Coop,
+			crate::ClosingSource::HolderForce => Self::HolderForce,
+			crate::ClosingSource::CounterpartyForce => Self::CounterpartyForce,
+			crate::ClosingSource::Unknown => Self::Unknown,
+		}
+	}
+}
+
+impl From<crate::RgbSweepStatus> for RgbSweepStatusDto {
+	fn from(value: crate::RgbSweepStatus) -> Self {
+		match value {
+			crate::RgbSweepStatus::Parked => Self::Parked,
+			crate::RgbSweepStatus::InFlight => Self::InFlight,
+			crate::RgbSweepStatus::Done => Self::Done,
+		}
+	}
+}
+
+impl From<crate::ClosingRgbDetails> for ClosingRgbDto {
+	fn from(value: crate::ClosingRgbDetails) -> Self {
+		Self {
+			contract_id: value.contract_id,
+			local_amount: value.local_amount,
+			remote_amount: value.remote_amount,
+			sweep_status: value.sweep_status.map(Into::into),
+			sweep_txid: value.sweep_txid.map(|t| t.to_string()),
+		}
+	}
+}
+
+/// One claimable BTC balance of a closing channel.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct ClosingBtcBalanceDto {
+	/// The balance kind (LDK balance variant name, e.g. `claimable_awaiting_confirmations`).
+	pub kind: String,
+	/// Amount in satoshis.
+	#[serde(with = "serde_u64_decimal_string")]
+	pub amount_sats: u64,
+	/// Height at which this balance matures (becomes spendable / generates a spendable
+	/// output), when applicable.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub maturity_height: Option<u32>,
+	/// Blocks remaining until `maturity_height`, computed against the monitor's best block.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub blocks_remaining: Option<u32>,
+}
+
+/// RGB details of a closing channel.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct ClosingRgbDto {
+	/// Contract ID of the asset held in the channel (`contract:...`), same identifier as
+	/// `/channels` `rgb_balance.contract_id`.
+	pub contract_id: String,
+	/// Our RGB amount at last channel state (final Lightning-side balance, not settlement
+	/// progress).
+	#[serde(with = "serde_u64_decimal_string")]
+	pub local_amount: u64,
+	/// Counterparty RGB amount at last channel state.
+	#[serde(with = "serde_u64_decimal_string")]
+	pub remote_amount: u64,
+	/// RGB sweep progress; absent for channels without RGB or without a sweep record. Observed
+	/// for both cooperative and force closes of RGB channels. Single per-channel value:
+	/// multi-sweep closes (RGB-carrying HTLCs) surface sequentially with null gaps, and
+	/// `done` is transient — treat the closing entry's disappearance as the terminal signal.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub sweep_status: Option<RgbSweepStatusDto>,
+	/// Txid of the RGB sweep transaction once broadcast.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub sweep_txid: Option<String>,
+}
+
+/// A channel between close initiation and funds landing back in the wallet.
+///
+/// A channel absent from both `/channels` and `/channels/closing` has settled entirely.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct ClosingChannelDto {
+	/// Channel id (32-byte hex).
+	pub channel_id: String,
+	/// Counterparty node id (hex pubkey).
+	pub counterparty_node_id: String,
+	/// User channel id (hex-encoded 16 bytes big-endian). Only known while the channel is
+	/// still tracked by the channel manager (negotiating stage).
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub user_channel_id: Option<String>,
+	/// Current closing stage.
+	pub status: ClosingChannelStatusDto,
+	/// How the channel was closed, when determinable.
+	pub close_source: ClosingSourceDto,
+	/// Txid of the closing/commitment transaction. Populated from the first confirmation
+	/// onward; `null` while the spend is unconfirmed or the close is still negotiating.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub closing_txid: Option<String>,
+	/// Claimable BTC balances still tracked for this channel (a force close may list several:
+	/// main output plus individual HTLCs).
+	pub btc_balances: Vec<ClosingBtcBalanceDto>,
+	/// BTC amounts currently being swept back to the on-chain wallet.
+	pub sweeping_balances: Vec<ClosingBtcBalanceDto>,
+	/// RGB details, present for RGB channels.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub rgb: Option<ClosingRgbDto>,
+}
+

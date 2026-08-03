@@ -41,7 +41,10 @@ pub struct SwapHopDto {
 ///
 /// Unlike [`SwapCreateOfferRequest`], the caller supplies the full circular route explicitly:
 /// `rgb_path` (maker -> ... -> taker) and `btc_path` (taker -> ... -> maker). The first hop of
-/// `btc_path` is marked as the swap-intercept hop on execution.
+/// `btc_path` is marked as the swap-intercept hop on execution. These names describe the
+/// historical route halves, not the channel type: with `maker_gives_rgb=false`, `rgb_path`
+/// carries the BTC counter-value and `btc_path` carries RGB. In a direct one-hop sell,
+/// `btc_path.channel_scid` must therefore identify the RGB channel.
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 pub struct SwapCreateMultihopOfferRequest {
 	pub rgb_path: Vec<SwapHopDto>,
