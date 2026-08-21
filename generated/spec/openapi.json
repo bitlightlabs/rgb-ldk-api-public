@@ -3,10 +3,6 @@
   "info": {
     "title": "rgb-ldk-node HTTP API",
     "description": "Experimental OpenAPI source of truth for the node HTTP API.",
-    "contact": {
-      "name": "Elias Rohrer",
-      "email": "dev@tnull.de"
-    },
     "license": {
       "name": "MIT OR Apache-2.0",
       "identifier": "MIT OR Apache-2.0"
@@ -2581,6 +2577,70 @@
         ]
       }
     },
+    "/rgb/utxos/merge": {
+      "post": {
+        "tags": [
+          "rgb-wallet"
+        ],
+        "summary": "Merge RGB UTXOs onto one destination",
+        "description": "Consolidates every spendable RGB UTXO of one contract onto an existing RGB-wallet destination outpoint via a blinded self-transfer. Inputs are auto-selected (deeply confirmed, unlocked, single-asset carriers); a single call consumes at most 256 inputs and reports the remainder via `remaining_count`. UTXOs bound to pending receive invoices are skipped unless `include_invoice_bound_utxos=true`, which also marks the affected invoices expired. Poll `GET /rgb/utxos/merge/status` until `done`.",
+        "operationId": "rgb_utxos_merge",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RgbUtxosMergeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Merge transaction broadcast",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbUtxosMergeResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/rgb/utxos/merge/status": {
+      "get": {
+        "tags": [
+          "rgb-wallet"
+        ],
+        "summary": "RGB UTXO merge status",
+        "description": "Lists every merge whose destination reservation is still held, newest first, and auto-releases the reservation of each merge that is deeply confirmed (reported as `done`). Takes no parameters, so callers can recover in-flight merges after losing local state; released merges disappear from subsequent responses. Poll until the merge you care about reports `done` (or the list is empty).",
+        "operationId": "rgb_utxos_merge_status",
+        "responses": {
+          "200": {
+            "description": "Merge status list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RgbUtxosMergeStatusResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
     "/rgb/utxos/release": {
       "post": {
         "tags": [
@@ -3016,7 +3076,7 @@
           "swap"
         ],
         "summary": "Create multi-hop swap offer",
-        "description": "Maker creates a multi-hop BTC<->RGB swap offer, providing the full circular route explicitly (rgb_path: maker -> ... -> taker; btc_path: taker -> ... -> maker). The path names are historical route halves: for maker_gives_rgb=false, rgb_path carries BTC and btc_path carries RGB.",
+        "description": "Maker creates a multi-hop BTC<->RGB swap offer, providing the full circular route explicitly (rgb_path: maker -> ... -> taker; btc_path: taker -> ... -> maker). Path names are historical route halves, not channel types: with maker_gives_rgb=false, rgb_path carries BTC and btc_path carries RGB (btc_path.channel_scid must be RGB-capable on a direct sell).",
         "operationId": "create_offer_multihop",
         "requestBody": {
           "content": {
@@ -4872,7 +4932,8 @@
             "type": [
               "boolean",
               "null"
-            ]
+            ],
+            "description": "When omitted, channels open as **private** (`false`). Set `true` to announce publicly."
           },
           "channel_amount_sats": {
             "type": "string",
@@ -5467,6 +5528,48 @@
             "description": "Public RGB wallet root descriptor."
           }
         }
+      },
+      "RgbFundingUtxoDto": {
+        "type": "object",
+        "description": "One caller-selected RGB channel funding UTXO.",
+        "required": [
+          "txid",
+          "vout",
+          "role"
+        ],
+        "properties": {
+          "role": {
+            "$ref": "#/components/schemas/RgbFundingUtxoRoleDto",
+            "description": "Role the UTXO plays in the funding transaction."
+          },
+          "txid": {
+            "type": "string",
+            "description": "Transaction id of the UTXO, as listed by `/rgb/utxos`."
+          },
+          "vout": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Output index of the UTXO.",
+            "minimum": 0
+          }
+        }
+      },
+      "RgbFundingUtxoPolicyDto": {
+        "type": "string",
+        "description": "Automatic funding UTXO selection policy for opening an RGB channel.",
+        "enum": [
+          "single-rgb-anchor",
+          "rgb-anchor-with-btc-support",
+          "merge-rgb-anchors-with-btc-support"
+        ]
+      },
+      "RgbFundingUtxoRoleDto": {
+        "type": "string",
+        "description": "Role of a caller-selected RGB channel funding UTXO.",
+        "enum": [
+          "rgb-state",
+          "fee-support"
+        ]
       },
       "RgbInvalidIssuerDto": {
         "type": "object",
@@ -6219,6 +6322,13 @@
             "type": "string",
             "pattern": "^[0-9]+$"
           },
+          "purpose": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Internal maintenance marker: `utxo_merge` | `utxo_top_up`; absent for ordinary payments.\nFrontends can use it to keep self-transfers out of user-facing payment history."
+          },
           "status": {
             "type": "string",
             "description": "One of: pending | succeeded | failed | expired"
@@ -6353,6 +6463,27 @@
           "contract_id": {
             "type": "string",
             "description": "RGB contract ID."
+          },
+          "funding_utxo_policy": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RgbFundingUtxoPolicyDto",
+                "description": "Optional per-open override of the node's automatic funding UTXO policy.\n\nMutually exclusive with `funding_utxos`. When both are omitted, the node-level policy\napplies."
+              }
+            ]
+          },
+          "funding_utxos": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/RgbFundingUtxoDto"
+            },
+            "description": "Optional exact set of funding UTXOs to spend for this channel.\n\nMutually exclusive with `funding_utxo_policy`. Outpoints must belong to the RGB wallet\ndomain as listed by `/rgb/utxos`."
           }
         }
       },
@@ -6849,6 +6980,142 @@
           "txid": {
             "type": "string",
             "description": "Broadcast Bitcoin transaction id."
+          }
+        }
+      },
+      "RgbUtxosMergeRequest": {
+        "type": "object",
+        "required": [
+          "contract_id",
+          "destination_utxo"
+        ],
+        "properties": {
+          "contract_id": {
+            "type": "string",
+            "description": "Contract whose spendable RGB UTXOs will be consolidated."
+          },
+          "destination_utxo": {
+            "type": "string",
+            "description": "Existing RGB-wallet outpoint (`txid:vout`) that receives the full merged balance.\n\nMust be deeply confirmed, unlocked, and hold either no RGB assets or only the\ntarget contract. It is never spent by the merge transaction."
+          },
+          "fee_rate_sats_per_vb": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float",
+            "description": "Positive fee rate in sat/vB. Defaults to 2.0."
+          },
+          "include_invoice_bound_utxos": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Also spend UTXOs bound to pending receive invoices. Defaults to `false`.\n\nRGB invoices cannot be revoked: a payer that still pays one of the affected\ninvoices afterwards burns their own assets. Callers must list the affected\ninvoices and ask for explicit user confirmation before setting this."
+          }
+        }
+      },
+      "RgbUtxosMergeResponse": {
+        "type": "object",
+        "required": [
+          "operation_id",
+          "txid",
+          "merged_inputs",
+          "total_amount",
+          "remaining_count",
+          "status",
+          "consignment_key"
+        ],
+        "properties": {
+          "consignment_key": {
+            "type": "string",
+            "description": "Consignment cache key produced for the self-transfer."
+          },
+          "merged_inputs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Consolidated inputs (`txid:vout`), spent by the merge transaction."
+          },
+          "operation_id": {
+            "type": "string",
+            "description": "UTXO operation id tracking the merge (`rgb-utxo-merge-...`)."
+          },
+          "remaining_count": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Mergeable UTXOs left for a follow-up call (a single call caps at 256 inputs).",
+            "minimum": 0
+          },
+          "status": {
+            "type": "string",
+            "description": "`confirming` right after broadcast; poll `GET /rgb/utxos/merge/status`."
+          },
+          "total_amount": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Total asset amount moved onto the destination by this call."
+          },
+          "txid": {
+            "type": "string",
+            "description": "Broadcast Bitcoin transaction id."
+          }
+        }
+      },
+      "RgbUtxosMergeStatusEntryDto": {
+        "type": "object",
+        "required": [
+          "txid",
+          "destination_utxo",
+          "status",
+          "confirmations",
+          "released"
+        ],
+        "properties": {
+          "confirmations": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Confirmation depth of the merge transaction (0 while unconfirmed).",
+            "minimum": 0
+          },
+          "contract_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Contract that was consolidated, when recorded."
+          },
+          "destination_utxo": {
+            "type": "string",
+            "description": "Destination outpoint (`txid:vout`) receiving the merged balance."
+          },
+          "released": {
+            "type": "boolean",
+            "description": "Whether this call released the destination reservation."
+          },
+          "status": {
+            "type": "string",
+            "description": "`confirming` until the merge transaction is deeply confirmed, then `done`."
+          },
+          "txid": {
+            "type": "string",
+            "description": "Merge transaction id."
+          }
+        }
+      },
+      "RgbUtxosMergeStatusResponse": {
+        "type": "object",
+        "required": [
+          "merges"
+        ],
+        "properties": {
+          "merges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RgbUtxosMergeStatusEntryDto"
+            },
+            "description": "Merges whose destination reservation was still held when this call ran, newest first.\nEntries reported `done` had their reservation released by this very call, so they\ndisappear from subsequent responses."
           }
         }
       },

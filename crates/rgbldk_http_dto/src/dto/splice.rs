@@ -1,4 +1,4 @@
-// Generated from rgb-ldk-node/src/http/dto/splice.rs. Do not edit.
+// Generated from rgb-ldk-node/crates/node-http/src/dto/splice.rs. Do not edit.
 
 //! Splice request DTOs (experimental, mirrors `Node::splice_in` / `Node::splice_out`).
 
@@ -31,4 +31,3 @@ pub struct SpliceOutRequest {
 	#[serde(with = "serde_u64_decimal_string")]
 	pub splice_amount_sats: u64,
 }
-

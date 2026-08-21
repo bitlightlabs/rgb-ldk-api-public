@@ -1,4 +1,4 @@
-// Generated from rgb-ldk-node/src/http/dto/core.rs. Do not edit.
+// Generated from rgb-ldk-node/crates/node-http/src/dto/core.rs. Do not edit.
 
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -122,6 +122,7 @@ pub struct OpenChannelRequest {
 	pub channel_amount_sats: u64,
 	#[serde(default, with = "serde_opt_u64_decimal_string")]
 	pub push_to_counterparty_msat: Option<u64>,
+	/// When omitted, channels open as **private** (`false`). Set `true` to announce publicly.
 	pub announce: Option<bool>,
 	#[serde(default)]
 	pub rgb: Option<RgbOpenChannelRequest>,
@@ -375,4 +376,3 @@ pub struct PaymentWaitResponse {
 	#[serde(default)]
 	pub checks: Vec<HealthCheckDto>,
 }
-

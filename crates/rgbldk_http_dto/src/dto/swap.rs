@@ -1,6 +1,6 @@
-// Generated from rgb-ldk-node/src/http/dto/swap.rs. Do not edit.
+// Generated from rgb-ldk-node/crates/node-http/src/dto/swap.rs. Do not edit.
 
-//! Swap (BTC <-> RGB) request/response DTOs, mirroring `Node::swap()` (`crate::swap::Swap`).
+//! Swap (BTC <-> RGB) request/response DTOs, mirroring `Node::swap()` (`rgb_ldk_node::Swap`).
 
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;

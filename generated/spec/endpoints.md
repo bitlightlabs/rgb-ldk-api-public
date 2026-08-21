@@ -476,6 +476,19 @@
 * **Request Body:** `RgbUtxosFundRequest`
 * **Response (200):** `RgbUtxosFundResponse`
 
+### POST `/api/v1/rgb/utxos/merge`
+
+* **Summary:** Merge RGB UTXOs onto one destination
+* **Description:** Consolidates every spendable RGB UTXO of one contract onto an existing RGB-wallet destination outpoint via a blinded self-transfer. Inputs are auto-selected (deeply confirmed, unlocked, single-asset carriers); a single call consumes at most 256 inputs and reports the remainder via `remaining_count`. UTXOs bound to pending receive invoices are skipped unless `include_invoice_bound_utxos=true`, which also marks the affected invoices expired. Poll `GET /rgb/utxos/merge/status` until `done`.
+* **Request Body:** `RgbUtxosMergeRequest`
+* **Response (200):** `RgbUtxosMergeResponse`
+
+### GET `/api/v1/rgb/utxos/merge/status`
+
+* **Summary:** RGB UTXO merge status
+* **Description:** Lists every merge whose destination reservation is still held, newest first, and auto-releases the reservation of each merge that is deeply confirmed (reported as `done`). Takes no parameters, so callers can recover in-flight merges after losing local state; released merges disappear from subsequent responses. Poll until the merge you care about reports `done` (or the list is empty).
+* **Response (200):** `RgbUtxosMergeStatusResponse`
+
 ### POST `/api/v1/rgb/utxos/release`
 
 * **Summary:** Release RGB UTXO reservation
@@ -566,7 +579,7 @@ Execute is gated on acceptance: it refuses with `SwapNotAcceptedYet` until the t
 ### POST `/api/v1/swap/offers/multihop`
 
 * **Summary:** Create multi-hop swap offer
-* **Description:** Maker creates a multi-hop BTC<->RGB swap offer, providing the full circular route explicitly (rgb_path: maker -> ... -> taker; btc_path: taker -> ... -> maker). The path names are historical route halves: for maker_gives_rgb=false, rgb_path carries BTC and btc_path carries RGB.
+* **Description:** Maker creates a multi-hop BTC<->RGB swap offer, providing the full circular route explicitly (rgb_path: maker -> ... -> taker; btc_path: taker -> ... -> maker). Path names are historical route halves, not channel types: with maker_gives_rgb=false, rgb_path carries BTC and btc_path carries RGB (btc_path.channel_scid must be RGB-capable on a direct sell).
 * **Request Body:** `SwapCreateMultihopOfferRequest`
 * **Response (200):** `SwapOfferResponse`
 

@@ -1,4 +1,4 @@
-// Generated from rgb-ldk-node/src/http/dto/async_payments.rs. Do not edit.
+// Generated from rgb-ldk-node/crates/node-http/src/dto/async_payments.rs. Do not edit.
 
 //! BOLT-12 async payment DTOs (experimental).
 
@@ -36,4 +36,3 @@ pub struct AsyncBlindedPathsResponse {
 	/// Hex-encoded `Writeable` serialization of the resulting `Vec<BlindedMessagePath>`.
 	pub paths_hex: String,
 }
-

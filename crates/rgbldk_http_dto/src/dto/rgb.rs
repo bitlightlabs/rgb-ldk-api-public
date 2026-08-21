@@ -1,4 +1,4 @@
-// Generated from rgb-ldk-node/src/http/dto/rgb.rs. Do not edit.
+// Generated from rgb-ldk-node/crates/node-http/src/dto/rgb.rs. Do not edit.
 
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -14,6 +14,51 @@ pub struct RgbOpenChannelRequest {
 	pub asset_amount: u64,
 	/// RGB color context data (e.g. a consignment endpoint like `file://...`).
 	pub color_context_data: String,
+	/// Optional per-open override of the node's automatic funding UTXO policy.
+	///
+	/// Mutually exclusive with `funding_utxos`. When both are omitted, the node-level policy
+	/// applies.
+	#[serde(default)]
+	pub funding_utxo_policy: Option<RgbFundingUtxoPolicyDto>,
+	/// Optional exact set of funding UTXOs to spend for this channel.
+	///
+	/// Mutually exclusive with `funding_utxo_policy`. Outpoints must belong to the RGB wallet
+	/// domain as listed by `/rgb/utxos`.
+	#[serde(default)]
+	pub funding_utxos: Option<Vec<RgbFundingUtxoDto>>,
+}
+
+/// Automatic funding UTXO selection policy for opening an RGB channel.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum RgbFundingUtxoPolicyDto {
+	/// Fund from exactly one RGB-carrying UTXO; fail if none covers the requested amount.
+	SingleRgbAnchor,
+	/// Prefer one RGB-carrying UTXO, adding plain BTC inputs for fees when needed.
+	RgbAnchorWithBtcSupport,
+	/// Merge multiple RGB-carrying UTXOs when no single one covers the requested amount.
+	MergeRgbAnchorsWithBtcSupport,
+}
+
+/// One caller-selected RGB channel funding UTXO.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RgbFundingUtxoDto {
+	/// Transaction id of the UTXO, as listed by `/rgb/utxos`.
+	pub txid: String,
+	/// Output index of the UTXO.
+	pub vout: u32,
+	/// Role the UTXO plays in the funding transaction.
+	pub role: RgbFundingUtxoRoleDto,
+}
+
+/// Role of a caller-selected RGB channel funding UTXO.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "kebab-case")]
+pub enum RgbFundingUtxoRoleDto {
+	/// The UTXO carries RGB state of the channel's asset that will be spent into the channel.
+	RgbState,
+	/// The UTXO contributes only plain BTC value for fees or carrier support.
+	FeeSupport,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -594,6 +639,10 @@ pub struct RgbOnchainPaymentDto {
 	pub consignment_key: Option<String>,
 	#[serde(default)]
 	pub consignment_download_path: Option<String>,
+	/// Internal maintenance marker: `utxo_merge` | `utxo_top_up`; absent for ordinary payments.
+	/// Frontends can use it to keep self-transfers out of user-facing payment history.
+	#[serde(default)]
+	pub purpose: Option<String>,
 }
 
 /// Canonical RGB-wallet UTXO view.
@@ -799,6 +848,71 @@ pub struct RgbUtxosTopUpResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RgbUtxosMergeRequest {
+	/// Contract whose spendable RGB UTXOs will be consolidated.
+	pub contract_id: String,
+	/// Existing RGB-wallet outpoint (`txid:vout`) that receives the full merged balance.
+	///
+	/// Must be deeply confirmed, unlocked, and hold either no RGB assets or only the
+	/// target contract. It is never spent by the merge transaction.
+	pub destination_utxo: String,
+	/// Also spend UTXOs bound to pending receive invoices. Defaults to `false`.
+	///
+	/// RGB invoices cannot be revoked: a payer that still pays one of the affected
+	/// invoices afterwards burns their own assets. Callers must list the affected
+	/// invoices and ask for explicit user confirmation before setting this.
+	#[serde(default)]
+	pub include_invoice_bound_utxos: Option<bool>,
+	/// Positive fee rate in sat/vB. Defaults to 2.0.
+	#[serde(default)]
+	pub fee_rate_sats_per_vb: Option<f32>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RgbUtxosMergeResponse {
+	/// UTXO operation id tracking the merge (`rgb-utxo-merge-...`).
+	pub operation_id: String,
+	/// Broadcast Bitcoin transaction id.
+	pub txid: String,
+	/// Consolidated inputs (`txid:vout`), spent by the merge transaction.
+	pub merged_inputs: Vec<String>,
+	/// Total asset amount moved onto the destination by this call.
+	#[serde(with = "serde_u64_decimal_string")]
+	pub total_amount: u64,
+	/// Mergeable UTXOs left for a follow-up call (a single call caps at 256 inputs).
+	pub remaining_count: u32,
+	/// `confirming` right after broadcast; poll `GET /rgb/utxos/merge/status`.
+	pub status: String,
+	/// Consignment cache key produced for the self-transfer.
+	pub consignment_key: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RgbUtxosMergeStatusResponse {
+	/// Merges whose destination reservation was still held when this call ran, newest first.
+	/// Entries reported `done` had their reservation released by this very call, so they
+	/// disappear from subsequent responses.
+	pub merges: Vec<RgbUtxosMergeStatusEntryDto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct RgbUtxosMergeStatusEntryDto {
+	/// Merge transaction id.
+	pub txid: String,
+	/// Destination outpoint (`txid:vout`) receiving the merged balance.
+	pub destination_utxo: String,
+	/// Contract that was consolidated, when recorded.
+	#[serde(default)]
+	pub contract_id: Option<String>,
+	/// `confirming` until the merge transaction is deeply confirmed, then `done`.
+	pub status: String,
+	/// Confirmation depth of the merge transaction (0 while unconfirmed).
+	pub confirmations: u32,
+	/// Whether this call released the destination reservation.
+	pub released: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct RgbUtxosSummaryResponse {
 	pub utxos: Vec<RgbUtxoSummaryDto>,
 }
@@ -947,3 +1061,55 @@ pub struct RgbUtxosReleaseResponse {
 	pub released: bool,
 }
 
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn rgb_open_channel_request_parses_funding_utxo_policy() {
+		let json = r#"{
+			"contract_id": "contract",
+			"asset_amount": "15",
+			"color_context_data": "file:///tmp",
+			"funding_utxo_policy": "merge-rgb-anchors-with-btc-support"
+		}"#;
+		let req: RgbOpenChannelRequest = serde_json::from_str(json).unwrap();
+		assert!(matches!(
+			req.funding_utxo_policy,
+			Some(RgbFundingUtxoPolicyDto::MergeRgbAnchorsWithBtcSupport)
+		));
+		assert!(req.funding_utxos.is_none());
+	}
+
+	#[test]
+	fn rgb_open_channel_request_parses_funding_utxos() {
+		let json = r#"{
+			"contract_id": "contract",
+			"asset_amount": "15",
+			"color_context_data": "file:///tmp",
+			"funding_utxos": [
+				{"txid": "aa", "vout": 1, "role": "rgb-state"},
+				{"txid": "bb", "vout": 0, "role": "fee-support"}
+			]
+		}"#;
+		let req: RgbOpenChannelRequest = serde_json::from_str(json).unwrap();
+		let utxos = req.funding_utxos.unwrap();
+		assert_eq!(utxos.len(), 2);
+		assert!(matches!(utxos[0].role, RgbFundingUtxoRoleDto::RgbState));
+		assert_eq!(utxos[0].vout, 1);
+		assert!(matches!(utxos[1].role, RgbFundingUtxoRoleDto::FeeSupport));
+		assert!(req.funding_utxo_policy.is_none());
+	}
+
+	#[test]
+	fn rgb_open_channel_request_parses_without_funding_fields() {
+		let json = r#"{
+			"contract_id": "contract",
+			"asset_amount": "15",
+			"color_context_data": "file:///tmp"
+		}"#;
+		let req: RgbOpenChannelRequest = serde_json::from_str(json).unwrap();
+		assert!(req.funding_utxo_policy.is_none());
+		assert!(req.funding_utxos.is_none());
+	}
+}

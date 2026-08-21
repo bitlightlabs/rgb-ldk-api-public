@@ -87,15 +87,18 @@ def _generated_header(source: str) -> str:
 
 
 def _strip_domain_from_impls(content: str) -> str:
-    """Remove `impl From<crate::…>` adapters that only compile inside rgb-ldk-node."""
+    """Remove `impl From<crate::…>` / `impl From<rgb_ldk_node::…>` adapters that
+    only compile inside rgb-ldk-node."""
     out: list[str] = []
     i = 0
-    marker = "\nimpl From<crate::"
+    markers = ("\nimpl From<crate::", "\nimpl From<rgb_ldk_node::")
     while True:
-        j = content.find(marker, i)
-        if j < 0:
+        hits = [(m, content.find(m, i)) for m in markers]
+        hits = [(m, p) for m, p in hits if p >= 0]
+        if not hits:
             out.append(content[i:])
             break
+        marker, j = min(hits, key=lambda item: item[1])
         out.append(content[i:j])
         brace = content.find("{", j + 1)
         if brace < 0:
@@ -122,11 +125,15 @@ def _strip_domain_from_impls(content: str) -> str:
 def _api_dto_source(path: Path) -> str:
     content = path.read_text(encoding="utf-8")
     # The node's swap DTO module also contains the node-only `From<crate::swap::SwapInfo>`
-    # adapter and tests. The mirror crate intentionally contains DTOs only, so those sections
+    # (legacy) / `From<rgb_ldk_node::SwapInfo>` (workspace refactor) adapter and tests.
+    # The mirror crate intentionally contains DTOs only, so those sections
     # would refer to a module that does not exist in rgbldk_http_dto and make the generated crate
     # fail to compile.
     if path.name == "swap.rs":
-        content = content.split("\nimpl From<crate::swap::SwapInfo>", 1)[0]
+        for marker in ("\nimpl From<crate::swap::SwapInfo>", "\nimpl From<rgb_ldk_node::SwapInfo>"):
+            if marker in content:
+                content = content.split(marker, 1)[0]
+                break
         return content.rstrip()
 
     # Other DTO modules may include node-domain `From<crate::…>` adapters (e.g. closing
@@ -137,8 +144,23 @@ def _api_dto_source(path: Path) -> str:
 
 def _write_dto_sources(node_repo: Path, crate_dir: Path) -> None:
     src_dir = crate_dir / "src"
+    # Modern layout: rgb-ldk-node is a workspace; HTTP DTOs live under
+    # crates/node-http/src/dto. Legacy fallback: src/http/dto.rs or src/http/dto.
     legacy_dto = node_repo / "src" / "http" / "dto.rs"
     module_dto = node_repo / "src" / "http" / "dto"
+    workspace_dto = node_repo / "crates" / "node-http" / "src" / "dto"
+
+    if workspace_dto.exists():
+        for path in workspace_dto.rglob("*.rs"):
+            rel = path.relative_to(workspace_dto)
+            out = src_dir / "dto" / rel
+            _write_text(
+                out,
+                _generated_header(f"rgb-ldk-node/crates/node-http/src/dto/{rel.as_posix()}")
+                + _api_dto_source(path)
+                + "\n",
+            )
+        return
 
     if legacy_dto.exists():
         _write_text(
@@ -287,7 +309,7 @@ def _render_endpoints_md(openapi: dict) -> str:
 def _export_openapi_json(node_repo: Path, output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     subprocess.check_call(
-        ["cargo", "run", "--bin", "rgbldkd", "--", "openapi", "--output", str(output_path)],
+        ["cargo", "run", "-p", "rgbldkd", "--bin", "rgbldkd", "--", "openapi", "--output", str(output_path)],
         cwd=node_repo,
     )
 

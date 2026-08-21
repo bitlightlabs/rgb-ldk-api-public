@@ -471,6 +471,12 @@ export interface RgbDescriptorResponse {
   derived_descriptors?: RgbDerivedDescriptorDto[];
 }
 
+export interface RgbFundingUtxoDto {
+  txid: string;
+  vout: number;
+  role: RgbFundingUtxoRoleDto;
+}
+
 export interface RgbInvalidIssuerDto {
   name: string;
   error: string;
@@ -629,6 +635,7 @@ export interface RgbOnchainPaymentDto {
   txid?: string;
   consignment_key?: string;
   consignment_download_path?: string;
+  purpose?: string;
 }
 
 export interface RgbOnchainPaymentsResponse {
@@ -661,6 +668,8 @@ export interface RgbOpenChannelRequest {
   contract_id: string;
   asset_amount: U64String;
   color_context_data: string;
+  funding_utxo_policy?: RgbFundingUtxoPolicyDto;
+  funding_utxos?: RgbFundingUtxoDto[];
 }
 
 export interface RgbPaymentContextDto {
@@ -762,6 +771,36 @@ export interface RgbUtxosFundResponse {
   outputs: RgbUtxosFundCreatedOutputDto[];
   change?: RgbUtxosFundChangeDto;
   fee_sats: U64String;
+}
+
+export interface RgbUtxosMergeRequest {
+  contract_id: string;
+  destination_utxo: string;
+  include_invoice_bound_utxos?: boolean;
+  fee_rate_sats_per_vb?: number;
+}
+
+export interface RgbUtxosMergeResponse {
+  operation_id: string;
+  txid: string;
+  merged_inputs: string[];
+  total_amount: U64String;
+  remaining_count: number;
+  status: string;
+  consignment_key: string;
+}
+
+export interface RgbUtxosMergeStatusEntryDto {
+  txid: string;
+  destination_utxo: string;
+  contract_id?: string;
+  status: string;
+  confirmations: number;
+  released: boolean;
+}
+
+export interface RgbUtxosMergeStatusResponse {
+  merges: RgbUtxosMergeStatusEntryDto[];
 }
 
 export interface RgbUtxosReleaseRequest {
@@ -1040,6 +1079,10 @@ export type MainStatusResponse =
   | StatusDto
   | LockedStatusDto
 ;
+
+export type RgbFundingUtxoPolicyDto = "SingleRgbAnchor" | "RgbAnchorWithBtcSupport" | "MergeRgbAnchorsWithBtcSupport";
+
+export type RgbFundingUtxoRoleDto = "RgbState" | "FeeSupport";
 
 export type RgbSignMessageAlgorithmDto = "bitcoin_signed_message" | "ecdsa";
 

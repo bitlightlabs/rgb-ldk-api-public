@@ -1,4 +1,4 @@
-// Generated from rgb-ldk-node/src/http/dto/common.rs. Do not edit.
+// Generated from rgb-ldk-node/crates/node-http/src/dto/common.rs. Do not edit.
 
 //! HTTP API request/response types (v1).
 //!
@@ -340,100 +340,6 @@ pub struct RgbChannelBalanceDto {
 	pub remote_amount: u64,
 }
 
-/// Channel details entry (extended for control-plane integrations).
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct ChannelDetailsExtendedDto {
-	/// Channel id (32-byte hex).
-	pub channel_id: String,
-	/// User channel id (hex-encoded 16 bytes BIG-ENDIAN).
-	pub user_channel_id: String,
-	/// Counterparty node id (hex pubkey).
-	pub counterparty_node_id: String,
-	/// Funding outpoint formatted as `txid:vout` if known.
-	pub channel_point: Option<String>,
-	/// The channel's short channel id, used to identify the channel in routing hops and onion
-	/// paths.
-	///
-	/// `None` until the funding transaction has reached the required number of confirmations.
-	#[serde(
-		default,
-		with = "serde_opt_u64_decimal_string",
-		skip_serializing_if = "Option::is_none"
-	)]
-	pub short_channel_id: Option<u64>,
-	/// A locally-generated alias for [`short_channel_id`], usable in place of it in outbound
-	/// routing hops while the channel is usable but not yet confirmed on-chain.
-	///
-	/// [`short_channel_id`]: Self::short_channel_id
-	#[serde(
-		default,
-		with = "serde_opt_u64_decimal_string",
-		skip_serializing_if = "Option::is_none"
-	)]
-	pub outbound_scid_alias: Option<u64>,
-	/// A counterparty-generated alias for [`short_channel_id`], usable in place of it in
-	/// inbound routing hints.
-	///
-	/// [`short_channel_id`]: Self::short_channel_id
-	#[serde(
-		default,
-		with = "serde_opt_u64_decimal_string",
-		skip_serializing_if = "Option::is_none"
-	)]
-	pub inbound_scid_alias: Option<u64>,
-	/// Total channel capacity in satoshis.
-	#[serde(with = "serde_u64_decimal_string")]
-	pub channel_value_sats: u64,
-	/// Sendable capacity in millisatoshis.
-	#[serde(with = "serde_u64_decimal_string")]
-	pub outbound_capacity_msat: u64,
-	/// Receivable capacity in millisatoshis.
-	#[serde(with = "serde_u64_decimal_string")]
-	pub inbound_capacity_msat: u64,
-	/// Estimated local (our) total balance in millisatoshis.
-	///
-	/// This includes our `unspendable_punishment_reserve` and therefore may be higher than
-	/// `outbound_capacity_msat`.
-	///
-	/// Returns `None` for outbound channels until the counterparty accepts the channel (as LDK
-	/// will report `unspendable_punishment_reserve = None`).
-	#[serde(
-		default,
-		with = "serde_opt_u64_decimal_string",
-		skip_serializing_if = "Option::is_none"
-	)]
-	pub local_balance_msat: Option<u64>,
-	/// Estimated remote (counterparty) total balance in millisatoshis.
-	///
-	/// This is derived as `channel_value_sats * 1000 - local_balance_msat` and is therefore also
-	/// `None` if `local_balance_msat` is unavailable.
-	#[serde(
-		default,
-		with = "serde_opt_u64_decimal_string",
-		skip_serializing_if = "Option::is_none"
-	)]
-	pub remote_balance_msat: Option<u64>,
-	/// Local (our) unspendable punishment reserve in satoshis.
-	#[serde(
-		default,
-		with = "serde_opt_u64_decimal_string",
-		skip_serializing_if = "Option::is_none"
-	)]
-	pub local_unspendable_punishment_reserve_sats: Option<u64>,
-	/// Remote (counterparty) unspendable punishment reserve in satoshis.
-	#[serde(with = "serde_u64_decimal_string")]
-	pub remote_unspendable_punishment_reserve_sats: u64,
-	/// Whether channel is ready.
-	pub is_channel_ready: bool,
-	/// Whether channel is usable.
-	pub is_usable: bool,
-	/// Whether channel is announced.
-	pub is_announced: bool,
-	/// RGB asset balance in this channel, if any.
-	#[serde(skip_serializing_if = "Option::is_none")]
-	pub rgb_balance: Option<RgbChannelBalanceDto>,
-}
-
 /// Stage of a closing channel.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "snake_case")]
@@ -550,4 +456,98 @@ pub struct ClosingChannelDto {
 	/// RGB details, present for RGB channels.
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub rgb: Option<ClosingRgbDto>,
+}
+
+/// Channel details entry (extended for control-plane integrations).
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct ChannelDetailsExtendedDto {
+	/// Channel id (32-byte hex).
+	pub channel_id: String,
+	/// User channel id (hex-encoded 16 bytes BIG-ENDIAN).
+	pub user_channel_id: String,
+	/// Counterparty node id (hex pubkey).
+	pub counterparty_node_id: String,
+	/// Funding outpoint formatted as `txid:vout` if known.
+	pub channel_point: Option<String>,
+	/// The channel's short channel id, used to identify the channel in routing hops and onion
+	/// paths.
+	///
+	/// `None` until the funding transaction has reached the required number of confirmations.
+	#[serde(
+		default,
+		with = "serde_opt_u64_decimal_string",
+		skip_serializing_if = "Option::is_none"
+	)]
+	pub short_channel_id: Option<u64>,
+	/// A locally-generated alias for [`short_channel_id`], usable in place of it in outbound
+	/// routing hops while the channel is usable but not yet confirmed on-chain.
+	///
+	/// [`short_channel_id`]: Self::short_channel_id
+	#[serde(
+		default,
+		with = "serde_opt_u64_decimal_string",
+		skip_serializing_if = "Option::is_none"
+	)]
+	pub outbound_scid_alias: Option<u64>,
+	/// A counterparty-generated alias for [`short_channel_id`], usable in place of it in
+	/// inbound routing hints.
+	///
+	/// [`short_channel_id`]: Self::short_channel_id
+	#[serde(
+		default,
+		with = "serde_opt_u64_decimal_string",
+		skip_serializing_if = "Option::is_none"
+	)]
+	pub inbound_scid_alias: Option<u64>,
+	/// Total channel capacity in satoshis.
+	#[serde(with = "serde_u64_decimal_string")]
+	pub channel_value_sats: u64,
+	/// Sendable capacity in millisatoshis.
+	#[serde(with = "serde_u64_decimal_string")]
+	pub outbound_capacity_msat: u64,
+	/// Receivable capacity in millisatoshis.
+	#[serde(with = "serde_u64_decimal_string")]
+	pub inbound_capacity_msat: u64,
+	/// Estimated local (our) total balance in millisatoshis.
+	///
+	/// This includes our `unspendable_punishment_reserve` and therefore may be higher than
+	/// `outbound_capacity_msat`.
+	///
+	/// Returns `None` for outbound channels until the counterparty accepts the channel (as LDK
+	/// will report `unspendable_punishment_reserve = None`).
+	#[serde(
+		default,
+		with = "serde_opt_u64_decimal_string",
+		skip_serializing_if = "Option::is_none"
+	)]
+	pub local_balance_msat: Option<u64>,
+	/// Estimated remote (counterparty) total balance in millisatoshis.
+	///
+	/// This is derived as `channel_value_sats * 1000 - local_balance_msat` and is therefore also
+	/// `None` if `local_balance_msat` is unavailable.
+	#[serde(
+		default,
+		with = "serde_opt_u64_decimal_string",
+		skip_serializing_if = "Option::is_none"
+	)]
+	pub remote_balance_msat: Option<u64>,
+	/// Local (our) unspendable punishment reserve in satoshis.
+	#[serde(
+		default,
+		with = "serde_opt_u64_decimal_string",
+		skip_serializing_if = "Option::is_none"
+	)]
+	pub local_unspendable_punishment_reserve_sats: Option<u64>,
+	/// Remote (counterparty) unspendable punishment reserve in satoshis.
+	#[serde(with = "serde_u64_decimal_string")]
+	pub remote_unspendable_punishment_reserve_sats: u64,
+	/// Whether channel is ready.
+	pub is_channel_ready: bool,
+	/// Whether channel is usable.
+	pub is_usable: bool,
+	/// Whether channel is announced.
+	pub is_announced: bool,
+	/// RGB asset balance in this channel, if any.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub rgb_balance: Option<RgbChannelBalanceDto>,
 }

@@ -1,4 +1,4 @@
-// Generated from rgb-ldk-node/src/http/dto/mod.rs. Do not edit.
+// Generated from rgb-ldk-node/crates/node-http/src/dto/mod.rs. Do not edit.
 
 //! HTTP API request/response types (v1).
 //!
@@ -92,4 +92,3 @@ mod tests {
 		assert!(req.blinding_utxo.is_none());
 	}
 }
-

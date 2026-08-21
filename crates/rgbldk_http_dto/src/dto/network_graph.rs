@@ -1,4 +1,4 @@
-// Generated from rgb-ldk-node/src/http/dto/network_graph.rs. Do not edit.
+// Generated from rgb-ldk-node/crates/node-http/src/dto/network_graph.rs. Do not edit.
 
 //! Network-graph DTOs.
 
@@ -63,4 +63,3 @@ pub struct ChannelUpdateInfoDto {
 	pub fee_base_msat: u32,
 	pub fee_proportional_millionths: u32,
 }
-
