@@ -61,6 +61,39 @@ pub struct WalletNewAddressResponse {
 	pub address: String,
 }
 
+/// Request body for `POST /wallet/send`.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct WalletSendRequest {
+	/// Destination Bitcoin address.
+	pub address: String,
+	/// Amount to send in satoshis (decimal string).
+	#[serde(with = "serde_u64_decimal_string")]
+	pub amount_sats: u64,
+	/// Optional fee rate in sat/vB. Omit to let the node estimate.
+	#[serde(default)]
+	pub fee_rate_sats_per_vb: Option<f32>,
+}
+
+/// Request body for `POST /wallet/send_all`.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct WalletSendAllRequest {
+	/// Destination Bitcoin address.
+	pub address: String,
+	/// When true, keep the Anchor-channel reserve. Required: draining reserves is dangerous
+	/// with open Anchor channels.
+	pub retain_reserves: bool,
+	/// Optional fee rate in sat/vB. Omit to let the node estimate.
+	#[serde(default)]
+	pub fee_rate_sats_per_vb: Option<f32>,
+}
+
+/// Broadcast ordinary on-chain BTC transaction.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct WalletSendResponse {
+	/// Broadcast Bitcoin transaction id.
+	pub txid: String,
+}
+
 /// Response containing the ordinary L1 wallet UTXO view.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct WalletUtxosResponse {
@@ -550,4 +583,30 @@ pub struct ChannelDetailsExtendedDto {
 	/// RGB asset balance in this channel, if any.
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub rgb_balance: Option<RgbChannelBalanceDto>,
+	/// Present when this channel was bought from an LSP via LSPS1; `null` otherwise.
+	#[serde(default)]
+	pub lsp: Option<ChannelLspLeaseDto>,
+}
+
+/// Seller and lease of a channel this node bought from an LSP (matched to the
+/// channel by funding outpoint).
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct ChannelLspLeaseDto {
+	/// LSP node pubkey, hex-encoded.
+	pub pubkey: String,
+	/// LSP socket address at order time.
+	pub address: String,
+	/// bLIP-51 order id the channel was bought with.
+	pub order_id: String,
+	/// Chain height when the funding was observed (lease start).
+	pub funded_at_height: u32,
+	/// Lease end as a chain height (`funded_at_height + channel_expiry_blocks`).
+	pub expires_at_height: u32,
+	/// Precise channel open time: Unix seconds when the funding was observed on
+	/// chain. Estimate the expiry date from this plus the block count to expiry.
+	#[serde(with = "serde_u64_decimal_string")]
+	pub funded_at_unix_secs: u64,
+	/// Order placement time, in Unix seconds.
+	#[serde(with = "serde_u64_decimal_string")]
+	pub created_at_unix_secs: u64,
 }

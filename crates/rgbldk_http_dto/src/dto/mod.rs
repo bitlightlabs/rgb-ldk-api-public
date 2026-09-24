@@ -9,6 +9,7 @@
 mod async_payments;
 mod common;
 mod core;
+mod lsps1;
 mod network_graph;
 mod rgb;
 mod splice;
@@ -18,6 +19,7 @@ pub use core::*;
 
 pub use async_payments::*;
 pub use common::*;
+pub use lsps1::*;
 pub use network_graph::*;
 pub use rgb::*;
 pub use splice::*;
@@ -72,6 +74,30 @@ mod serde_opt_u64_decimal_string {
 #[cfg(test)]
 mod tests {
 	use super::*;
+
+	#[test]
+	fn wallet_send_requests_use_decimal_amount_and_require_retain_reserves() {
+		let send: WalletSendRequest = serde_json::from_value(serde_json::json!({
+			"address": "bcrt1qtest",
+			"amount_sats": "54321",
+		}))
+		.expect("valid send request should deserialize");
+		assert_eq!(send.amount_sats, 54_321);
+		assert!(send.fee_rate_sats_per_vb.is_none());
+
+		assert!(serde_json::from_value::<WalletSendAllRequest>(serde_json::json!({
+			"address": "bcrt1qtest",
+		}))
+		.is_err());
+
+		let send_all: WalletSendAllRequest = serde_json::from_value(serde_json::json!({
+			"address": "bcrt1qtest",
+			"retain_reserves": true,
+		}))
+		.expect("valid send_all request should deserialize");
+		assert!(send_all.retain_reserves);
+		assert!(send_all.fee_rate_sats_per_vb.is_none());
+	}
 
 	#[test]
 	fn rgb_onchain_invoice_create_request_allows_missing_blinding_utxo() {

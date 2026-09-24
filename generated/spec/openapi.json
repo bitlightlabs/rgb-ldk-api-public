@@ -980,6 +980,399 @@
         ]
       }
     },
+    "/lsps1/info": {
+      "get": {
+        "tags": [
+          "lsps1"
+        ],
+        "summary": "Get LSP offering",
+        "description": "Queries the configured LSP for its standard LSPS1 options and, when offered, its RGB asset roster with pricing. Requires the node to be configured with an LSPS1 LSP.",
+        "operationId": "info",
+        "responses": {
+          "200": {
+            "description": "LSP offering",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lsps1InfoResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/lsps1/lsp": {
+      "get": {
+        "tags": [
+          "lsps1"
+        ],
+        "summary": "Get configured LSP",
+        "description": "Returns the LSP this node currently buys channels from; 404 when none is configured.",
+        "operationId": "lsp_get",
+        "responses": {
+          "200": {
+            "description": "Configured LSP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lsps1LspConfigDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No LSP configured"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "lsps1"
+        ],
+        "summary": "Set configured LSP",
+        "description": "Sets (or replaces) the LSP this node buys channels from. Persisted across restarts; takes effect for subsequent requests (the connection is made lazily). In-flight requests against the previous LSP time out. The configured LSP is trusted for 0-confirmation channels (same as configuring it at startup); a replaced LSP loses that trust.",
+        "operationId": "lsp_set",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lsps1LspConfigDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "LSP set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lsps1LspConfigDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/lsps1/options": {
+      "get": {
+        "tags": [
+          "lsps1"
+        ],
+        "summary": "Get service options",
+        "description": "Returns the runtime config of this node's own LSPS1 service: the advertised order limits (`supported_options`) and the service behavior knobs (`service`).",
+        "operationId": "options_get",
+        "responses": {
+          "200": {
+            "description": "Current options",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lsps1OptionsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "lsps1"
+        ],
+        "summary": "Update service options",
+        "description": "Validates, persists, and applies a new runtime config (full replace). Takes effect for new orders immediately; orders already accepted keep the parameters they were created with.",
+        "operationId": "options_set",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lsps1OptionsDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Options updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lsps1OptionsDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/lsps1/order": {
+      "post": {
+        "tags": [
+          "lsps1"
+        ],
+        "summary": "Order a BTC channel",
+        "description": "Places a plain BTC channel order with the configured LSP and returns the order with its payment options (bolt11 HOLD invoice, and an onchain deposit address when the LSP offers it). Pay one of them; the LSP opens the channel once the payment is in.",
+        "operationId": "order_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lsps1OrderCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Order created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lsps1OrderResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/lsps1/order/{order_id}": {
+      "get": {
+        "tags": [
+          "lsps1"
+        ],
+        "summary": "Check order status",
+        "description": "Queries the configured LSP for the current state of a previously placed order (BTC or RGB; RGB orders come back with their `rgb` section filled).",
+        "operationId": "order_status",
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "description": "The order id returned at order creation.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lsps1OrderResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/lsps1/orders": {
+      "get": {
+        "tags": [
+          "lsps1"
+        ],
+        "summary": "List served orders",
+        "description": "Returns every order in this node's LSPS1 fulfillment ledger (operator view), including payment, funding, and refund state.",
+        "operationId": "service_orders",
+        "responses": {
+          "200": {
+            "description": "Served orders",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lsps1ServiceOrdersResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/lsps1/orders/{order_id}": {
+      "get": {
+        "tags": [
+          "lsps1"
+        ],
+        "summary": "Get a served order",
+        "description": "Returns one order from this node's LSPS1 fulfillment ledger (operator view).",
+        "operationId": "service_order_get",
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "description": "The bLIP-51 order id (UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Served order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lsps1ServiceOrderDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/lsps1/pricing": {
+      "get": {
+        "tags": [
+          "lsps1"
+        ],
+        "summary": "Get service pricing",
+        "description": "Returns the current pricing config of this node's own LSPS1 service: the global BTC capacity rate, onchain cost, fee floor, and the offered RGB asset roster.",
+        "operationId": "pricing_get",
+        "responses": {
+          "200": {
+            "description": "Current pricing",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lsps1PricingDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "lsps1"
+        ],
+        "summary": "Update service pricing",
+        "description": "Validates, persists, and applies a new pricing config; new orders are priced with it immediately. Every asset entry needs a `color_context` (consignment endpoint) and `max_client_asset_balance` must be 0 for now.",
+        "operationId": "pricing_set",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lsps1PricingDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Pricing updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lsps1PricingDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/lsps1/rgb_order": {
+      "post": {
+        "tags": [
+          "lsps1"
+        ],
+        "summary": "Order an RGB channel",
+        "description": "Places an RGB channel order with the configured LSP. The response includes the itemized RGB fee breakdown (onchain cost, BTC rent, asset rent, asset sale) on top of the standard payment options.",
+        "operationId": "rgb_order_create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lsps1RgbOrderCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Order created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lsps1OrderResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
     "/network_graph/channel/{scid}": {
       "get": {
         "tags": [
@@ -3296,6 +3689,86 @@
         ]
       }
     },
+    "/wallet/send": {
+      "post": {
+        "tags": [
+          "wallet"
+        ],
+        "summary": "Send ordinary on-chain BTC",
+        "description": "Broadcasts an ordinary BTC payment from the BDK wallet account. This is not RGB (`POST /rgb/onchain/send`). RGB-colored outpoints are excluded by the wallet. Typical flow: `POST /wallet/sync` → `GET /balances` / `GET /wallet/utxos` → `POST /wallet/send`. Omit `fee_rate_sats_per_vb` to let the node estimate.",
+        "operationId": "wallet_send",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WalletSendRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "On-chain transaction broadcast",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletSendResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request, address, amount, fee rate, or insufficient funds"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/wallet/send_all": {
+      "post": {
+        "tags": [
+          "wallet"
+        ],
+        "summary": "Send all ordinary on-chain BTC",
+        "description": "Drains ordinary BTC from the BDK wallet to the given address. This is not RGB. RGB-colored outpoints are excluded by the wallet. `retain_reserves` is required: `true` keeps the Anchor-channel reserve; `false` also spends reserves (dangerous with open Anchor channels). Typical flow: `POST /wallet/sync` → `GET /balances` / `GET /wallet/utxos` → `POST /wallet/send_all`. Omit `fee_rate_sats_per_vb` to let the node estimate.",
+        "operationId": "wallet_send_all",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WalletSendAllRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "On-chain transaction broadcast",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletSendResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request, address, fee rate, or insufficient funds"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
     "/wallet/sync": {
       "post": {
         "tags": [
@@ -4088,6 +4561,17 @@
             "pattern": "^[0-9]+$",
             "description": "Local (our) unspendable punishment reserve in satoshis."
           },
+          "lsp": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ChannelLspLeaseDto",
+                "description": "Present when this channel was bought from an LSP via LSPS1; `null` otherwise."
+              }
+            ]
+          },
           "outbound_capacity_msat": {
             "type": "string",
             "pattern": "^[0-9]+$",
@@ -4139,6 +4623,55 @@
           }
         }
       },
+      "ChannelLspLeaseDto": {
+        "type": "object",
+        "description": "Seller and lease of a channel this node bought from an LSP (matched to the\nchannel by funding outpoint).",
+        "required": [
+          "pubkey",
+          "address",
+          "order_id",
+          "funded_at_height",
+          "expires_at_height",
+          "funded_at_unix_secs",
+          "created_at_unix_secs"
+        ],
+        "properties": {
+          "address": {
+            "type": "string",
+            "description": "LSP socket address at order time."
+          },
+          "created_at_unix_secs": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Order placement time, in Unix seconds."
+          },
+          "expires_at_height": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Lease end as a chain height (`funded_at_height + channel_expiry_blocks`).",
+            "minimum": 0
+          },
+          "funded_at_height": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Chain height when the funding was observed (lease start).",
+            "minimum": 0
+          },
+          "funded_at_unix_secs": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Precise channel open time: Unix seconds when the funding was observed on\nchain. Estimate the expiry date from this plus the block count to expiry."
+          },
+          "order_id": {
+            "type": "string",
+            "description": "bLIP-51 order id the channel was bought with."
+          },
+          "pubkey": {
+            "type": "string",
+            "description": "LSP node pubkey, hex-encoded."
+          }
+        }
+      },
       "ChannelUpdateInfoDto": {
         "type": "object",
         "description": "One direction's `channel_update` info.",
@@ -4171,14 +4704,12 @@
             "minimum": 0
           },
           "htlc_maximum_msat": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 0
+            "type": "string",
+            "pattern": "^[0-9]+$"
           },
           "htlc_minimum_msat": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 0
+            "type": "string",
+            "pattern": "^[0-9]+$"
           },
           "last_update": {
             "type": "integer",
@@ -4758,6 +5289,896 @@
           }
         }
       },
+      "Lsps1AssetPricingDto": {
+        "type": "object",
+        "required": [
+          "asset_id",
+          "ticker",
+          "precision",
+          "asset_unit_price_sat",
+          "asset_rent_ppm_per_year",
+          "min_lsp_asset_balance",
+          "max_lsp_asset_balance",
+          "max_client_asset_balance",
+          "color_context"
+        ],
+        "properties": {
+          "asset_id": {
+            "type": "string"
+          },
+          "asset_rent_ppm_per_year": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "asset_unit_price_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Sale price per whole asset unit, in satoshi (balances are in smallest units)."
+          },
+          "color_context": {
+            "type": "string",
+            "description": "Consignment endpoint used when opening channels of this asset."
+          },
+          "max_client_asset_balance": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Must be 0 for now: client-side asset buy-out is not offered yet."
+          },
+          "max_lsp_asset_balance": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "min_lsp_asset_balance": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "precision": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "ticker": {
+            "type": "string"
+          }
+        }
+      },
+      "Lsps1Bolt11PaymentDto": {
+        "type": "object",
+        "required": [
+          "state",
+          "expires_at_unix_secs",
+          "fee_total_sat",
+          "order_total_sat",
+          "invoice"
+        ],
+        "properties": {
+          "expires_at_unix_secs": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "fee_total_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "invoice": {
+            "type": "string"
+          },
+          "order_total_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "state": {
+            "type": "string",
+            "description": "`expect_payment`, `hold`, `paid`, or `refunded`."
+          }
+        }
+      },
+      "Lsps1ChannelInfoDto": {
+        "type": "object",
+        "required": [
+          "funded_at_unix_secs",
+          "funding_outpoint",
+          "expires_at_unix_secs"
+        ],
+        "properties": {
+          "expires_at_unix_secs": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "funded_at_unix_secs": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "funding_outpoint": {
+            "type": "string",
+            "description": "`txid:vout` of the channel funding output."
+          }
+        }
+      },
+      "Lsps1InfoResponse": {
+        "type": "object",
+        "description": "The configured LSP's offering (`GET /lsps1/info`).",
+        "required": [
+          "supported_options"
+        ],
+        "properties": {
+          "pricing": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Lsps1LspPricingDto",
+                "description": "Fee parameters; `null` when the LSP does not speak our extension (pricing\nrides on `lsps1.rgb_get_info`, so a foreign standard LSP advertises none)."
+              }
+            ]
+          },
+          "rgb": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Lsps1RgbOfferingDto",
+                "description": "`null` when the LSP does not speak the RGB extension at all. An LSP that does\nbut currently offers no assets returns `rgb_assets: []` — check the roster,\nnot just null-ness, to decide whether RGB channels can be ordered."
+              }
+            ]
+          },
+          "supported_options": {
+            "$ref": "#/components/schemas/Lsps1SupportedOptionsDto"
+          }
+        }
+      },
+      "Lsps1LspConfigDto": {
+        "type": "object",
+        "description": "The LSP this node buys channels from (`GET`/`PUT /lsps1/lsp`).",
+        "required": [
+          "pubkey",
+          "address"
+        ],
+        "properties": {
+          "address": {
+            "type": "string",
+            "description": "LSP socket address, e.g. `203.0.113.5:9735`."
+          },
+          "pubkey": {
+            "type": "string",
+            "description": "LSP node pubkey, hex-encoded."
+          },
+          "token": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Access token sent with orders, if the LSP requires one."
+          }
+        }
+      },
+      "Lsps1LspPricingDto": {
+        "type": "object",
+        "description": "The LSP's fee parameters, shared by BTC and RGB orders (`GET /lsps1/info`).",
+        "required": [
+          "btc_capacity_ppm_per_year"
+        ],
+        "properties": {
+          "btc_capacity_ppm_per_year": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Yearly lease rate for BTC capacity as ppm of the leased amount.",
+            "minimum": 0
+          },
+          "min_fee_sat": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$",
+            "description": "Minimum total fee per order; `null` = old-version LSP."
+          },
+          "onchain_cost_sat": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$",
+            "description": "Onchain cost component charged on every order; `null` = old-version LSP."
+          }
+        }
+      },
+      "Lsps1OnchainPaymentDto": {
+        "type": "object",
+        "required": [
+          "state",
+          "expires_at_unix_secs",
+          "fee_total_sat",
+          "order_total_sat",
+          "address"
+        ],
+        "properties": {
+          "address": {
+            "type": "string",
+            "description": "Per-order deposit address."
+          },
+          "expires_at_unix_secs": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "fee_total_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "min_onchain_payment_confirmations": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "order_total_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "refund_onchain_address": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "description": "`expect_payment`, `hold`, `paid`, or `refunded`."
+          }
+        }
+      },
+      "Lsps1OptionsDto": {
+        "type": "object",
+        "description": "Runtime service config (`GET`/`PUT /lsps1/options`). Changes apply to new orders\nonly; accepted orders keep the parameters they were created with.",
+        "required": [
+          "supported_options",
+          "service"
+        ],
+        "properties": {
+          "service": {
+            "$ref": "#/components/schemas/Lsps1ServiceBehaviorDto"
+          },
+          "supported_options": {
+            "$ref": "#/components/schemas/Lsps1SupportedOptionsDto",
+            "description": "Order limits advertised via `lsps1.get_info` and enforced on `create_order`."
+          }
+        }
+      },
+      "Lsps1OrderCreateRequest": {
+        "type": "object",
+        "required": [
+          "lsp_balance_sat",
+          "channel_expiry_blocks"
+        ],
+        "properties": {
+          "announce_channel": {
+            "type": "boolean"
+          },
+          "channel_expiry_blocks": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Channel lease duration in blocks.",
+            "minimum": 0
+          },
+          "client_balance_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Sats pushed to this node's side (paid on top of the fee). Default 0."
+          },
+          "lsp_balance_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Sats the LSP provides on its side (the inbound liquidity being bought)."
+          }
+        }
+      },
+      "Lsps1OrderParamsDto": {
+        "type": "object",
+        "required": [
+          "lsp_balance_sat",
+          "client_balance_sat",
+          "required_channel_confirmations",
+          "funding_confirms_within_blocks",
+          "channel_expiry_blocks",
+          "announce_channel"
+        ],
+        "properties": {
+          "announce_channel": {
+            "type": "boolean"
+          },
+          "channel_expiry_blocks": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "client_balance_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "funding_confirms_within_blocks": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "lsp_balance_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "required_channel_confirmations": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
+      "Lsps1OrderResponse": {
+        "type": "object",
+        "description": "A placed order as reported by the LSP (`POST /lsps1/order`, `POST /lsps1/rgb_order`,\n`GET /lsps1/order/{order_id}`).",
+        "required": [
+          "order_id",
+          "order",
+          "payment"
+        ],
+        "properties": {
+          "channel": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Lsps1ChannelInfoDto"
+              }
+            ]
+          },
+          "order": {
+            "$ref": "#/components/schemas/Lsps1OrderParamsDto"
+          },
+          "order_id": {
+            "type": "string"
+          },
+          "payment": {
+            "$ref": "#/components/schemas/Lsps1PaymentOptionsDto"
+          },
+          "rgb": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Lsps1RgbOrderDetailsDto",
+                "description": "RGB section; `null` for plain BTC orders."
+              }
+            ]
+          }
+        }
+      },
+      "Lsps1PaymentOptionsDto": {
+        "type": "object",
+        "properties": {
+          "bolt11": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Lsps1Bolt11PaymentDto"
+              }
+            ]
+          },
+          "onchain": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Lsps1OnchainPaymentDto"
+              }
+            ]
+          }
+        }
+      },
+      "Lsps1PricingCoreDto": {
+        "type": "object",
+        "description": "Fee parameters of this node's own LSPS1 service (operator side).",
+        "required": [
+          "btc_capacity_ppm_per_year",
+          "onchain_cost_sat",
+          "min_fee_sat"
+        ],
+        "properties": {
+          "btc_capacity_ppm_per_year": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "min_fee_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "onchain_cost_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          }
+        }
+      },
+      "Lsps1PricingDto": {
+        "type": "object",
+        "description": "Operator pricing config (`GET`/`PUT /lsps1/pricing`).",
+        "required": [
+          "pricing",
+          "assets"
+        ],
+        "properties": {
+          "assets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Lsps1AssetPricingDto"
+            }
+          },
+          "pricing": {
+            "$ref": "#/components/schemas/Lsps1PricingCoreDto"
+          }
+        }
+      },
+      "Lsps1RgbAssetOfferDto": {
+        "type": "object",
+        "required": [
+          "asset_id",
+          "ticker",
+          "precision",
+          "asset_unit_price_sat",
+          "asset_rent_ppm_per_year",
+          "min_lsp_asset_balance",
+          "max_lsp_asset_balance",
+          "max_client_asset_balance"
+        ],
+        "properties": {
+          "asset_id": {
+            "type": "string"
+          },
+          "asset_rent_ppm_per_year": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Yearly lease rate as ppm of the leased asset value.",
+            "minimum": 0
+          },
+          "asset_unit_price_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Sale price per whole asset unit, in satoshi (balances are in smallest units)."
+          },
+          "max_client_asset_balance": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "max_lsp_asset_balance": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "min_lsp_asset_balance": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "precision": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "ticker": {
+            "type": "string"
+          }
+        }
+      },
+      "Lsps1RgbFeeBreakdownDto": {
+        "type": "object",
+        "description": "Itemization of `fee_total_sat`.",
+        "required": [
+          "onchain_cost_sat",
+          "btc_rent_sat",
+          "asset_rent_sat",
+          "asset_sale_sat"
+        ],
+        "properties": {
+          "asset_rent_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "asset_sale_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "btc_rent_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "onchain_cost_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          }
+        }
+      },
+      "Lsps1RgbOfferingDto": {
+        "type": "object",
+        "required": [
+          "rgb_assets"
+        ],
+        "properties": {
+          "rgb_assets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Lsps1RgbAssetOfferDto"
+            }
+          }
+        }
+      },
+      "Lsps1RgbOrderCreateRequest": {
+        "type": "object",
+        "required": [
+          "asset_id",
+          "lsp_asset_balance",
+          "lsp_balance_sat",
+          "channel_expiry_blocks"
+        ],
+        "properties": {
+          "announce_channel": {
+            "type": "boolean"
+          },
+          "asset_id": {
+            "type": "string",
+            "description": "RGB contract id of the ordered asset."
+          },
+          "channel_expiry_blocks": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "client_asset_balance": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Asset units pushed to this node's side (buy-out; LSPs may not offer it). Default 0."
+          },
+          "client_balance_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "lsp_asset_balance": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Asset units the LSP provides on its side (leased inbound asset liquidity)."
+          },
+          "lsp_balance_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          }
+        }
+      },
+      "Lsps1RgbOrderDetailsDto": {
+        "type": "object",
+        "required": [
+          "asset_id",
+          "lsp_asset_balance",
+          "client_asset_balance",
+          "fee_breakdown"
+        ],
+        "properties": {
+          "asset_funding_outpoint": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`txid:vout` of the funding output carrying the RGB allocation, once opened."
+          },
+          "asset_id": {
+            "type": "string"
+          },
+          "client_asset_balance": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "fee_breakdown": {
+            "$ref": "#/components/schemas/Lsps1RgbFeeBreakdownDto"
+          },
+          "lsp_asset_balance": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          }
+        }
+      },
+      "Lsps1ServiceBehaviorDto": {
+        "type": "object",
+        "description": "Service behavior knobs of this node's own LSPS1 service.",
+        "required": [
+          "bolt11_invoice_expiry_secs",
+          "min_onchain_payment_confirmations",
+          "max_fulfill_retries",
+          "auto_close_expired_channels",
+          "channel_expiry_grace_blocks",
+          "late_deposit_refund_window_secs"
+        ],
+        "properties": {
+          "auto_close_expired_channels": {
+            "type": "boolean",
+            "description": "Cooperatively close leased channels once lease + grace expired."
+          },
+          "bolt11_invoice_expiry_secs": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Payment window per order (bolt11 invoice expiry; also bounds the onchain option).",
+            "minimum": 0
+          },
+          "channel_expiry_grace_blocks": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Blocks of grace before an expired lease is closed.",
+            "minimum": 0
+          },
+          "late_deposit_refund_window_secs": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "How long after payment expiry a late deposit is still auto-refunded."
+          },
+          "max_fulfill_retries": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Channel-open retries before an order fails.",
+            "minimum": 0
+          },
+          "min_onchain_payment_confirmations": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Confirmations before an onchain deposit counts as paid. 0 is raised to 1;\nvalues above 6 have no practical effect (bLIP-51 forces acceptance at 6).",
+            "minimum": 0
+          },
+          "require_token": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Token clients must send with orders; `null` disables the check."
+          }
+        }
+      },
+      "Lsps1ServiceOrderDto": {
+        "type": "object",
+        "description": "One served order in the LSPS1 fulfillment ledger (`GET /lsps1/orders`).",
+        "required": [
+          "order_id",
+          "counterparty_node_id",
+          "order_state",
+          "payment_state",
+          "lsp_balance_sat",
+          "client_balance_sat",
+          "channel_expiry_blocks",
+          "announce_channel",
+          "fee_total_sat",
+          "order_total_sat",
+          "fulfill_retry_count",
+          "created_at_unix_secs",
+          "payment_expires_at_unix_secs"
+        ],
+        "properties": {
+          "announce_channel": {
+            "type": "boolean"
+          },
+          "channel_closed_at_unix_secs": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$",
+            "description": "Set once the expired lease was cooperatively closed."
+          },
+          "channel_expiry_blocks": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "client_balance_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "counterparty_node_id": {
+            "type": "string"
+          },
+          "created_at_unix_secs": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "fee_total_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "fulfill_retry_count": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "funded_at_height": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Chain height when the funding tx was published (lease expiry baseline).",
+            "minimum": 0
+          },
+          "funding_outpoint": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`txid:vout` of the channel funding output, once published."
+          },
+          "lsp_balance_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "onchain_address": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "onchain_paid_sat": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$"
+          },
+          "order_id": {
+            "type": "string"
+          },
+          "order_state": {
+            "type": "string",
+            "description": "`created`, `completed`, or `failed`."
+          },
+          "order_total_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "paid_via": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`bolt11` or `onchain`; `null` while unpaid."
+          },
+          "payment_expires_at_unix_secs": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "payment_state": {
+            "type": "string",
+            "description": "`expect_payment`, `hold`, `paid`, or `refunded`."
+          },
+          "refund_onchain_address": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "refund_txid": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "rgb": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Lsps1ServiceRgbOrderDto"
+              }
+            ]
+          }
+        }
+      },
+      "Lsps1ServiceOrdersResponse": {
+        "type": "object",
+        "required": [
+          "orders"
+        ],
+        "properties": {
+          "orders": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Lsps1ServiceOrderDto"
+            }
+          }
+        }
+      },
+      "Lsps1ServiceRgbOrderDto": {
+        "type": "object",
+        "required": [
+          "asset_id",
+          "lsp_asset_balance",
+          "client_asset_balance",
+          "fee_breakdown"
+        ],
+        "properties": {
+          "asset_id": {
+            "type": "string"
+          },
+          "client_asset_balance": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "fee_breakdown": {
+            "$ref": "#/components/schemas/Lsps1RgbFeeBreakdownDto"
+          },
+          "lsp_asset_balance": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          }
+        }
+      },
+      "Lsps1SupportedOptionsDto": {
+        "type": "object",
+        "required": [
+          "min_required_channel_confirmations",
+          "min_funding_confirms_within_blocks",
+          "supports_zero_channel_reserve",
+          "max_channel_expiry_blocks",
+          "min_initial_client_balance_sat",
+          "max_initial_client_balance_sat",
+          "min_initial_lsp_balance_sat",
+          "max_initial_lsp_balance_sat",
+          "min_channel_balance_sat",
+          "max_channel_balance_sat"
+        ],
+        "properties": {
+          "max_channel_balance_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "max_channel_expiry_blocks": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "max_initial_client_balance_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "max_initial_lsp_balance_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "min_channel_balance_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "min_funding_confirms_within_blocks": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "min_initial_client_balance_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "min_initial_lsp_balance_sat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "min_required_channel_confirmations": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "supports_zero_channel_reserve": {
+            "type": "boolean"
+          }
+        }
+      },
       "NetworkGraphChannelInfoResponse": {
         "type": "object",
         "description": "Information about a channel (both directions), as observed via channel_announcement and\nchannel_update gossip messages.",
@@ -4768,11 +6189,10 @@
         "properties": {
           "capacity_sats": {
             "type": [
-              "integer",
+              "string",
               "null"
             ],
-            "format": "int64",
-            "minimum": 0
+            "pattern": "^[0-9]+$"
           },
           "node_one": {
             "type": "string"
@@ -7515,9 +8935,8 @@
             "type": "string"
           },
           "splice_amount_sats": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 0
+            "type": "string",
+            "pattern": "^[0-9]+$"
           },
           "user_channel_id": {
             "type": "string"
@@ -7541,9 +8960,8 @@
             "type": "string"
           },
           "splice_amount_sats": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 0
+            "type": "string",
+            "pattern": "^[0-9]+$"
           },
           "user_channel_id": {
             "type": "string"
@@ -7915,6 +9333,72 @@
           }
         }
       },
+      "WalletSendAllRequest": {
+        "type": "object",
+        "description": "Request body for `POST /wallet/send_all`.",
+        "required": [
+          "address",
+          "retain_reserves"
+        ],
+        "properties": {
+          "address": {
+            "type": "string",
+            "description": "Destination Bitcoin address."
+          },
+          "fee_rate_sats_per_vb": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float",
+            "description": "Optional fee rate in sat/vB. Omit to let the node estimate."
+          },
+          "retain_reserves": {
+            "type": "boolean",
+            "description": "When true, keep the Anchor-channel reserve. Required: draining reserves is dangerous\nwith open Anchor channels."
+          }
+        }
+      },
+      "WalletSendRequest": {
+        "type": "object",
+        "description": "Request body for `POST /wallet/send`.",
+        "required": [
+          "address",
+          "amount_sats"
+        ],
+        "properties": {
+          "address": {
+            "type": "string",
+            "description": "Destination Bitcoin address."
+          },
+          "amount_sats": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Amount to send in satoshis (decimal string)."
+          },
+          "fee_rate_sats_per_vb": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float",
+            "description": "Optional fee rate in sat/vB. Omit to let the node estimate."
+          }
+        }
+      },
+      "WalletSendResponse": {
+        "type": "object",
+        "description": "Broadcast ordinary on-chain BTC transaction.",
+        "required": [
+          "txid"
+        ],
+        "properties": {
+          "txid": {
+            "type": "string",
+            "description": "Broadcast Bitcoin transaction id."
+          }
+        }
+      },
       "WalletUtxoConfirmationDto": {
         "type": "object",
         "required": [
@@ -8048,7 +9532,7 @@
     },
     {
       "name": "wallet",
-      "description": "Ordinary BTC-wallet endpoints. Typical flow: `POST /wallet/sync` before selecting from `GET /wallet/utxos`, `GET /wallet/address/current` to redisplay the current receive address, and `POST /wallet/address/new` for explicit plain BTC receive/change outputs."
+      "description": "Ordinary BTC-wallet endpoints (not RGB; RGB-colored outpoints are excluded by the wallet). Typical flow: `POST /wallet/sync` before `GET /balances` / `GET /wallet/utxos`, then `POST /wallet/send` or `POST /wallet/send_all`. Use `GET /wallet/address/current` to redisplay the current receive address, and `POST /wallet/address/new` for explicit plain BTC receive/change outputs."
     },
     {
       "name": "channel",
@@ -8097,6 +9581,10 @@
     {
       "name": "swap",
       "description": "BTC<->RGB atomic swap endpoints (circular payment over Lightning)."
+    },
+    {
+      "name": "lsps1",
+      "description": "LSPS1 (bLIP-51) channel-order endpoints. Client side (`/lsps1/info`, `/lsps1/order`, `/lsps1/rgb_order`, `/lsps1/order/{order_id}`) buys channels from the configured LSP; operator side (`/lsps1/pricing`, `/lsps1/orders`) runs this node's own channel-selling service."
     }
   ]
 }

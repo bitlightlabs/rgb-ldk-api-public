@@ -193,6 +193,17 @@ export interface ChannelDetailsExtendedDto {
   is_usable: boolean;
   is_announced: boolean;
   rgb_balance?: RgbChannelBalanceDto;
+  lsp?: ChannelLspLeaseDto;
+}
+
+export interface ChannelLspLeaseDto {
+  pubkey: string;
+  address: string;
+  order_id: string;
+  funded_at_height: number;
+  expires_at_height: number;
+  funded_at_unix_secs: U64String;
+  created_at_unix_secs: U64String;
 }
 
 export interface ChannelUpdateInfoDto {
@@ -282,6 +293,204 @@ export interface ListeningAddressesResponse {
 
 export interface LockedStatusDto {
   locked: boolean;
+}
+
+export interface Lsps1AssetPricingDto {
+  asset_id: string;
+  ticker: string;
+  precision: number;
+  asset_unit_price_sat: U64String;
+  asset_rent_ppm_per_year: number;
+  min_lsp_asset_balance: U64String;
+  max_lsp_asset_balance: U64String;
+  max_client_asset_balance: U64String;
+  color_context: string;
+}
+
+export interface Lsps1Bolt11PaymentDto {
+  state: string;
+  expires_at_unix_secs: U64String;
+  fee_total_sat: U64String;
+  order_total_sat: U64String;
+  invoice: string;
+}
+
+export interface Lsps1ChannelInfoDto {
+  funded_at_unix_secs: U64String;
+  funding_outpoint: string;
+  expires_at_unix_secs: U64String;
+}
+
+export interface Lsps1InfoResponse {
+  supported_options: Lsps1SupportedOptionsDto;
+  pricing?: Lsps1LspPricingDto;
+  rgb?: Lsps1RgbOfferingDto;
+}
+
+export interface Lsps1LspConfigDto {
+  pubkey: string;
+  address: string;
+  token?: string;
+}
+
+export interface Lsps1LspPricingDto {
+  btc_capacity_ppm_per_year: number;
+  onchain_cost_sat?: U64String;
+  min_fee_sat?: U64String;
+}
+
+export interface Lsps1OnchainPaymentDto {
+  state: string;
+  expires_at_unix_secs: U64String;
+  fee_total_sat: U64String;
+  order_total_sat: U64String;
+  address: string;
+  min_onchain_payment_confirmations?: number;
+  refund_onchain_address?: string;
+}
+
+export interface Lsps1OptionsDto {
+  supported_options: Lsps1SupportedOptionsDto;
+  service: Lsps1ServiceBehaviorDto;
+}
+
+export interface Lsps1OrderCreateRequest {
+  lsp_balance_sat: U64String;
+  client_balance_sat?: U64String;
+  channel_expiry_blocks: number;
+  announce_channel?: boolean;
+}
+
+export interface Lsps1OrderParamsDto {
+  lsp_balance_sat: U64String;
+  client_balance_sat: U64String;
+  required_channel_confirmations: number;
+  funding_confirms_within_blocks: number;
+  channel_expiry_blocks: number;
+  announce_channel: boolean;
+}
+
+export interface Lsps1OrderResponse {
+  order_id: string;
+  order: Lsps1OrderParamsDto;
+  payment: Lsps1PaymentOptionsDto;
+  channel?: Lsps1ChannelInfoDto;
+  rgb?: Lsps1RgbOrderDetailsDto;
+}
+
+export interface Lsps1PaymentOptionsDto {
+  bolt11?: Lsps1Bolt11PaymentDto;
+  onchain?: Lsps1OnchainPaymentDto;
+}
+
+export interface Lsps1PricingCoreDto {
+  btc_capacity_ppm_per_year: number;
+  onchain_cost_sat: U64String;
+  min_fee_sat: U64String;
+}
+
+export interface Lsps1PricingDto {
+  pricing: Lsps1PricingCoreDto;
+  assets: Lsps1AssetPricingDto[];
+}
+
+export interface Lsps1RgbAssetOfferDto {
+  asset_id: string;
+  ticker: string;
+  precision: number;
+  asset_unit_price_sat: U64String;
+  asset_rent_ppm_per_year: number;
+  min_lsp_asset_balance: U64String;
+  max_lsp_asset_balance: U64String;
+  max_client_asset_balance: U64String;
+}
+
+export interface Lsps1RgbFeeBreakdownDto {
+  onchain_cost_sat: U64String;
+  btc_rent_sat: U64String;
+  asset_rent_sat: U64String;
+  asset_sale_sat: U64String;
+}
+
+export interface Lsps1RgbOfferingDto {
+  rgb_assets: Lsps1RgbAssetOfferDto[];
+}
+
+export interface Lsps1RgbOrderCreateRequest {
+  asset_id: string;
+  lsp_asset_balance: U64String;
+  client_asset_balance?: U64String;
+  lsp_balance_sat: U64String;
+  client_balance_sat?: U64String;
+  channel_expiry_blocks: number;
+  announce_channel?: boolean;
+}
+
+export interface Lsps1RgbOrderDetailsDto {
+  asset_id: string;
+  lsp_asset_balance: U64String;
+  client_asset_balance: U64String;
+  fee_breakdown: Lsps1RgbFeeBreakdownDto;
+  asset_funding_outpoint?: string;
+}
+
+export interface Lsps1ServiceBehaviorDto {
+  require_token?: string;
+  bolt11_invoice_expiry_secs: number;
+  min_onchain_payment_confirmations: number;
+  max_fulfill_retries: number;
+  auto_close_expired_channels: boolean;
+  channel_expiry_grace_blocks: number;
+  late_deposit_refund_window_secs: U64String;
+}
+
+export interface Lsps1ServiceOrderDto {
+  order_id: string;
+  counterparty_node_id: string;
+  order_state: string;
+  payment_state: string;
+  paid_via?: string;
+  lsp_balance_sat: U64String;
+  client_balance_sat: U64String;
+  channel_expiry_blocks: number;
+  announce_channel: boolean;
+  fee_total_sat: U64String;
+  order_total_sat: U64String;
+  onchain_address?: string;
+  onchain_paid_sat?: U64String;
+  refund_onchain_address?: string;
+  refund_txid?: string;
+  fulfill_retry_count: number;
+  created_at_unix_secs: U64String;
+  payment_expires_at_unix_secs: U64String;
+  funding_outpoint?: string;
+  funded_at_height?: number;
+  channel_closed_at_unix_secs?: U64String;
+  rgb?: Lsps1ServiceRgbOrderDto;
+}
+
+export interface Lsps1ServiceOrdersResponse {
+  orders: Lsps1ServiceOrderDto[];
+}
+
+export interface Lsps1ServiceRgbOrderDto {
+  asset_id: string;
+  lsp_asset_balance: U64String;
+  client_asset_balance: U64String;
+  fee_breakdown: Lsps1RgbFeeBreakdownDto;
+}
+
+export interface Lsps1SupportedOptionsDto {
+  min_required_channel_confirmations: number;
+  min_funding_confirms_within_blocks: number;
+  supports_zero_channel_reserve: boolean;
+  max_channel_expiry_blocks: number;
+  min_initial_client_balance_sat: U64String;
+  max_initial_client_balance_sat: U64String;
+  min_initial_lsp_balance_sat: U64String;
+  max_initial_lsp_balance_sat: U64String;
+  min_channel_balance_sat: U64String;
+  max_channel_balance_sat: U64String;
 }
 
 export interface NetworkGraphChannelInfoResponse {
@@ -1001,6 +1210,22 @@ export interface VersionResponse {
 
 export interface WalletNewAddressResponse {
   address: string;
+}
+
+export interface WalletSendAllRequest {
+  address: string;
+  retain_reserves: boolean;
+  fee_rate_sats_per_vb?: number;
+}
+
+export interface WalletSendRequest {
+  address: string;
+  amount_sats: U64String;
+  fee_rate_sats_per_vb?: number;
+}
+
+export interface WalletSendResponse {
+  txid: string;
 }
 
 export interface WalletUtxoConfirmationDto {

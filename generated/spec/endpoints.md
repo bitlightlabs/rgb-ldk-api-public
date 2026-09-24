@@ -192,6 +192,84 @@
 * **Description:** Returns the list of socket addresses currently advertised by the node.
 * **Response (200):** `ListeningAddressesResponse`
 
+### GET `/api/v1/lsps1/info`
+
+* **Summary:** Get LSP offering
+* **Description:** Queries the configured LSP for its standard LSPS1 options and, when offered, its RGB asset roster with pricing. Requires the node to be configured with an LSPS1 LSP.
+* **Response (200):** `Lsps1InfoResponse`
+
+### GET `/api/v1/lsps1/lsp`
+
+* **Summary:** Get configured LSP
+* **Description:** Returns the LSP this node currently buys channels from; 404 when none is configured.
+* **Response (200):** `Lsps1LspConfigDto`
+* **Response (404):** No LSP configured
+
+### PUT `/api/v1/lsps1/lsp`
+
+* **Summary:** Set configured LSP
+* **Description:** Sets (or replaces) the LSP this node buys channels from. Persisted across restarts; takes effect for subsequent requests (the connection is made lazily). In-flight requests against the previous LSP time out. The configured LSP is trusted for 0-confirmation channels (same as configuring it at startup); a replaced LSP loses that trust.
+* **Request Body:** `Lsps1LspConfigDto`
+* **Response (200):** `Lsps1LspConfigDto`
+
+### GET `/api/v1/lsps1/options`
+
+* **Summary:** Get service options
+* **Description:** Returns the runtime config of this node's own LSPS1 service: the advertised order limits (`supported_options`) and the service behavior knobs (`service`).
+* **Response (200):** `Lsps1OptionsDto`
+
+### PUT `/api/v1/lsps1/options`
+
+* **Summary:** Update service options
+* **Description:** Validates, persists, and applies a new runtime config (full replace). Takes effect for new orders immediately; orders already accepted keep the parameters they were created with.
+* **Request Body:** `Lsps1OptionsDto`
+* **Response (200):** `Lsps1OptionsDto`
+
+### POST `/api/v1/lsps1/order`
+
+* **Summary:** Order a BTC channel
+* **Description:** Places a plain BTC channel order with the configured LSP and returns the order with its payment options (bolt11 HOLD invoice, and an onchain deposit address when the LSP offers it). Pay one of them; the LSP opens the channel once the payment is in.
+* **Request Body:** `Lsps1OrderCreateRequest`
+* **Response (200):** `Lsps1OrderResponse`
+
+### GET `/api/v1/lsps1/order/{order_id}`
+
+* **Summary:** Check order status
+* **Description:** Queries the configured LSP for the current state of a previously placed order (BTC or RGB; RGB orders come back with their `rgb` section filled).
+* **Response (200):** `Lsps1OrderResponse`
+
+### GET `/api/v1/lsps1/orders`
+
+* **Summary:** List served orders
+* **Description:** Returns every order in this node's LSPS1 fulfillment ledger (operator view), including payment, funding, and refund state.
+* **Response (200):** `Lsps1ServiceOrdersResponse`
+
+### GET `/api/v1/lsps1/orders/{order_id}`
+
+* **Summary:** Get a served order
+* **Description:** Returns one order from this node's LSPS1 fulfillment ledger (operator view).
+* **Response (200):** `Lsps1ServiceOrderDto`
+
+### GET `/api/v1/lsps1/pricing`
+
+* **Summary:** Get service pricing
+* **Description:** Returns the current pricing config of this node's own LSPS1 service: the global BTC capacity rate, onchain cost, fee floor, and the offered RGB asset roster.
+* **Response (200):** `Lsps1PricingDto`
+
+### PUT `/api/v1/lsps1/pricing`
+
+* **Summary:** Update service pricing
+* **Description:** Validates, persists, and applies a new pricing config; new orders are priced with it immediately. Every asset entry needs a `color_context` (consignment endpoint) and `max_client_asset_balance` must be 0 for now.
+* **Request Body:** `Lsps1PricingDto`
+* **Response (200):** `Lsps1PricingDto`
+
+### POST `/api/v1/lsps1/rgb_order`
+
+* **Summary:** Order an RGB channel
+* **Description:** Places an RGB channel order with the configured LSP. The response includes the itemized RGB fee breakdown (onchain cost, BTC rent, asset rent, asset sale) on top of the standard payment options.
+* **Request Body:** `Lsps1RgbOrderCreateRequest`
+* **Response (200):** `Lsps1OrderResponse`
+
 ### GET `/api/v1/network_graph/channel/{scid}`
 
 * **Summary:** Get info for a channel by short channel ID
@@ -620,6 +698,22 @@ Execute is gated on acceptance: it refuses with `SwapNotAcceptedYet` until the t
 * **Summary:** New on-chain address
 * **Description:** Deprecated compatibility alias for `POST /wallet/address/new`. Generates a new receive/change address from the ordinary BTC wallet account. Use this for plain BTC funding, explicit change on RGB UTXO-management calls, and outputs that should later appear in `/wallet/utxos`. Do not use it for RGB-owned outputs; use `POST /rgb/address/new` for those.
 * **Response (200):** `WalletNewAddressResponse`
+
+### POST `/api/v1/wallet/send`
+
+* **Summary:** Send ordinary on-chain BTC
+* **Description:** Broadcasts an ordinary BTC payment from the BDK wallet account. This is not RGB (`POST /rgb/onchain/send`). RGB-colored outpoints are excluded by the wallet. Typical flow: `POST /wallet/sync` → `GET /balances` / `GET /wallet/utxos` → `POST /wallet/send`. Omit `fee_rate_sats_per_vb` to let the node estimate.
+* **Request Body:** `WalletSendRequest`
+* **Response (200):** `WalletSendResponse`
+* **Response (400):** Invalid request, address, amount, fee rate, or insufficient funds
+
+### POST `/api/v1/wallet/send_all`
+
+* **Summary:** Send all ordinary on-chain BTC
+* **Description:** Drains ordinary BTC from the BDK wallet to the given address. This is not RGB. RGB-colored outpoints are excluded by the wallet. `retain_reserves` is required: `true` keeps the Anchor-channel reserve; `false` also spends reserves (dangerous with open Anchor channels). Typical flow: `POST /wallet/sync` → `GET /balances` / `GET /wallet/utxos` → `POST /wallet/send_all`. Omit `fee_rate_sats_per_vb` to let the node estimate.
+* **Request Body:** `WalletSendAllRequest`
+* **Response (200):** `WalletSendResponse`
+* **Response (400):** Invalid request, address, fee rate, or insufficient funds
 
 ### POST `/api/v1/wallet/sync`
 
