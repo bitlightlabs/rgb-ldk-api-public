@@ -1247,6 +1247,30 @@ export interface WalletUtxoLockDto {
   expires_at_unix_secs?: U64String;
 }
 
+export interface WalletUtxoLockStatusDto {
+  operation_id: string;
+  purpose: WalletUtxoLockPurposeDto;
+  expires_at_unix_secs?: U64String;
+}
+
+export interface WalletUtxoOperationDto {
+  operation_id: string;
+  phase: WalletUtxoOperationPhaseDto;
+}
+
+export interface WalletUtxoStatusDto {
+  outpoint: string;
+  account_id: string;
+  scope_id: string;
+  value_sats: U64String;
+  onchain_state: WalletUtxoOnchainStateDto;
+  availability: WalletUtxoAvailabilityDto;
+  selectable: boolean;
+  operation?: WalletUtxoOperationDto;
+  lock?: WalletUtxoLockStatusDto;
+  unavailable_reason?: string;
+}
+
 export interface WalletUtxosResponse {
   utxos: WalletUtxoDto[];
 }
@@ -1319,6 +1343,14 @@ export type RgbUtxoConfirmationStatusDto = "confirmed" | "mempool";
 
 export type RgbUtxoLockKindDto = "none" | "manual_reservation" | "operation";
 
+export type WalletUtxoAvailabilityDto = "blocked_by_policy" | "blocked_by_spend" | "locked" | "recovering" | "reserved" | "selectable" | "unknown";
+
 export type WalletUtxoConfirmationStatusDto = "confirmed" | "mempool";
 
 export type WalletUtxoLockKindDto = "none" | "manual_reservation" | "operation";
+
+export type WalletUtxoLockPurposeDto = "btc_send" | "fee_support" | "manual_reservation" | "planned_selection";
+
+export type WalletUtxoOnchainStateDto = "confirmed" | "spending_in_flight" | "spent" | "unconfirmed_incoming" | "unknown";
+
+export type WalletUtxoOperationPhaseDto = "awaiting_confirmation" | "broadcast" | "constructing" | "rolling_back" | "selected" | "signed";

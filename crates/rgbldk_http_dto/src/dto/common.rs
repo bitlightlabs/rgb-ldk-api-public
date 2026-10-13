@@ -7,6 +7,65 @@
 #![allow(missing_docs)]
 
 use serde::{Deserialize, Serialize};
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+pub enum WalletUtxoOnchainStateDto {
+    #[serde(rename = "confirmed")]
+    Confirmed,
+    #[serde(rename = "spending_in_flight")]
+    SpendingInFlight,
+    #[serde(rename = "spent")]
+    Spent,
+    #[serde(rename = "unconfirmed_incoming")]
+    UnconfirmedIncoming,
+    #[serde(rename = "unknown")]
+    Unknown,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+pub enum WalletUtxoAvailabilityDto {
+    #[serde(rename = "blocked_by_policy")]
+    BlockedByPolicy,
+    #[serde(rename = "blocked_by_spend")]
+    BlockedBySpend,
+    #[serde(rename = "locked")]
+    Locked,
+    #[serde(rename = "recovering")]
+    Recovering,
+    #[serde(rename = "reserved")]
+    Reserved,
+    #[serde(rename = "selectable")]
+    Selectable,
+    #[serde(rename = "unknown")]
+    Unknown,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+pub enum WalletUtxoOperationPhaseDto {
+    #[serde(rename = "awaiting_confirmation")]
+    AwaitingConfirmation,
+    #[serde(rename = "broadcast")]
+    Broadcast,
+    #[serde(rename = "constructing")]
+    Constructing,
+    #[serde(rename = "rolling_back")]
+    RollingBack,
+    #[serde(rename = "selected")]
+    Selected,
+    #[serde(rename = "signed")]
+    Signed,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]
+pub enum WalletUtxoLockPurposeDto {
+    #[serde(rename = "btc_send")]
+    BtcSend,
+    #[serde(rename = "fee_support")]
+    FeeSupport,
+    #[serde(rename = "manual_reservation")]
+    ManualReservation,
+    #[serde(rename = "planned_selection")]
+    PlannedSelection,
+}
 use utoipa::ToSchema;
 
 use super::*;
@@ -101,6 +160,49 @@ pub struct WalletUtxosResponse {
 	///
 	/// RGB wallet outputs are intentionally excluded from this view.
 	pub utxos: Vec<WalletUtxoDto>,
+}
+
+/// Read-only txoscope-backed status for one known UTXO.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct WalletUtxoStatusDto {
+	/// Outpoint formatted as `txid:vout`.
+	pub outpoint: String,
+	/// Account that currently owns the UTXO.
+	pub account_id: String,
+	/// Wallet scope that currently owns the UTXO.
+	pub scope_id: String,
+	/// Value of the output in sats (decimal string).
+	#[serde(with = "serde_u64_decimal_string")]
+	pub value_sats: u64,
+	/// Current on-chain state, for example `confirmed` or `spending_in_flight`.
+	pub onchain_state: WalletUtxoOnchainStateDto,
+	/// Current txoscope availability state.
+	pub availability: WalletUtxoAvailabilityDto,
+	/// Whether the UTXO is generically selectable.
+	pub selectable: bool,
+	/// Operation currently associated with the UTXO, if any.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub operation: Option<WalletUtxoOperationDto>,
+	/// Lock currently associated with the UTXO, if any.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub lock: Option<WalletUtxoLockStatusDto>,
+	/// Primary reason the UTXO is unavailable, if one exists.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub unavailable_reason: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct WalletUtxoOperationDto {
+	pub operation_id: String,
+	pub phase: WalletUtxoOperationPhaseDto,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct WalletUtxoLockStatusDto {
+	pub operation_id: String,
+	pub purpose: WalletUtxoLockPurposeDto,
+	#[serde(default, with = "serde_opt_u64_decimal_string")]
+	pub expires_at_unix_secs: Option<u64>,
 }
 
 /// Ordinary L1 wallet UTXO with confirmation and lock metadata.

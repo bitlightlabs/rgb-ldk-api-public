@@ -721,6 +721,14 @@ Execute is gated on acceptance: it refuses with `SwapNotAcceptedYet` until the t
 * **Description:** Synchronizes the ordinary BTC wallet with the configured chain source and persists newly observed wallet outputs. Call this before selecting inputs from `GET /wallet/utxos`, or before expecting fresh receive/change outputs to appear in the ordinary wallet view.
 * **Response (200):** `OkResponse`
 
+### GET `/api/v1/wallet/utxo/status`
+
+* **Summary:** Get UTXO status
+* **Description:** Returns the recorded txoscope state, ownership, operation, lock and primary unavailability reason for one known UTXO. This is read-only and does not clean up expired reservations or reserve the input.
+* **Response (200):** `WalletUtxoStatusDto`
+* **Response (400):** Invalid outpoint or wallet state
+* **Response (404):** The outpoint is not known to txoscope
+
 ### GET `/api/v1/wallet/utxos`
 
 * **Summary:** List ordinary L1 wallet UTXOs

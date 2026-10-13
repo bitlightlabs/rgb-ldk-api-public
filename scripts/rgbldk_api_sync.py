@@ -3,21 +3,21 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import shutil
 import subprocess
 import sys
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from urllib.parse import urlparse
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
-@dataclass
+@dataclass(frozen=True)
 class SourceInfo:
     node_repo: str
     node_commit: str | None
@@ -26,397 +26,560 @@ class SourceInfo:
     generated_at_utc: str
 
 
-def _read_toml(path: Path) -> dict:
-    try:
-        import tomllib
-    except ModuleNotFoundError:
-        raise RuntimeError("python >= 3.11 is required (missing tomllib)") from None
-
-    return tomllib.loads(path.read_text(encoding="utf-8"))
+@dataclass(frozen=True)
+class DtoSource:
+    source_path: Path
+    output_path: Path
+    content: str
 
 
-def _git_head(repo: Path) -> str | None:
-    try:
-        out = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD"], stderr=subprocess.DEVNULL)
-        text = out.decode("utf-8").strip()
-        return text or None
-    except Exception:
-        return None
+@dataclass(frozen=True)
+class NodeSources:
+    info: SourceInfo
+    dtos: tuple[DtoSource, ...]
 
 
-def _git_origin_url(repo: Path) -> str | None:
-    try:
-        out = subprocess.check_output(
-            ["git", "-C", str(repo), "remote", "get-url", "origin"], stderr=subprocess.DEVNULL
+@dataclass(frozen=True)
+class OpenApiDocument:
+    content: str
+    data: dict
+
+
+@dataclass(frozen=True)
+class Artifact:
+    path: Path
+    content: str
+
+
+class ReadNodeSourcesPass:
+    """Read provenance and DTO sources without changing the node repository."""
+
+    def __init__(self, node_repo: Path):
+        self._node_repo = node_repo
+
+    def run(self) -> NodeSources:
+        cargo_toml = self._read_toml(self._node_repo / "Cargo.toml")
+        package = cargo_toml.get("package")
+        if not isinstance(package, dict) or "version" not in package:
+            raise RuntimeError(f"missing [package].version in {self._node_repo / 'Cargo.toml'}")
+        reference = self._git_origin_url(self._node_repo) or str(self._node_repo)
+        info = SourceInfo(
+            node_repo=self._sanitize_repo_reference(reference),
+            node_commit=self._git_head(self._node_repo),
+            node_package_version=str(package["version"]),
+            api_version="v1",
+            generated_at_utc=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         )
-        text = out.decode("utf-8").strip()
-        return text or None
-    except Exception:
-        return None
+        source = self._locate_source()
+        if source.is_dir():
+            paths = sorted(source.rglob("*.rs"))
+        else:
+            paths = [source]
+        dtos = []
+        for path in paths:
+            if source.is_dir():
+                output = Path("src/dto") / path.relative_to(source)
+            else:
+                output = Path("src/dto.rs")
+            dtos.append(DtoSource(
+                source_path=path.relative_to(self._node_repo),
+                output_path=output,
+                content=path.read_text(encoding="utf-8"),
+            ))
+        return NodeSources(info, tuple(dtos))
 
+    def _locate_source(self) -> Path:
+        for relative in ("crates/node-http/src/dto", "src/http/dto.rs", "src/http/dto"):
+            source = self._node_repo / relative
+            if source.exists():
+                return source
+        raise RuntimeError(f"missing node DTO source in {self._node_repo}")
 
-def _rfc3339_utc_now() -> str:
-    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    @staticmethod
+    def _read_toml(path: Path) -> dict:
+        try:
+            import tomllib
+        except ModuleNotFoundError:
+            raise RuntimeError("python >= 3.11 is required (missing tomllib)") from None
 
+        return tomllib.loads(path.read_text(encoding="utf-8"))
 
-def _write_text(path: Path, content: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
+    @staticmethod
+    def _git_head(repo: Path) -> str | None:
+        try:
+            out = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD"], stderr=subprocess.DEVNULL)
+            text = out.decode("utf-8").strip()
+            return text or None
+        except Exception:
+            return None
 
-
-def _copytree_overwrite(src: Path, dst: Path) -> None:
-    if dst.exists():
-        shutil.rmtree(dst)
-    shutil.copytree(src, dst)
-
-
-def _copytree_merge(src: Path, dst: Path) -> None:
-    dst.mkdir(parents=True, exist_ok=True)
-    for path in src.rglob("*"):
-        rel = path.relative_to(src)
-        out = dst / rel
-        if path.is_dir():
-            out.mkdir(parents=True, exist_ok=True)
-            continue
-        out.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(path, out)
-
-
-def _generated_header(source: str) -> str:
-    return f"// Generated from {source}. Do not edit.\n\n"
-
-
-def _strip_domain_from_impls(content: str) -> str:
-    """Remove `impl From<crate::…>` / `impl From<rgb_ldk_node::…>` adapters that
-    only compile inside rgb-ldk-node."""
-    out: list[str] = []
-    i = 0
-    markers = ("\nimpl From<crate::", "\nimpl From<rgb_ldk_node::")
-    while True:
-        hits = [(m, content.find(m, i)) for m in markers]
-        hits = [(m, p) for m, p in hits if p >= 0]
-        if not hits:
-            out.append(content[i:])
-            break
-        marker, j = min(hits, key=lambda item: item[1])
-        out.append(content[i:j])
-        brace = content.find("{", j + 1)
-        if brace < 0:
-            out.append(content[j:])
-            break
-        depth = 0
-        p = brace
-        while p < len(content):
-            ch = content[p]
-            if ch == "{":
-                depth += 1
-            elif ch == "}":
-                depth -= 1
-                if depth == 0:
-                    p += 1
-                    break
-            p += 1
-        if p < len(content) and content[p] == "\n":
-            p += 1
-        i = p
-    return "".join(out)
-
-
-def _api_dto_source(path: Path) -> str:
-    content = path.read_text(encoding="utf-8")
-    # The node's swap DTO module also contains the node-only `From<crate::swap::SwapInfo>`
-    # (legacy) / `From<rgb_ldk_node::SwapInfo>` (workspace refactor) adapter and tests.
-    # The mirror crate intentionally contains DTOs only, so those sections
-    # would refer to a module that does not exist in rgbldk_http_dto and make the generated crate
-    # fail to compile.
-    if path.name == "swap.rs":
-        for marker in ("\nimpl From<crate::swap::SwapInfo>", "\nimpl From<rgb_ldk_node::SwapInfo>"):
-            if marker in content:
-                content = content.split(marker, 1)[0]
-                break
-        return content.rstrip()
-
-    # Other DTO modules may include node-domain `From<crate::…>` adapters (e.g. closing
-    # observability maps domain enums into DTO enums). Strip those: the mirror crate has no
-    # domain types at `crate::`.
-    return _strip_domain_from_impls(content).rstrip()
-
-
-def _write_dto_sources(node_repo: Path, crate_dir: Path) -> None:
-    src_dir = crate_dir / "src"
-    # Modern layout: rgb-ldk-node is a workspace; HTTP DTOs live under
-    # crates/node-http/src/dto. Legacy fallback: src/http/dto.rs or src/http/dto.
-    legacy_dto = node_repo / "src" / "http" / "dto.rs"
-    module_dto = node_repo / "src" / "http" / "dto"
-    workspace_dto = node_repo / "crates" / "node-http" / "src" / "dto"
-
-    if workspace_dto.exists():
-        for path in workspace_dto.rglob("*.rs"):
-            rel = path.relative_to(workspace_dto)
-            out = src_dir / "dto" / rel
-            _write_text(
-                out,
-                _generated_header(f"rgb-ldk-node/crates/node-http/src/dto/{rel.as_posix()}")
-                + _api_dto_source(path)
-                + "\n",
+    @staticmethod
+    def _git_origin_url(repo: Path) -> str | None:
+        try:
+            out = subprocess.check_output(
+                ["git", "-C", str(repo), "remote", "get-url", "origin"], stderr=subprocess.DEVNULL
             )
-        return
+            text = out.decode("utf-8").strip()
+            return text or None
+        except Exception:
+            return None
 
-    if legacy_dto.exists():
-        _write_text(
-            src_dir / "dto.rs",
-            _generated_header("rgb-ldk-node/src/http/dto.rs") + _api_dto_source(legacy_dto) + "\n",
+    @staticmethod
+    def _sanitize_repo_reference(value: str) -> str:
+        ssh_match = re.match(r"^git@[^:]+:([^/]+)/(.+?)(?:\.git)?$", value)
+        if ssh_match:
+            return f"{ssh_match.group(1)}/{ssh_match.group(2)}"
+        if value.startswith(("https://", "http://", "ssh://")):
+            parsed = urlparse(value)
+            path = parsed.path.strip("/")
+            if path.endswith(".git"):
+                path = path[:-4]
+            if path:
+                return path
+            return value
+        if re.search(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", value):
+            return value
+
+        looks_like_local_path = (
+            value.startswith(("/", "~", "./", "../"))
+            or "/Users/" in value
+            or "/home/" in value
+            or "\\" in value
+            or re.match(r"^[A-Za-z]:\\\\", value) is not None
         )
-        return
+        if not looks_like_local_path:
+            return value
 
-    if not module_dto.exists():
-        raise RuntimeError(f"missing node DTO source: {legacy_dto} or {module_dto}")
-
-    for path in module_dto.rglob("*.rs"):
-        rel = path.relative_to(module_dto)
-        out = src_dir / "dto" / rel
-        _write_text(
-            out,
-            _generated_header(f"rgb-ldk-node/src/http/dto/{rel.as_posix()}")
-            + _api_dto_source(path)
-            + "\n",
-        )
+        parts = [part for part in re.split(r"[\\\\/]+", value.strip()) if part]
+        name = parts[-1] if parts else ""
+        if name.endswith(".git"):
+            name = name[:-4]
+        return name or "local-path-redacted"
 
 
-def _sanitize_repo_reference(value: str) -> str:
-    ssh_match = re.match(r"^git@[^:]+:([^/]+)/(.+?)(?:\.git)?$", value)
-    if ssh_match:
-        return f"{ssh_match.group(1)}/{ssh_match.group(2)}"
-    if value.startswith(("https://", "http://", "ssh://")):
-        parsed = urlparse(value)
-        path = parsed.path.strip("/")
-        if path.endswith(".git"):
-            path = path[:-4]
-        if path:
-            return path
-        return value
-    if re.search(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", value):
-        return value
+class ExportOpenApiPass:
+    """Run the node exporter in temporary storage and retain its exact JSON text."""
 
-    looks_like_local_path = (
-        value.startswith(("/", "~", "./", "../"))
-        or "/Users/" in value
-        or "/home/" in value
-        or "\\" in value
-        or re.match(r"^[A-Za-z]:\\\\", value) is not None
+    def __init__(self, node_repo: Path):
+        self._node_repo = node_repo
+
+    def run(self) -> OpenApiDocument:
+        with TemporaryDirectory(prefix="rgbldk-openapi-") as directory:
+            output = Path(directory) / "openapi.json"
+            subprocess.check_call(
+                ["cargo", "run", "-p", "rgbldkd", "--bin", "rgbldkd", "--",
+                 "openapi", "--output", str(output)],
+                cwd=self._node_repo,
+            )
+            content = output.read_text(encoding="utf-8")
+        return OpenApiDocument(content, json.loads(content))
+
+
+class StripDomainAdaptersPass:
+    """Remove node-only implementations while retaining the public DTO source."""
+
+    def run(self, sources: tuple[DtoSource, ...]) -> tuple[DtoSource, ...]:
+        outputs = []
+        for source in sources:
+            content = source.content
+            if source.source_path.name == "swap.rs":
+                # The swap module's trailing adapter and tests belong to the node.
+                for marker in ("\nimpl From<crate::swap::SwapInfo>", "\nimpl From<rgb_ldk_node::SwapInfo>"):
+                    if marker in content:
+                        content = content.split(marker, 1)[0]
+                        break
+            else:
+                content = self._strip_domain_from_impls(content)
+            outputs.append(replace(source, content=content.rstrip()))
+        return tuple(outputs)
+
+    @staticmethod
+    def _strip_domain_from_impls(content: str) -> str:
+        """Remove `impl From<crate::…>` / `impl From<rgb_ldk_node::…>` adapters that
+        only compile inside rgb-ldk-node."""
+        out: list[str] = []
+        i = 0
+        markers = ("\nimpl From<crate::", "\nimpl From<rgb_ldk_node::")
+        while True:
+            hits = [(m, content.find(m, i)) for m in markers]
+            hits = [(m, p) for m, p in hits if p >= 0]
+            if not hits:
+                out.append(content[i:])
+                break
+            marker, j = min(hits, key=lambda item: item[1])
+            out.append(content[i:j])
+            brace = content.find("{", j + 1)
+            if brace < 0:
+                out.append(content[j:])
+                break
+            depth = 0
+            p = brace
+            while p < len(content):
+                ch = content[p]
+                if ch == "{":
+                    depth += 1
+                elif ch == "}":
+                    depth -= 1
+                    if depth == 0:
+                        p += 1
+                        break
+                p += 1
+            if p < len(content) and content[p] == "\n":
+                p += 1
+            i = p
+        return "".join(out)
+
+
+class WalletEnumsPass:
+    """Mirror domain-owned wallet enums without depending on domain crates."""
+
+    NAMES = (
+        "WalletUtxoOnchainStateDto",
+        "WalletUtxoAvailabilityDto",
+        "WalletUtxoOperationPhaseDto",
+        "WalletUtxoLockPurposeDto",
     )
-    if not looks_like_local_path:
-        return value
+    SCHEMA_FIELDS = {"type", "enum", "title", "description", "deprecated", "example", "examples"}
 
-    parts = [part for part in re.split(r"[\\\\/]+", value.strip()) if part]
-    name = parts[-1] if parts else ""
-    if name.endswith(".git"):
-        name = name[:-4]
-    return name or "local-path-redacted"
+    def __init__(self, openapi: dict):
+        self._openapi = openapi
+        self._declarations: dict[str, str] = {}
+        self._seen: set[str] = set()
+
+    def run(self, sources: tuple[DtoSource, ...]) -> tuple[DtoSource, ...]:
+        # Tracking belongs to one run, including when a pass is reused after failure.
+        self._declarations = {}
+        self._seen = set()
+        has_aliases = False
+        for source in sources:
+            for statement in re.findall(r"pub use\s+[^;]+;", source.content):
+                if self._references_wallet_enum(statement):
+                    has_aliases = True
+        if not has_aliases:
+            return sources
+        self._load_declarations()
+        outputs = []
+        for source in sources:
+            outputs.append(replace(source, content=self._rewrite(source.content)))
+        self._validate_complete()
+        return tuple(outputs)
+
+    def _load_declarations(self) -> None:
+        components = self._openapi.get("components")
+        schemas = components.get("schemas") if isinstance(components, dict) else None
+        if not isinstance(schemas, dict):
+            raise RuntimeError("wallet enums: missing OpenAPI components.schemas object")
+        for name in self.NAMES:
+            self._declarations[name] = self._render_enum(name, schemas.get(name))
+
+    @classmethod
+    def _references_wallet_enum(cls, statement: str) -> bool:
+        for name in cls.NAMES:
+            if re.search(rf"\b{name}\b", statement):
+                return True
+        return False
+
+    def _render_enum(self, name: str, schema: object) -> str:
+        if not isinstance(schema, dict) or set(schema) - self.SCHEMA_FIELDS or schema.get("type") != "string":
+            raise RuntimeError(f"{name}: expected a plain string enum schema")
+        values = schema.get("enum")
+        if not isinstance(values, list) or not values:
+            raise RuntimeError(f"{name}: expected a nonempty enum")
+        variants: dict[str, str] = {}
+        for value in values:
+            if not isinstance(value, str) or not re.fullmatch(r"[a-z][a-z0-9]*(?:_[a-z0-9]+)*", value):
+                raise RuntimeError(f"{name}: unsupported enum value {value!r}; expected snake_case")
+            words = []
+            for part in value.split("_"):
+                words.append(part[0].upper() + part[1:])
+            variant = "".join(words)
+            if variant == "Self" or variant in variants:
+                raise RuntimeError(f"{name}: duplicate or invalid Rust variant {variant}")
+            variants[variant] = value
+        lines = [
+            "#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize, utoipa::ToSchema)]",
+            f"pub enum {name} {{",
+        ]
+        for variant, value in sorted(variants.items()):
+            lines.append(f'    #[serde(rename = "{value}")]')
+            lines.append(f"    {variant},")
+        lines.append("}")
+        return "\n".join(lines)
+
+    def _rewrite(self, content: str) -> str:
+        return re.sub(r"pub use\s+[^;]+;", self._replace_reexport, content)
+
+    def _replace_reexport(self, match: re.Match) -> str:
+        statement = match.group(0)
+        if not self._references_wallet_enum(statement):
+            return statement
+        parsed = re.fullmatch(r"pub use\s+txoscope_core::\{([^{}]+)\}\s*;", statement)
+        if not parsed:
+            raise RuntimeError(f"unsupported wallet enum reexport: {statement}")
+        remaining = []
+        generated = set()
+        for raw_item in parsed[1].split(","):
+            item = raw_item.strip()
+            if not item:
+                continue
+            alias = re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*\s+as\s+([A-Za-z_][A-Za-z0-9_]*)", item)
+            if alias and alias[1] in self._declarations:
+                name = alias[1]
+                if name in self._seen:
+                    raise RuntimeError(f"duplicate wallet enum reexport: {name}")
+                self._seen.add(name)
+                generated.add(name)
+            elif self._references_wallet_enum(item):
+                raise RuntimeError(f"unsupported wallet enum reexport: {item}")
+            else:
+                remaining.append(item)
+        output = []
+        if remaining:
+            output.append(f"pub use txoscope_core::{{{', '.join(remaining)}}};")
+        for name in self.NAMES:
+            if name in generated:
+                output.append(self._declarations[name])
+        return "\n\n".join(output)
+
+    def _validate_complete(self) -> None:
+        missing = set(self._declarations) - self._seen
+        if missing:
+            raise RuntimeError(f"missing wallet enum reexports: {', '.join(sorted(missing))}")
 
 
-def _schema_type_name(schema: dict | None) -> str | None:
-    if not isinstance(schema, dict):
+class RenderArtifactsPass:
+    """Render the complete export in memory; no output files are written here."""
+
+    def run(
+        self, info: SourceInfo, document: OpenApiDocument, sources: tuple[DtoSource, ...]
+    ) -> tuple[Artifact, ...]:
+        spec = Path("generated/spec")
+        crate = Path("crates/rgbldk_http_dto")
+        artifacts = [
+            Artifact(spec / "api-version.txt", f"{info.api_version}\n"),
+            Artifact(spec / "node-package-version.txt", f"{info.node_package_version}\n"),
+            Artifact(spec / "source.json", json.dumps(asdict(info), indent=2, sort_keys=True) + "\n"),
+            Artifact(spec / "openapi.json", document.content),
+            Artifact(spec / "endpoints.md", self._render_endpoints_md(document.data)),
+            Artifact(crate / "Cargo.toml", self._render_manifest(info.node_package_version)),
+            Artifact(crate / "src/lib.rs", "//! Generated. Do not edit.\n\npub mod dto;\npub use dto::*;\n"),
+        ]
+        for source in sources:
+            origin = f"rgb-ldk-node/{source.source_path.as_posix()}"
+            content = f"// Generated from {origin}. Do not edit.\n\n{source.content}\n"
+            artifacts.append(Artifact(crate / source.output_path, content))
+        return tuple(artifacts)
+
+    @staticmethod
+    def _render_manifest(node_version: str) -> str:
+        return "\n".join([
+            "[package]",
+            'name = "rgbldk_http_dto"',
+            f'version = "{node_version}"',
+            'edition = "2021"',
+            'license = "UNLICENSED"',
+            "publish = false",
+            "",
+            "[dependencies]",
+            'serde = { version = "1", features = ["derive"] }',
+            'serde_json = "1"',
+            'utoipa = "5.4.0"',
+            "",
+        ])
+
+    def _schema_type_name(self, schema: dict | None) -> str | None:
+        if not isinstance(schema, dict):
+            return None
+        ref = schema.get("$ref")
+        if isinstance(ref, str) and ref.startswith("#/components/schemas/"):
+            return ref.rsplit("/", 1)[-1]
+        schema_type = schema.get("type")
+        if schema_type == "array":
+            inner = self._schema_type_name(schema.get("items"))
+            return f"{inner}[]" if inner else "array"
+        if schema_type == "string":
+            fmt = schema.get("format")
+            if fmt == "binary":
+                return "binary"
+            return "string"
+        if isinstance(schema_type, str):
+            return schema_type
         return None
-    ref = schema.get("$ref")
-    if isinstance(ref, str) and ref.startswith("#/components/schemas/"):
-        return ref.rsplit("/", 1)[-1]
-    schema_type = schema.get("type")
-    if schema_type == "array":
-        inner = _schema_type_name(schema.get("items"))
-        return f"{inner}[]" if inner else "array"
-    if schema_type == "string":
-        fmt = schema.get("format")
-        if fmt == "binary":
-            return "binary"
-        return "string"
-    if isinstance(schema_type, str):
-        return schema_type
-    return None
 
+    @staticmethod
+    def _prefixed_api_path(path: str) -> str:
+        if path.startswith("/api/v1"):
+            return path
+        return "/api/v1" + (path if path.startswith("/") else "/" + path)
 
-def _prefixed_api_path(path: str) -> str:
-    if path.startswith("/api/v1"):
-        return path
-    return "/api/v1" + (path if path.startswith("/") else "/" + path)
-
-
-def _render_endpoints_md(openapi: dict) -> str:
-    paths = openapi.get("paths")
-    if not isinstance(paths, dict):
-        raise RuntimeError("openapi.json is missing top-level paths")
-    out: list[str] = []
-    out.append("# Endpoint List (Prefix: `/api/v1`)")
-    out.append("")
-    out.append("*This file is exported by `scripts/rgbldk_api_sync.py`.*")
-    out.append("")
-    route_entries: list[tuple[str, str, dict]] = []
-    for raw_path, path_item in paths.items():
-        if not isinstance(path_item, dict):
-            continue
-        for method in ("get", "post", "put", "delete", "patch"):
-            op = path_item.get(method)
-            if isinstance(op, dict):
-                route_entries.append((method.upper(), _prefixed_api_path(raw_path), op))
-
-    route_entries.sort(key=lambda item: (item[1], item[0]))
-
-    for method, full_path, op in route_entries:
-        out.append(f"### {method} `{full_path}`")
+    def _render_endpoints_md(self, openapi: dict) -> str:
+        paths = openapi.get("paths")
+        if not isinstance(paths, dict):
+            raise RuntimeError("openapi.json is missing top-level paths")
+        out: list[str] = []
+        out.append("# Endpoint List (Prefix: `/api/v1`)")
         out.append("")
-        summary = op.get("summary")
-        if isinstance(summary, str) and summary.strip():
-            out.append(f"* **Summary:** {summary.strip()}")
-        description = op.get("description")
-        if isinstance(description, str) and description.strip():
-            out.append(f"* **Description:** {description.strip()}")
-        request_body = op.get("requestBody")
-        if method in ("POST", "PUT", "PATCH") and isinstance(request_body, dict):
-            content = request_body.get("content")
-            if isinstance(content, dict):
-                json_content = content.get("application/json")
-                octet_content = content.get("application/octet-stream")
-                selected = json_content if isinstance(json_content, dict) else octet_content
-                if isinstance(selected, dict):
-                    req_type = _schema_type_name(selected.get("schema"))
-                    if req_type:
-                        out.append(f"* **Request Body:** `{req_type}`")
-        responses = op.get("responses")
-        if isinstance(responses, dict):
-            for status in sorted(responses, key=lambda code: (not str(code).isdigit(), str(code))):
-                resp = responses.get(status)
-                if not isinstance(resp, dict):
-                    continue
-                content = resp.get("content")
-                resp_type = None
+        out.append("*This file is exported by `scripts/rgbldk_api_sync.py`.*")
+        out.append("")
+        route_entries: list[tuple[str, str, dict]] = []
+        for raw_path, path_item in paths.items():
+            if not isinstance(path_item, dict):
+                continue
+            for method in ("get", "post", "put", "delete", "patch"):
+                op = path_item.get(method)
+                if isinstance(op, dict):
+                    route_entries.append((method.upper(), self._prefixed_api_path(raw_path), op))
+
+        route_entries.sort(key=lambda item: (item[1], item[0]))
+
+        for method, full_path, op in route_entries:
+            out.append(f"### {method} `{full_path}`")
+            out.append("")
+            summary = op.get("summary")
+            if isinstance(summary, str) and summary.strip():
+                out.append(f"* **Summary:** {summary.strip()}")
+            description = op.get("description")
+            if isinstance(description, str) and description.strip():
+                out.append(f"* **Description:** {description.strip()}")
+            request_body = op.get("requestBody")
+            if method in ("POST", "PUT", "PATCH") and isinstance(request_body, dict):
+                content = request_body.get("content")
                 if isinstance(content, dict):
                     json_content = content.get("application/json")
                     octet_content = content.get("application/octet-stream")
                     selected = json_content if isinstance(json_content, dict) else octet_content
                     if isinstance(selected, dict):
-                        resp_type = _schema_type_name(selected.get("schema"))
-                if resp_type:
-                    out.append(f"* **Response ({status}):** `{resp_type}`")
-                else:
-                    desc = resp.get("description")
-                    if isinstance(desc, str) and desc.strip():
-                        out.append(f"* **Response ({status}):** {desc.strip()}")
-        out.append("")
+                        req_type = self._schema_type_name(selected.get("schema"))
+                        if req_type:
+                            out.append(f"* **Request Body:** `{req_type}`")
+            responses = op.get("responses")
+            if isinstance(responses, dict):
+                for status in sorted(responses, key=lambda code: (not str(code).isdigit(), str(code))):
+                    resp = responses.get(status)
+                    if not isinstance(resp, dict):
+                        continue
+                    content = resp.get("content")
+                    resp_type = None
+                    if isinstance(content, dict):
+                        json_content = content.get("application/json")
+                        octet_content = content.get("application/octet-stream")
+                        selected = json_content if isinstance(json_content, dict) else octet_content
+                        if isinstance(selected, dict):
+                            resp_type = self._schema_type_name(selected.get("schema"))
+                    if resp_type:
+                        out.append(f"* **Response ({status}):** `{resp_type}`")
+                    else:
+                        desc = resp.get("description")
+                        if isinstance(desc, str) and desc.strip():
+                            out.append(f"* **Response ({status}):** {desc.strip()}")
+            out.append("")
 
-    return "\n".join(out).rstrip() + "\n"
-
-
-def _export_openapi_json(node_repo: Path, output_path: Path) -> None:
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.check_call(
-        ["cargo", "run", "-p", "rgbldkd", "--bin", "rgbldkd", "--", "openapi", "--output", str(output_path)],
-        cwd=node_repo,
-    )
-
-
-def export_artifacts(node_repo: Path, out_dir: Path) -> None:
-    node_repo = node_repo.resolve()
-    out_dir = out_dir.resolve()
-
-    cargo_toml = _read_toml(node_repo / "Cargo.toml")
-    package = cargo_toml.get("package")
-    if not isinstance(package, dict) or "version" not in package:
-        raise RuntimeError(f"missing [package].version in {node_repo / 'Cargo.toml'}")
-    node_version = str(package["version"])
-    api_version = "v1"
-
-    node_repo_ref = _git_origin_url(node_repo) or str(node_repo)
-    info = SourceInfo(
-        node_repo=_sanitize_repo_reference(node_repo_ref),
-        node_commit=_git_head(node_repo),
-        node_package_version=node_version,
-        api_version=api_version,
-        generated_at_utc=_rfc3339_utc_now(),
-    )
-
-    _write_text(out_dir / "generated" / "spec" / "api-version.txt", f"{api_version}\n")
-    _write_text(out_dir / "generated" / "spec" / "node-package-version.txt", f"{node_version}\n")
-    _write_text(out_dir / "generated" / "spec" / "source.json", json.dumps(asdict(info), indent=2, sort_keys=True) + "\n")
-    exported_openapi = out_dir / "generated" / "spec" / "openapi.json"
-    _export_openapi_json(node_repo, exported_openapi)
-    openapi = json.loads(exported_openapi.read_text(encoding="utf-8"))
-    _write_text(out_dir / "generated" / "spec" / "endpoints.md", _render_endpoints_md(openapi))
-
-    crate_dir = out_dir / "crates" / "rgbldk_http_dto"
-    _write_text(
-        crate_dir / "Cargo.toml",
-        "\n".join(
-            [
-                "[package]",
-                'name = "rgbldk_http_dto"',
-                f'version = "{node_version}"',
-                'edition = "2021"',
-                'license = "UNLICENSED"',
-                "publish = false",
-                "",
-                "[dependencies]",
-                'serde = { version = "1", features = ["derive"] }',
-                'serde_json = "1"',
-                'utoipa = "5.4.0"',
-                "",
-            ]
-        ),
-    )
-    _write_text(crate_dir / "src" / "lib.rs", "//! Generated. Do not edit.\n\npub mod dto;\npub use dto::*;\n")
-    _write_dto_sources(node_repo, crate_dir)
+        return "\n".join(out).rstrip() + "\n"
 
 
-def sync_to_api_repo(node_repo: Path, api_repo: Path, git_commit: bool, git_commit_message: str) -> None:
-    node_repo = node_repo.resolve()
-    api_repo = api_repo.resolve()
-    if not (api_repo / ".git").exists():
-        raise RuntimeError(f"api repo does not look like a git repo: {api_repo}")
+class WriteArtifactsPass:
+    """Materialize a validated, fully rendered export."""
 
-    tmp_root = api_repo / ".tmp"
-    tmp_root.mkdir(parents=True, exist_ok=True)
-    tmp_export = tmp_root / f"rgbldk-api-sync-{os.getpid()}"
-    if tmp_export.exists():
-        shutil.rmtree(tmp_export)
-    tmp_export.mkdir(parents=True, exist_ok=True)
+    def __init__(self, output_dir: Path):
+        self._output_dir = output_dir
 
-    try:
-        export_artifacts(node_repo=node_repo, out_dir=tmp_export)
+    def run(self, artifacts: tuple[Artifact, ...]) -> None:
+        for artifact in artifacts:
+            output = self._output_dir / artifact.path
+            output.parent.mkdir(parents=True, exist_ok=True)
+            output.write_text(artifact.content, encoding="utf-8")
 
-        tmp_generated_spec = tmp_export / "generated" / "spec"
-        if not tmp_generated_spec.exists():
-            raise RuntimeError(f"missing generated spec in export: {tmp_generated_spec}")
-        (api_repo / "generated").mkdir(parents=True, exist_ok=True)
-        _copytree_merge(tmp_generated_spec, api_repo / "generated" / "spec")
 
-        tmp_dto_crate = tmp_export / "crates" / "rgbldk_http_dto"
-        if not tmp_dto_crate.exists():
-            raise RuntimeError(f"missing dto crate in export: {tmp_dto_crate}")
-        (api_repo / "crates").mkdir(parents=True, exist_ok=True)
-        _copytree_overwrite(tmp_dto_crate, api_repo / "crates" / "rgbldk_http_dto")
+class InstallArtifactsPass:
+    """Merge spec files, replace the DTO crate, and remove the legacy crate."""
 
-        legacy = api_repo / "generated" / "crates" / "rgbldk_http_dto"
+    def __init__(self, api_repo: Path):
+        self._api_repo = api_repo
+
+    def run(self, exported: Path) -> None:
+        spec = exported / "generated/spec"
+        crate = exported / "crates/rgbldk_http_dto"
+        if not spec.is_dir():
+            raise RuntimeError(f"missing generated spec in export: {spec}")
+        if not crate.is_dir():
+            raise RuntimeError(f"missing dto crate in export: {crate}")
+        self._copytree_merge(spec, self._api_repo / "generated/spec")
+        (self._api_repo / "crates").mkdir(parents=True, exist_ok=True)
+        self._copytree_overwrite(crate, self._api_repo / "crates/rgbldk_http_dto")
+        legacy = self._api_repo / "generated/crates/rgbldk_http_dto"
         if legacy.exists():
             shutil.rmtree(legacy)
 
-        if git_commit:
-            subprocess.check_call(
-                [
-                    "git",
-                    "-C",
-                    str(api_repo),
-                    "add",
-                    "generated",
-                    "crates/rgbldk_http_dto",
-                ]
-            )
-            diff_quiet = subprocess.call(["git", "-C", str(api_repo), "diff", "--cached", "--quiet"])
-            if diff_quiet != 0:
-                subprocess.check_call(
-                    ["git", "-C", str(api_repo), "commit", "--no-gpg-sign", "-m", git_commit_message]
-                )
-    finally:
-        if tmp_export.exists():
-            shutil.rmtree(tmp_export)
+    @staticmethod
+    def _copytree_merge(src: Path, dst: Path) -> None:
+        dst.mkdir(parents=True, exist_ok=True)
+        for path in src.rglob("*"):
+            rel = path.relative_to(src)
+            out = dst / rel
+            if path.is_dir():
+                out.mkdir(parents=True, exist_ok=True)
+                continue
+            out.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(path, out)
+
+    @staticmethod
+    def _copytree_overwrite(src: Path, dst: Path) -> None:
+        if dst.exists():
+            shutil.rmtree(dst)
+        shutil.copytree(src, dst)
+
+
+class CommitArtifactsPass:
+    """Stage exported artifacts and commit when Git reports staged changes."""
+
+    def __init__(self, api_repo: Path, message: str):
+        self._api_repo = api_repo
+        self._message = message
+
+    def run(self) -> None:
+        git = ["git", "-C", str(self._api_repo)]
+        subprocess.check_call(git + ["add", "generated", "crates/rgbldk_http_dto"])
+        diff = subprocess.run(git + ["diff", "--cached", "--quiet"])
+        if diff.returncode == 0:
+            return
+        if diff.returncode != 1:
+            diff.check_returncode()
+        subprocess.check_call(git + ["commit", "--no-gpg-sign", "-m", self._message])
+
+
+class ExportPipeline:
+    """Order source, schema, transformation, rendering, and write passes."""
+
+    def __init__(self, node_repo: Path):
+        self._node_repo = node_repo.resolve()
+
+    def run(self, output_dir: Path) -> None:
+        sources = ReadNodeSourcesPass(self._node_repo).run()
+        document = ExportOpenApiPass(self._node_repo).run()
+        dtos = StripDomainAdaptersPass().run(sources.dtos)
+        dtos = WalletEnumsPass(document.data).run(dtos)
+        artifacts = RenderArtifactsPass().run(sources.info, document, dtos)
+        WriteArtifactsPass(output_dir.resolve()).run(artifacts)
+
+
+class SyncPipeline:
+    """Keep an export staged until validation succeeds, then install and commit."""
+
+    def __init__(self, node_repo: Path, api_repo: Path):
+        self._node_repo = node_repo.resolve()
+        self._api_repo = api_repo.resolve()
+
+    def run(self, git_commit: bool, git_commit_message: str) -> None:
+        if not (self._api_repo / ".git").exists():
+            raise RuntimeError(f"api repo does not look like a git repo: {self._api_repo}")
+        temporary_root = self._api_repo / ".tmp"
+        temporary_root.mkdir(parents=True, exist_ok=True)
+        with TemporaryDirectory(prefix="rgbldk-api-sync-", dir=temporary_root) as directory:
+            exported = Path(directory)
+            ExportPipeline(self._node_repo).run(exported)
+            InstallArtifactsPass(self._api_repo).run(exported)
+            if git_commit:
+                CommitArtifactsPass(self._api_repo, git_commit_message).run()
 
 
 def main(argv: list[str]) -> int:
@@ -438,12 +601,10 @@ def main(argv: list[str]) -> int:
 
     args = parser.parse_args(argv)
     if args.cmd == "export":
-        export_artifacts(node_repo=Path(args.node_repo), out_dir=Path(args.out))
+        ExportPipeline(Path(args.node_repo)).run(Path(args.out))
         return 0
     if args.cmd == "sync":
-        sync_to_api_repo(
-            node_repo=Path(args.node_repo),
-            api_repo=Path(args.api_repo),
+        SyncPipeline(Path(args.node_repo), Path(args.api_repo)).run(
             git_commit=bool(args.git_commit),
             git_commit_message=str(args.git_commit_message),
         )

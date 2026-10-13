@@ -3796,6 +3796,50 @@
         ]
       }
     },
+    "/wallet/utxo/status": {
+      "get": {
+        "tags": [
+          "wallet"
+        ],
+        "summary": "Get UTXO status",
+        "description": "Returns the recorded txoscope state, ownership, operation, lock and primary unavailability reason for one known UTXO. This is read-only and does not clean up expired reservations or reserve the input.",
+        "operationId": "wallet_utxo_status",
+        "parameters": [
+          {
+            "name": "outpoint",
+            "in": "query",
+            "description": "UTXO outpoint formatted as txid:vout",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "UTXO status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletUtxoStatusDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid outpoint or wallet state"
+          },
+          "404": {
+            "description": "The outpoint is not known to txoscope"
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
     "/wallet/utxos": {
       "get": {
         "tags": [
@@ -9399,6 +9443,19 @@
           }
         }
       },
+      "WalletUtxoAvailabilityDto": {
+        "type": "string",
+        "description": "Txoscope availability state for a managed UTXO.",
+        "enum": [
+          "unknown",
+          "selectable",
+          "reserved",
+          "locked",
+          "blocked_by_policy",
+          "blocked_by_spend",
+          "recovering"
+        ]
+      },
       "WalletUtxoConfirmationDto": {
         "type": "object",
         "required": [
@@ -9495,6 +9552,149 @@
           "manual_reservation",
           "operation"
         ]
+      },
+      "WalletUtxoLockPurposeDto": {
+        "type": "string",
+        "description": "Purpose of a persisted UTXO lock.",
+        "enum": [
+          "manual_reservation",
+          "btc_send",
+          "fee_support",
+          "planned_selection"
+        ]
+      },
+      "WalletUtxoLockStatusDto": {
+        "type": "object",
+        "required": [
+          "operation_id",
+          "purpose"
+        ],
+        "properties": {
+          "expires_at_unix_secs": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$"
+          },
+          "operation_id": {
+            "type": "string"
+          },
+          "purpose": {
+            "$ref": "#/components/schemas/WalletUtxoLockPurposeDto"
+          }
+        }
+      },
+      "WalletUtxoOnchainStateDto": {
+        "type": "string",
+        "description": "Recorded chain state for a managed UTXO.",
+        "enum": [
+          "unknown",
+          "unconfirmed_incoming",
+          "confirmed",
+          "spending_in_flight",
+          "spent"
+        ]
+      },
+      "WalletUtxoOperationDto": {
+        "type": "object",
+        "required": [
+          "operation_id",
+          "phase"
+        ],
+        "properties": {
+          "operation_id": {
+            "type": "string"
+          },
+          "phase": {
+            "$ref": "#/components/schemas/WalletUtxoOperationPhaseDto"
+          }
+        }
+      },
+      "WalletUtxoOperationPhaseDto": {
+        "type": "string",
+        "description": "Persisted operation phase associated with a managed UTXO.",
+        "enum": [
+          "selected",
+          "constructing",
+          "signed",
+          "broadcast",
+          "awaiting_confirmation",
+          "rolling_back"
+        ]
+      },
+      "WalletUtxoStatusDto": {
+        "type": "object",
+        "description": "Read-only txoscope-backed status for one known UTXO.",
+        "required": [
+          "outpoint",
+          "account_id",
+          "scope_id",
+          "value_sats",
+          "onchain_state",
+          "availability",
+          "selectable"
+        ],
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "description": "Account that currently owns the UTXO."
+          },
+          "availability": {
+            "$ref": "#/components/schemas/WalletUtxoAvailabilityDto",
+            "description": "Current txoscope availability state."
+          },
+          "lock": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/WalletUtxoLockStatusDto",
+                "description": "Lock currently associated with the UTXO, if any."
+              }
+            ]
+          },
+          "onchain_state": {
+            "$ref": "#/components/schemas/WalletUtxoOnchainStateDto",
+            "description": "Current on-chain state, for example `confirmed` or `spending_in_flight`."
+          },
+          "operation": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/WalletUtxoOperationDto",
+                "description": "Operation currently associated with the UTXO, if any."
+              }
+            ]
+          },
+          "outpoint": {
+            "type": "string",
+            "description": "Outpoint formatted as `txid:vout`."
+          },
+          "scope_id": {
+            "type": "string",
+            "description": "Wallet scope that currently owns the UTXO."
+          },
+          "selectable": {
+            "type": "boolean",
+            "description": "Whether the UTXO is generically selectable."
+          },
+          "unavailable_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Primary reason the UTXO is unavailable, if one exists."
+          },
+          "value_sats": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Value of the output in sats (decimal string)."
+          }
+        }
       },
       "WalletUtxosResponse": {
         "type": "object",
