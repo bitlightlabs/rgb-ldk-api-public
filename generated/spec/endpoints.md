@@ -280,6 +280,47 @@
 * **Request Body:** `Lsps1RgbOrderCreateRequest`
 * **Response (200):** `Lsps1OrderResponse`
 
+### POST `/api/v1/lsps2/invoice`
+
+* **Summary:** Create a JIT channel invoice
+* **Description:** Buys a JIT channel from the LSP given by `lsp_node_id` and returns a BOLT11 invoice paying through it. The LSP opens the channel when the payment arrives and keeps its fee out of it.
+* **Request Body:** `Lsps2InvoiceRequest`
+* **Response (200):** `Lsps2InvoiceResponse`
+
+### GET `/api/v1/lsps2/options`
+
+* **Summary:** Get service options
+* **Description:** Returns the runtime options of this node's own LSPS2 service. Fails with 503 when the node runs no LSPS2 service.
+* **Response (200):** `Lsps2OptionsResponse`
+
+### PUT `/api/v1/lsps2/options`
+
+* **Summary:** Update service options
+* **Description:** Validates, persists, and applies new runtime options (full replace); they replace the startup config from then on, also after a restart. Fee offers made afterwards use them; offers already given out keep their terms until they expire. `advertise_service` can only be set at startup.
+* **Request Body:** `Lsps2OptionsDto`
+* **Response (200):** `Lsps2OptionsResponse`
+
+### POST `/api/v1/lsps2/quote`
+
+* **Summary:** Quote a JIT channel
+* **Description:** Returns the JIT channel fee offers of the LSP given by `lsp_node_id`, and with `amount_msat` the fee for that payment.
+* **Request Body:** `Lsps2QuoteRequest`
+* **Response (200):** `Lsps2QuoteResponse`
+
+### POST `/api/v1/lsps2/rgb_invoice`
+
+* **Summary:** Create an RGB JIT channel invoice
+* **Description:** Buys an RGB JIT channel from the LSP and returns an RGB LN invoice paying through it, in one step. The payer pays the carrier plus the LSP's fee; the LSP opens the channel with the asset when the payment arrives and keeps the fee. Fails with 409 `fee_above_limit` when the LSP's fee is above `max_fee_sat`, and with 409 `precondition_failed` when the LSP is not trusted for 0conf, or the wallet cannot cover the anchor reserve and the LSP is not trusted to waive it. Fails with 503 `lsp_unsupported` when the LSP does not sell RGB JIT channels.
+* **Request Body:** `Lsps2RgbInvoiceRequest`
+* **Response (200):** `Lsps2RgbInvoiceResponse`
+
+### POST `/api/v1/lsps2/rgb_quote`
+
+* **Summary:** Quote an RGB JIT channel
+* **Description:** Returns the RGB JIT offering of the LSP and the fee it would charge for this request, estimated locally with the LSP's formula. Leaves no state at the LSP; show the estimate, then pass it (or a bit more) as `max_fee_sat` to `/lsps2/rgb_invoice`. Fails with 400 when the request is outside the LSP's offered ranges, and with 503 `lsp_unsupported` when the LSP does not sell RGB JIT channels.
+* **Request Body:** `Lsps2RgbQuoteRequest`
+* **Response (200):** `Lsps2RgbQuoteResponse`
+
 ### GET `/api/v1/network_graph/channel/{scid}`
 
 * **Summary:** Get info for a channel by short channel ID

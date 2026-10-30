@@ -1427,6 +1427,216 @@
         ]
       }
     },
+    "/lsps2/invoice": {
+      "post": {
+        "tags": [
+          "lsps2"
+        ],
+        "summary": "Create a JIT channel invoice",
+        "description": "Buys a JIT channel from the LSP given by `lsp_node_id` and returns a BOLT11 invoice paying through it. The LSP opens the channel when the payment arrives and keeps its fee out of it.",
+        "operationId": "invoice",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lsps2InvoiceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Invoice",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lsps2InvoiceResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/lsps2/options": {
+      "get": {
+        "tags": [
+          "lsps2"
+        ],
+        "summary": "Get service options",
+        "description": "Returns the runtime options of this node's own LSPS2 service. Fails with 503 when the node runs no LSPS2 service.",
+        "operationId": "options_get",
+        "responses": {
+          "200": {
+            "description": "Current options",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lsps2OptionsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "lsps2"
+        ],
+        "summary": "Update service options",
+        "description": "Validates, persists, and applies new runtime options (full replace); they replace the startup config from then on, also after a restart. Fee offers made afterwards use them; offers already given out keep their terms until they expire. `advertise_service` can only be set at startup.",
+        "operationId": "options_set",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lsps2OptionsDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Options updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lsps2OptionsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/lsps2/quote": {
+      "post": {
+        "tags": [
+          "lsps2"
+        ],
+        "summary": "Quote a JIT channel",
+        "description": "Returns the JIT channel fee offers of the LSP given by `lsp_node_id`, and with `amount_msat` the fee for that payment.",
+        "operationId": "quote",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lsps2QuoteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Fee offers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lsps2QuoteResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/lsps2/rgb_invoice": {
+      "post": {
+        "tags": [
+          "lsps2"
+        ],
+        "summary": "Create an RGB JIT channel invoice",
+        "description": "Buys an RGB JIT channel from the LSP and returns an RGB LN invoice paying through it, in one step. The payer pays the carrier plus the LSP's fee; the LSP opens the channel with the asset when the payment arrives and keeps the fee. Fails with 409 `fee_above_limit` when the LSP's fee is above `max_fee_sat`, and with 409 `precondition_failed` when the LSP is not trusted for 0conf, or the wallet cannot cover the anchor reserve and the LSP is not trusted to waive it. Fails with 503 `lsp_unsupported` when the LSP does not sell RGB JIT channels.",
+        "operationId": "rgb_invoice",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lsps2RgbInvoiceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Invoice",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lsps2RgbInvoiceResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/lsps2/rgb_quote": {
+      "post": {
+        "tags": [
+          "lsps2"
+        ],
+        "summary": "Quote an RGB JIT channel",
+        "description": "Returns the RGB JIT offering of the LSP and the fee it would charge for this request, estimated locally with the LSP's formula. Leaves no state at the LSP; show the estimate, then pass it (or a bit more) as `max_fee_sat` to `/lsps2/rgb_invoice`. Fails with 400 when the request is outside the LSP's offered ranges, and with 503 `lsp_unsupported` when the LSP does not sell RGB JIT channels.",
+        "operationId": "rgb_quote",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lsps2RgbQuoteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Estimate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lsps2RgbQuoteResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
     "/network_graph/channel/{scid}": {
       "get": {
         "tags": [
@@ -6431,6 +6641,456 @@
           }
         }
       },
+      "Lsps2FeeOfferDto": {
+        "type": "object",
+        "description": "One fee offer of the LSP for plain BTC JIT channels.",
+        "required": [
+          "min_fee_msat",
+          "proportional_ppm",
+          "valid_until",
+          "min_lifetime",
+          "max_client_to_self_delay",
+          "min_payment_size_msat",
+          "max_payment_size_msat"
+        ],
+        "properties": {
+          "max_client_to_self_delay": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "max_payment_size_msat": {
+            "type": "string"
+          },
+          "min_fee_msat": {
+            "type": "string"
+          },
+          "min_lifetime": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "min_payment_size_msat": {
+            "type": "string"
+          },
+          "proportional_ppm": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "valid_until": {
+            "type": "string"
+          }
+        }
+      },
+      "Lsps2InvoiceRequest": {
+        "type": "object",
+        "description": "`POST /lsps2/invoice`.",
+        "required": [
+          "lsp_node_id",
+          "expiry_secs"
+        ],
+        "properties": {
+          "amount_msat": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Invoice amount; omit for a variable-amount invoice."
+          },
+          "description": {
+            "type": "string"
+          },
+          "expiry_secs": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "lsp_node_id": {
+            "type": "string"
+          },
+          "max_fee": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Fixed amount: the most the LSP may take in total. Variable amount: the most it may\ntake in ppm of the payment."
+          }
+        }
+      },
+      "Lsps2InvoiceResponse": {
+        "type": "object",
+        "required": [
+          "invoice"
+        ],
+        "properties": {
+          "invoice": {
+            "type": "string"
+          }
+        }
+      },
+      "Lsps2OptionsDto": {
+        "type": "object",
+        "description": "Runtime options of this node's LSPS2 service (`PUT /lsps2/options`, full replace).\nChanges apply to fee offers made afterwards; offers already given out keep their terms\nuntil they expire.",
+        "required": [
+          "channel_opening_fee_ppm",
+          "channel_over_provisioning_ppm",
+          "min_channel_opening_fee_msat",
+          "min_channel_lifetime",
+          "max_client_to_self_delay",
+          "min_payment_size_msat",
+          "max_payment_size_msat",
+          "max_unpaid_channels_per_peer",
+          "max_unpaid_channels_total",
+          "unpaid_channel_close_secs"
+        ],
+        "properties": {
+          "channel_opening_fee_ppm": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "channel_over_provisioning_ppm": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Extra channel capacity on top of the forwarded amount, in ppm.",
+            "minimum": 0
+          },
+          "max_client_to_self_delay": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "max_payment_size_msat": {
+            "type": "string"
+          },
+          "max_unpaid_channels_per_peer": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Channels whose opening fee is still outstanding one client may have at once.",
+            "minimum": 0
+          },
+          "max_unpaid_channels_total": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Channels whose opening fee is still outstanding all clients may have at once.",
+            "minimum": 0
+          },
+          "min_channel_lifetime": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Blocks the LSP keeps a paid channel open after confirmation.",
+            "minimum": 0
+          },
+          "min_channel_opening_fee_msat": {
+            "type": "string"
+          },
+          "min_payment_size_msat": {
+            "type": "string"
+          },
+          "require_token": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Token clients must send; `null` or empty accepts any client."
+          },
+          "unpaid_channel_close_secs": {
+            "type": "string",
+            "description": "Seconds after the offer expired when a channel whose fee is still outstanding is closed."
+          }
+        }
+      },
+      "Lsps2OptionsResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Lsps2OptionsDto"
+          },
+          {
+            "type": "object",
+            "required": [
+              "advertise_service"
+            ],
+            "properties": {
+              "advertise_service": {
+                "type": "boolean",
+                "description": "Set at startup only."
+              }
+            }
+          }
+        ],
+        "description": "`GET`/`PUT /lsps2/options` response."
+      },
+      "Lsps2QuoteRequest": {
+        "type": "object",
+        "description": "`POST /lsps2/quote`.",
+        "required": [
+          "lsp_node_id"
+        ],
+        "properties": {
+          "amount_msat": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Payment amount to price, if any."
+          },
+          "lsp_node_id": {
+            "type": "string",
+            "description": "LSP node pubkey, hex-encoded; must be in the LSP list."
+          }
+        }
+      },
+      "Lsps2QuoteResponse": {
+        "type": "object",
+        "required": [
+          "offers"
+        ],
+        "properties": {
+          "fee_msat": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Fee of the cheapest offer covering `amount_msat`; `null` without an amount or when\nno offer covers it."
+          },
+          "offers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Lsps2FeeOfferDto"
+            }
+          }
+        }
+      },
+      "Lsps2RgbAssetOfferDto": {
+        "type": "object",
+        "required": [
+          "asset_id",
+          "ticker",
+          "precision",
+          "asset_unit_price_sat",
+          "asset_rent_ppm_per_year",
+          "min_lsp_asset_balance",
+          "max_lsp_asset_balance"
+        ],
+        "properties": {
+          "asset_id": {
+            "type": "string"
+          },
+          "asset_rent_ppm_per_year": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "asset_unit_price_sat": {
+            "type": "string"
+          },
+          "max_lsp_asset_balance": {
+            "type": "string"
+          },
+          "min_lsp_asset_balance": {
+            "type": "string"
+          },
+          "precision": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "ticker": {
+            "type": "string"
+          }
+        }
+      },
+      "Lsps2RgbFeeDto": {
+        "type": "object",
+        "required": [
+          "fee_sat",
+          "onchain_cost_sat",
+          "btc_rent_sat",
+          "asset_rent_sat"
+        ],
+        "properties": {
+          "asset_rent_sat": {
+            "type": "string"
+          },
+          "btc_rent_sat": {
+            "type": "string"
+          },
+          "fee_sat": {
+            "type": "string"
+          },
+          "onchain_cost_sat": {
+            "type": "string"
+          }
+        }
+      },
+      "Lsps2RgbInvoiceRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Lsps2RgbQuoteRequest"
+          },
+          {
+            "type": "object",
+            "required": [
+              "max_fee_sat",
+              "expiry_secs"
+            ],
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "expiry_secs": {
+                "type": "integer",
+                "format": "int32",
+                "minimum": 0
+              },
+              "max_fee_sat": {
+                "type": "string",
+                "description": "No invoice is created if the LSP's fee is above this."
+              }
+            }
+          }
+        ],
+        "description": "`POST /lsps2/rgb_invoice`."
+      },
+      "Lsps2RgbInvoiceResponse": {
+        "type": "object",
+        "required": [
+          "invoice",
+          "payment_hash",
+          "fee",
+          "amount_msat",
+          "expires_at_unix_secs",
+          "min_lifetime"
+        ],
+        "properties": {
+          "amount_msat": {
+            "type": "string",
+            "description": "What the payer pays: the carrier plus the fee."
+          },
+          "expires_at_unix_secs": {
+            "type": "string"
+          },
+          "fee": {
+            "$ref": "#/components/schemas/Lsps2RgbFeeDto"
+          },
+          "invoice": {
+            "type": "string"
+          },
+          "min_lifetime": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "payment_hash": {
+            "type": "string"
+          }
+        }
+      },
+      "Lsps2RgbOfferingDto": {
+        "type": "object",
+        "required": [
+          "assets",
+          "btc_capacity_ppm_per_year",
+          "onchain_cost_sat",
+          "min_fee_sat",
+          "min_lsp_balance_sat",
+          "max_lsp_balance_sat",
+          "min_lifetime"
+        ],
+        "properties": {
+          "assets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Lsps2RgbAssetOfferDto"
+            }
+          },
+          "btc_capacity_ppm_per_year": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "max_lsp_balance_sat": {
+            "type": "string"
+          },
+          "min_fee_sat": {
+            "type": "string"
+          },
+          "min_lifetime": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "min_lsp_balance_sat": {
+            "type": "string"
+          },
+          "onchain_cost_sat": {
+            "type": "string"
+          }
+        }
+      },
+      "Lsps2RgbQuoteRequest": {
+        "type": "object",
+        "description": "What a client wants from an RGB JIT channel.",
+        "required": [
+          "lsp_node_id",
+          "contract_id",
+          "asset_amount",
+          "lsp_asset_balance",
+          "lsp_balance_sat"
+        ],
+        "properties": {
+          "asset_amount": {
+            "type": "string",
+            "description": "Asset amount of the payment to receive."
+          },
+          "btc_carrier_amount_msat": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "BTC carrier of the payment, excluding the fee; at least 354000 (the holder reserve\nof the new channel). Defaults to 354000."
+          },
+          "contract_id": {
+            "type": "string"
+          },
+          "lsp_asset_balance": {
+            "type": "string",
+            "description": "Asset amount the LSP puts into the channel; at least `asset_amount`. What is left\nafter the first payment stays as inbound asset capacity for later payments."
+          },
+          "lsp_balance_sat": {
+            "type": "string",
+            "description": "BTC capacity the LSP puts into the channel."
+          },
+          "lsp_node_id": {
+            "type": "string"
+          }
+        }
+      },
+      "Lsps2RgbQuoteResponse": {
+        "type": "object",
+        "required": [
+          "offering",
+          "estimated_fee",
+          "min_btc_carrier_amount_msat",
+          "max_btc_carrier_amount_msat"
+        ],
+        "properties": {
+          "estimated_fee": {
+            "$ref": "#/components/schemas/Lsps2RgbFeeDto",
+            "description": "The fee the LSP would charge now, estimated locally; the actual fee is set by\n`POST /lsps2/rgb_invoice`."
+          },
+          "max_btc_carrier_amount_msat": {
+            "type": "string"
+          },
+          "min_btc_carrier_amount_msat": {
+            "type": "string"
+          },
+          "offering": {
+            "$ref": "#/components/schemas/Lsps2RgbOfferingDto"
+          }
+        }
+      },
       "NetworkGraphChannelInfoResponse": {
         "type": "object",
         "description": "Information about a channel (both directions), as observed via channel_announcement and\nchannel_update gossip messages.",
@@ -10573,6 +11233,10 @@
     {
       "name": "swap",
       "description": "BTC<->RGB atomic swap endpoints (circular payment over Lightning)."
+    },
+    {
+      "name": "lsps2",
+      "description": "LSPS2 (bLIP-52) JIT channel endpoints: receive through a channel the LSP opens when the payment arrives, for plain BTC and RGB payments."
     },
     {
       "name": "lsps1",

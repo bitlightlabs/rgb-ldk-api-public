@@ -579,6 +579,116 @@ export interface Lsps1SupportedOptionsDto {
   max_channel_balance_sat: U64String;
 }
 
+export interface Lsps2FeeOfferDto {
+  min_fee_msat: U64String;
+  proportional_ppm: number;
+  valid_until: string;
+  min_lifetime: number;
+  max_client_to_self_delay: number;
+  min_payment_size_msat: U64String;
+  max_payment_size_msat: U64String;
+}
+
+export interface Lsps2InvoiceRequest {
+  lsp_node_id: string;
+  amount_msat?: U64String | null;
+  max_fee?: U64String | null;
+  description?: string;
+  expiry_secs: number;
+}
+
+export interface Lsps2InvoiceResponse {
+  invoice: string;
+}
+
+export interface Lsps2OptionsDto {
+  require_token?: string | null;
+  channel_opening_fee_ppm: number;
+  channel_over_provisioning_ppm: number;
+  min_channel_opening_fee_msat: U64String;
+  min_channel_lifetime: number;
+  max_client_to_self_delay: number;
+  min_payment_size_msat: U64String;
+  max_payment_size_msat: U64String;
+  max_unpaid_channels_per_peer: number;
+  max_unpaid_channels_total: number;
+  unpaid_channel_close_secs: U64String;
+}
+
+export interface Lsps2OptionsResponse {
+  advertise_service: boolean;
+  options: Lsps2OptionsDto;
+}
+
+export interface Lsps2QuoteRequest {
+  lsp_node_id: string;
+  amount_msat?: U64String | null;
+}
+
+export interface Lsps2QuoteResponse {
+  offers: Lsps2FeeOfferDto[];
+  fee_msat: U64String | null;
+}
+
+export interface Lsps2RgbAssetOfferDto {
+  asset_id: string;
+  ticker: string;
+  precision: number;
+  asset_unit_price_sat: U64String;
+  asset_rent_ppm_per_year: number;
+  min_lsp_asset_balance: U64String;
+  max_lsp_asset_balance: U64String;
+}
+
+export interface Lsps2RgbFeeDto {
+  fee_sat: U64String;
+  onchain_cost_sat: U64String;
+  btc_rent_sat: U64String;
+  asset_rent_sat: U64String;
+}
+
+export interface Lsps2RgbInvoiceRequest {
+  quote: Lsps2RgbQuoteRequest;
+  max_fee_sat: U64String;
+  description?: string;
+  expiry_secs: number;
+}
+
+export interface Lsps2RgbInvoiceResponse {
+  invoice: string;
+  payment_hash: string;
+  fee: Lsps2RgbFeeDto;
+  amount_msat: U64String;
+  expires_at_unix_secs: U64String;
+  min_lifetime: number;
+}
+
+export interface Lsps2RgbOfferingDto {
+  assets: Lsps2RgbAssetOfferDto[];
+  btc_capacity_ppm_per_year: number;
+  onchain_cost_sat: U64String;
+  min_fee_sat: U64String;
+  min_lsp_balance_sat: U64String;
+  max_lsp_balance_sat: U64String;
+  min_lifetime: number;
+}
+
+export interface Lsps2RgbQuoteRequest {
+  lsp_node_id: string;
+  contract_id: string;
+  asset_amount: U64String;
+  lsp_asset_balance: U64String;
+  lsp_balance_sat: U64String;
+  btc_carrier_amount_msat?: U64String | null;
+}
+
+export interface Lsps2RgbQuoteResponse {
+  offering: Lsps2RgbOfferingDto;
+  estimated_fee: Lsps2RgbFeeDto;
+  min_btc_carrier_amount_msat: U64String;
+  max_btc_carrier_amount_msat: U64String;
+}
+
 export interface NetworkGraphChannelInfoResponse {
   node_one: string;
   node_two: string;

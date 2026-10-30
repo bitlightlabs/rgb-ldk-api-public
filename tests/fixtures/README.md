@@ -4,7 +4,7 @@
 direction: the maker supplies RGB or the maker supplies bitcoin. Each execution
 plan was built with `application::swap_plan::ExecutionPlan::build`, checked with
 `validate`, and serialized by the node implementation at commit
-[`fce6188e`](https://github.com/bitlightlabs/rgb-ldk-node/commit/fce6188eb7ad8f681111e7cd284b7d0f5d47398a).
+[`5c97e220`](https://github.com/bitlightlabs/rgb-ldk-node/commit/5c97e220489f81a5728121355ce1624fdc4d036e).
 The fixtures place the plans in `execution.plans`, point `execution.selected_plan`
 at their version, and reference that version from each send attempt.
 The surrounding `SwapInfoDto` fields use illustrative values: `contract:fixture`,

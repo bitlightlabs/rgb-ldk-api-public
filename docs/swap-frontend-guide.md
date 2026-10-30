@@ -1,7 +1,7 @@
 # Swap frontend integration guide
 
 This guide describes the node behavior at commit
-[`fce6188e`](https://github.com/bitlightlabs/rgb-ldk-node/commit/fce6188eb7ad8f681111e7cd284b7d0f5d47398a).
+[`5c97e220`](https://github.com/bitlightlabs/rgb-ldk-node/commit/5c97e220489f81a5728121355ce1624fdc4d036e).
 See [`source.json`](../generated/spec/source.json) for the source revision,
 [OpenAPI](../generated/spec/openapi.json) for request and response definitions,
 and [`examples/swap.ts`](../examples/swap.ts) for complete TypeScript examples.
