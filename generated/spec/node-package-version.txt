@@ -1,1 +1,1 @@
-0.7.0-bitlight.6
+0.7.0-bitlight.7

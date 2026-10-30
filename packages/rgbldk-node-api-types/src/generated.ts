@@ -1,5 +1,5 @@
 // Generated. Do not edit.
-// Source: crates/rgbldk_http_dto/src/dto.rs
+// Source: crates/rgbldk_http_dto/src/dto/
 // Run: `pnpm gen` at repo root.
 
 export type U64String = string;
@@ -38,7 +38,7 @@ export interface Bolt11DecodeRequest {
 export interface Bolt11DecodeResponse {
   payment_hash: string;
   destination: string;
-  amount_msat?: U64String;
+  amount_msat?: U64String | null;
   expiry_secs: U64String;
 }
 
@@ -48,7 +48,7 @@ export interface Bolt11FailForHashRequest {
 
 export interface Bolt11PayRequest {
   invoice: string;
-  amount_msat?: U64String;
+  amount_msat?: U64String | null;
 }
 
 export interface Bolt11PayResponse {
@@ -56,7 +56,7 @@ export interface Bolt11PayResponse {
   preimage: string;
   amount_sats: U64String;
   destination: string;
-  fee_paid_msat?: U64String;
+  fee_paid_msat?: U64String | null;
 }
 
 export interface Bolt11ReceiveForHashRequest {
@@ -96,11 +96,11 @@ export interface Bolt12OfferDecodeRequest {
 
 export interface Bolt12OfferDecodeResponse {
   offer_id: string;
-  signing_pubkey?: string;
-  description?: string;
-  issuer?: string;
-  amount_msat?: U64String;
-  absolute_expiry_unix_secs?: U64String;
+  signing_pubkey?: string | null;
+  description?: string | null;
+  issuer?: string | null;
+  amount_msat?: U64String | null;
+  absolute_expiry_unix_secs?: U64String | null;
   chain_hashes?: string[];
   paths_count: number;
   expects_quantity: boolean;
@@ -109,13 +109,13 @@ export interface Bolt12OfferDecodeResponse {
 export interface Bolt12OfferReceiveRequest {
   amount_msat: U64String;
   description: string;
-  expiry_secs?: number;
-  quantity?: U64String;
+  expiry_secs?: number | null;
+  quantity?: U64String | null;
 }
 
 export interface Bolt12OfferReceiveVarRequest {
   description: string;
-  expiry_secs?: number;
+  expiry_secs?: number | null;
 }
 
 export interface Bolt12OfferResponse {
@@ -124,9 +124,9 @@ export interface Bolt12OfferResponse {
 
 export interface Bolt12OfferSendRequest {
   offer: string;
-  amount_msat?: U64String;
-  quantity?: U64String;
-  payer_note?: string;
+  amount_msat?: U64String | null;
+  quantity?: U64String | null;
+  payer_note?: string | null;
 }
 
 export interface Bolt12RefundDecodeRequest {
@@ -135,21 +135,21 @@ export interface Bolt12RefundDecodeRequest {
 
 export interface Bolt12RefundDecodeResponse {
   description: string;
-  issuer?: string;
+  issuer?: string | null;
   amount_msat: U64String;
-  absolute_expiry_unix_secs?: U64String;
+  absolute_expiry_unix_secs?: U64String | null;
   chain_hash: string;
   payer_signing_pubkey: string;
-  payer_note?: string;
-  quantity?: U64String;
+  payer_note?: string | null;
+  quantity?: U64String | null;
   paths_count: number;
 }
 
 export interface Bolt12RefundInitiateRequest {
   amount_msat: U64String;
   expiry_secs: number;
-  quantity?: U64String;
-  payer_note?: string;
+  quantity?: U64String | null;
+  payer_note?: string | null;
 }
 
 export interface Bolt12RefundInitiateResponse {
@@ -178,7 +178,7 @@ export interface ChannelDetailsExtendedDto {
   channel_id: string;
   user_channel_id: string;
   counterparty_node_id: string;
-  channel_point?: string;
+  channel_point?: string | null;
   short_channel_id?: U64String;
   outbound_scid_alias?: U64String;
   inbound_scid_alias?: U64String;
@@ -193,7 +193,7 @@ export interface ChannelDetailsExtendedDto {
   is_usable: boolean;
   is_announced: boolean;
   rgb_balance?: RgbChannelBalanceDto;
-  lsp?: ChannelLspLeaseDto;
+  lsp?: ChannelLspLeaseDto | null;
 }
 
 export interface ChannelLspLeaseDto {
@@ -273,11 +273,36 @@ export interface CustomTlvDto {
   value_hex: string;
 }
 
+export interface DirectionalPolicy {
+  asset_id?: number[] | null;
+  source: string;
+  destination: string;
+  channel_scid: U64String;
+  base_fee_msat: number;
+  fee_proportional_millionths: number;
+  cltv_expiry_delta: number;
+  htlc_minimum_msat: U64String;
+  htlc_maximum_msat: U64String;
+  rgb_htlc_maximum: U64String | null;
+  enabled: boolean;
+  provenance: string;
+  last_update?: number | null;
+}
+
 export interface ErrorResponse {
   ok: boolean;
   error: string;
   hint?: string;
   checks?: HealthCheckDto[];
+}
+
+export interface ExecutionPlan {
+  format_version: number;
+  version: U64String;
+  quote: SwapQuote;
+  policy_snapshot_at_unix_secs: U64String;
+  maker_to_taker: LegPlan;
+  taker_to_maker: LegPlan;
 }
 
 export interface HealthCheckDto {
@@ -287,12 +312,63 @@ export interface HealthCheckDto {
   hint?: string;
 }
 
+export interface HopPlan {
+  source: string;
+  node_id: string;
+  channel_scid: U64String;
+  btc_input_msat: U64String;
+  btc_output_msat: U64String | null;
+  rgb_input: U64String | null;
+  rgb_output: U64String | null;
+  incoming_cltv_delta: number;
+  outgoing_cltv_delta?: number | null;
+  policy: DirectionalPolicy;
+}
+
+export interface LegConstraints {
+  fixed_route?: RouteEdge[] | null;
+  required_nodes: string[];
+  required_channels: U64String[];
+  required_lsps: string[];
+  max_fee_msat: U64String;
+}
+
+export interface LegPlan {
+  direction: LegDirection;
+  asset: LegAsset;
+  fee_payer: FeePayer;
+  constraints: LegConstraints;
+  fee_msat: U64String;
+  hops: HopPlan[];
+}
+
 export interface ListeningAddressesResponse {
   addresses: string[];
 }
 
 export interface LockedStatusDto {
   locked: boolean;
+}
+
+export interface LspAddRequest {
+  pubkey: string;
+  address: string;
+  token?: string | null;
+  trust_peer_0conf: boolean;
+  trust_peer_no_reserve: boolean;
+}
+
+export interface LspDto {
+  pubkey: string;
+  address: string;
+  token?: string | null;
+  trust_peer_0conf: boolean;
+  trust_peer_no_reserve: boolean;
+  protocols?: number[] | null;
+}
+
+export interface LspListResponse {
+  lsps: LspDto[];
 }
 
 export interface Lsps1AssetPricingDto {
@@ -321,22 +397,30 @@ export interface Lsps1ChannelInfoDto {
   expires_at_unix_secs: U64String;
 }
 
-export interface Lsps1InfoResponse {
-  supported_options: Lsps1SupportedOptionsDto;
-  pricing?: Lsps1LspPricingDto;
-  rgb?: Lsps1RgbOfferingDto;
+export interface Lsps1InfoEntryDto {
+  lsp_node_id: string;
+  info?: Lsps1InfoResponse | null;
+  error?: unknown | null;
 }
 
-export interface Lsps1LspConfigDto {
-  pubkey: string;
-  address: string;
-  token?: string;
+export interface Lsps1InfoListResponse {
+  lsps: Lsps1InfoEntryDto[];
+}
+
+export interface Lsps1InfoQuery {
+  lsp_node_id?: string | null;
+}
+
+export interface Lsps1InfoResponse {
+  supported_options: Lsps1SupportedOptionsDto;
+  pricing?: Lsps1LspPricingDto | null;
+  rgb?: Lsps1RgbOfferingDto | null;
 }
 
 export interface Lsps1LspPricingDto {
   btc_capacity_ppm_per_year: number;
-  onchain_cost_sat?: U64String;
-  min_fee_sat?: U64String;
+  onchain_cost_sat?: U64String | null;
+  min_fee_sat?: U64String | null;
 }
 
 export interface Lsps1OnchainPaymentDto {
@@ -345,8 +429,8 @@ export interface Lsps1OnchainPaymentDto {
   fee_total_sat: U64String;
   order_total_sat: U64String;
   address: string;
-  min_onchain_payment_confirmations?: number;
-  refund_onchain_address?: string;
+  min_onchain_payment_confirmations?: number | null;
+  refund_onchain_address?: string | null;
 }
 
 export interface Lsps1OptionsDto {
@@ -355,6 +439,7 @@ export interface Lsps1OptionsDto {
 }
 
 export interface Lsps1OrderCreateRequest {
+  lsp_node_id: string;
   lsp_balance_sat: U64String;
   client_balance_sat?: U64String;
   channel_expiry_blocks: number;
@@ -374,13 +459,13 @@ export interface Lsps1OrderResponse {
   order_id: string;
   order: Lsps1OrderParamsDto;
   payment: Lsps1PaymentOptionsDto;
-  channel?: Lsps1ChannelInfoDto;
-  rgb?: Lsps1RgbOrderDetailsDto;
+  channel?: Lsps1ChannelInfoDto | null;
+  rgb?: Lsps1RgbOrderDetailsDto | null;
 }
 
 export interface Lsps1PaymentOptionsDto {
-  bolt11?: Lsps1Bolt11PaymentDto;
-  onchain?: Lsps1OnchainPaymentDto;
+  bolt11?: Lsps1Bolt11PaymentDto | null;
+  onchain?: Lsps1OnchainPaymentDto | null;
 }
 
 export interface Lsps1PricingCoreDto {
@@ -417,6 +502,7 @@ export interface Lsps1RgbOfferingDto {
 }
 
 export interface Lsps1RgbOrderCreateRequest {
+  lsp_node_id: string;
   asset_id: string;
   lsp_asset_balance: U64String;
   client_asset_balance?: U64String;
@@ -431,17 +517,17 @@ export interface Lsps1RgbOrderDetailsDto {
   lsp_asset_balance: U64String;
   client_asset_balance: U64String;
   fee_breakdown: Lsps1RgbFeeBreakdownDto;
-  asset_funding_outpoint?: string;
+  asset_funding_outpoint?: string | null;
 }
 
 export interface Lsps1ServiceBehaviorDto {
-  require_token?: string;
+  require_token?: string | null;
   bolt11_invoice_expiry_secs: number;
   min_onchain_payment_confirmations: number;
-  max_fulfill_retries: number;
   auto_close_expired_channels: boolean;
   channel_expiry_grace_blocks: number;
   late_deposit_refund_window_secs: U64String;
+  onchain_open_timeout_blocks?: number;
 }
 
 export interface Lsps1ServiceOrderDto {
@@ -449,24 +535,24 @@ export interface Lsps1ServiceOrderDto {
   counterparty_node_id: string;
   order_state: string;
   payment_state: string;
-  paid_via?: string;
+  paid_via?: string | null;
   lsp_balance_sat: U64String;
   client_balance_sat: U64String;
   channel_expiry_blocks: number;
   announce_channel: boolean;
   fee_total_sat: U64String;
   order_total_sat: U64String;
-  onchain_address?: string;
-  onchain_paid_sat?: U64String;
-  refund_onchain_address?: string;
-  refund_txid?: string;
+  onchain_address?: string | null;
+  onchain_paid_sat?: U64String | null;
+  refund_onchain_address?: string | null;
+  refund_txid?: string | null;
   fulfill_retry_count: number;
   created_at_unix_secs: U64String;
   payment_expires_at_unix_secs: U64String;
-  funding_outpoint?: string;
-  funded_at_height?: number;
-  channel_closed_at_unix_secs?: U64String;
-  rgb?: Lsps1ServiceRgbOrderDto;
+  funding_outpoint?: string | null;
+  funded_at_height?: number | null;
+  channel_closed_at_unix_secs?: U64String | null;
+  rgb?: Lsps1ServiceRgbOrderDto | null;
 }
 
 export interface Lsps1ServiceOrdersResponse {
@@ -496,7 +582,7 @@ export interface Lsps1SupportedOptionsDto {
 export interface NetworkGraphChannelInfoResponse {
   node_one: string;
   node_two: string;
-  capacity_sats?: U64String;
+  capacity_sats?: U64String | null;
   one_to_two?: ChannelUpdateInfoDto;
   two_to_one?: ChannelUpdateInfoDto;
 }
@@ -533,9 +619,9 @@ export interface OpenChannelRequest {
   node_id: string;
   address: string;
   channel_amount_sats: U64String;
-  push_to_counterparty_msat?: U64String;
-  announce?: boolean;
-  rgb?: RgbOpenChannelRequest;
+  push_to_counterparty_msat?: U64String | null;
+  announce?: boolean | null;
+  rgb?: RgbOpenChannelRequest | null;
 }
 
 export interface OpenChannelResponse {
@@ -551,16 +637,16 @@ export interface PaymentDetailsDto {
   id: string;
   direction: string;
   status: string;
-  amount_msat?: U64String;
+  amount_msat?: U64String | null;
   kind: string;
   payment_hash?: string;
   htlc_locked: boolean;
-  fee_paid_msat?: U64String;
+  fee_paid_msat?: U64String | null;
   kind_details?: unknown;
 }
 
 export interface PaymentWaitRequest {
-  timeout_secs?: number;
+  timeout_secs?: number | null;
 }
 
 export interface PaymentWaitResponse {
@@ -618,11 +704,11 @@ export interface RgbContractBalanceResponse {
 
 export interface RgbContractDto {
   contract_id: string;
-  name?: string;
-  ticker?: string;
-  precision?: number;
-  issued_supply?: U64String;
-  details?: string;
+  name?: string | null;
+  ticker?: string | null;
+  precision?: number | null;
+  issued_supply?: U64String | null;
+  details?: string | null;
 }
 
 export interface RgbContractKnownResponse {
@@ -651,10 +737,10 @@ export interface RgbContractsImportResponse {
 export interface RgbContractsIssueRequest {
   issuer_name: string;
   contract_name: string;
-  ticker?: string;
-  precision?: number;
+  ticker?: string | null;
+  precision?: number | null;
   issued_supply: U64String;
-  utxo?: string;
+  utxo?: string | null;
 }
 
 export interface RgbContractsIssueResponse {
@@ -724,19 +810,19 @@ export interface RgbLnCarrierEstimateChannelDto {
   is_usable: boolean;
   inbound_capacity_msat: U64String;
   inbound_htlc_minimum_msat: U64String;
-  inbound_htlc_maximum_msat?: U64String;
+  inbound_htlc_maximum_msat?: U64String | null;
   local_balance_output_sats: U64String;
   has_holder_reserve: boolean;
   receive_available: boolean;
   can_receive_rgb_invoice?: boolean;
   blocking_reason?: string;
-  required_carrier_msat?: U64String;
+  required_carrier_msat?: U64String | null;
   required_carrier_reason?: string;
   available_inbound_capacity_msat?: U64String;
   suggested_action?: string;
-  minimum_viable_carrier_amount_msat?: U64String;
+  minimum_viable_carrier_amount_msat?: U64String | null;
   minimum_viable_reason?: string;
-  default_create_carrier_amount_msat?: U64String;
+  default_create_carrier_amount_msat?: U64String | null;
   default_create_reason?: string;
 }
 
@@ -744,9 +830,9 @@ export interface RgbLnCarrierEstimateResponse {
   receive_available: boolean;
   can_create_rgb_invoice?: boolean;
   blocking_reason?: string;
-  required_carrier_msat?: U64String;
+  required_carrier_msat?: U64String | null;
   required_carrier_reason?: string;
-  available_inbound_capacity_msat?: U64String;
+  available_inbound_capacity_msat?: U64String | null;
   suggested_action?: string;
   minimum_viable_carrier_amount_msat: U64String;
   minimum_viable_reason: string;
@@ -765,16 +851,16 @@ export interface RgbLnInvoiceCreateForHashRequest {
   asset_amount: U64String;
   payment_hash: string;
   description: string;
-  expiry_secs?: number;
-  btc_carrier_amount_msat?: U64String;
+  expiry_secs?: number | null;
+  btc_carrier_amount_msat?: U64String | null;
 }
 
 export interface RgbLnInvoiceCreateRequest {
   contract_id: string;
   asset_amount: U64String;
   description: string;
-  expiry_secs?: number;
-  btc_carrier_amount_msat?: U64String;
+  expiry_secs?: number | null;
+  btc_carrier_amount_msat?: U64String | null;
 }
 
 export interface RgbLnInvoiceDecodeRequest {
@@ -784,10 +870,10 @@ export interface RgbLnInvoiceDecodeRequest {
 export interface RgbLnInvoiceDecodeResponse {
   payment_hash: string;
   destination: string;
-  carrier_amount_msat?: U64String;
+  carrier_amount_msat?: U64String | null;
   expiry_secs: U64String;
-  contract_id?: string;
-  asset_amount?: U64String;
+  contract_id?: string | null;
+  asset_amount?: U64String | null;
 }
 
 export interface RgbLnInvoiceResponse {
@@ -797,8 +883,8 @@ export interface RgbLnInvoiceResponse {
 
 export interface RgbLnPayRequest {
   invoice: string;
-  contract_id?: string;
-  asset_amount?: U64String;
+  contract_id?: string | null;
+  asset_amount?: U64String | null;
 }
 
 export interface RgbNewAddressResponse {
@@ -808,10 +894,10 @@ export interface RgbNewAddressResponse {
 export interface RgbOnchainInvoiceCreateRequest {
   contract_id: string;
   amount: U64String;
-  expiry_secs?: U64String;
-  use_witness_utxo?: boolean;
-  nonce?: U64String;
-  blinding_utxo?: string;
+  expiry_secs?: U64String | null;
+  use_witness_utxo?: boolean | null;
+  nonce?: U64String | null;
+  blinding_utxo?: string | null;
 }
 
 export interface RgbOnchainInvoiceDecodeRequest {
@@ -823,12 +909,12 @@ export interface RgbOnchainInvoiceDecodeResponse {
   amount: U64String;
   beneficiary: string;
   use_witness_utxo: boolean;
-  expiry_unix_secs?: U64String;
+  expiry_unix_secs?: U64String | null;
 }
 
 export interface RgbOnchainInvoiceResponse {
   invoice: string;
-  blinding_utxo_used?: string;
+  blinding_utxo_used?: string | null;
 }
 
 export interface RgbOnchainPaymentDto {
@@ -837,14 +923,14 @@ export interface RgbOnchainPaymentDto {
   status: string;
   created_at_unix_secs: U64String;
   latest_update_timestamp: U64String;
-  expires_at_unix_secs?: U64String;
-  invoice?: string;
-  contract_id?: string;
-  amount?: U64String;
-  txid?: string;
-  consignment_key?: string;
-  consignment_download_path?: string;
-  purpose?: string;
+  expires_at_unix_secs?: U64String | null;
+  invoice?: string | null;
+  contract_id?: string | null;
+  amount?: U64String | null;
+  txid?: string | null;
+  consignment_key?: string | null;
+  consignment_download_path?: string | null;
+  purpose?: string | null;
 }
 
 export interface RgbOnchainPaymentsResponse {
@@ -853,8 +939,8 @@ export interface RgbOnchainPaymentsResponse {
 
 export interface RgbOnchainReceiveRequest {
   consignment_key: string;
-  payment_id?: string;
-  invoice?: string;
+  payment_id?: string | null;
+  invoice?: string | null;
 }
 
 export interface RgbOnchainReceiveResponse {
@@ -864,7 +950,7 @@ export interface RgbOnchainReceiveResponse {
 
 export interface RgbOnchainSendRequest {
   invoice: string;
-  sats_for_fee_and_outputs?: U64String;
+  sats_for_fee_and_outputs?: U64String | null;
   fee_rate_sats_per_vb: number;
 }
 
@@ -877,8 +963,8 @@ export interface RgbOpenChannelRequest {
   contract_id: string;
   asset_amount: U64String;
   color_context_data: string;
-  funding_utxo_policy?: RgbFundingUtxoPolicyDto;
-  funding_utxos?: RgbFundingUtxoDto[];
+  funding_utxo_policy?: RgbFundingUtxoPolicyDto | null;
+  funding_utxos?: RgbFundingUtxoDto[] | null;
 }
 
 export interface RgbPaymentContextDto {
@@ -890,9 +976,9 @@ export interface RgbPaymentContextDto {
 
 export interface RgbSignMessageRequest {
   message: string;
-  algorithm?: RgbSignMessageAlgorithmDto;
-  compact?: boolean;
-  encoding?: RgbSignMessageEncodingDto;
+  algorithm?: RgbSignMessageAlgorithmDto | null;
+  compact?: boolean | null;
+  encoding?: RgbSignMessageEncodingDto | null;
 }
 
 export interface RgbSignMessageResponse {
@@ -913,7 +999,7 @@ export interface RgbUtxoAssetAllocationDto {
 
 export interface RgbUtxoConfirmationDto {
   status: RgbUtxoConfirmationStatusDto;
-  height?: number;
+  height?: number | null;
 }
 
 export interface RgbUtxoDto {
@@ -927,8 +1013,8 @@ export interface RgbUtxoDto {
 export interface RgbUtxoLockDto {
   locked: boolean;
   kind: RgbUtxoLockKindDto;
-  operation_id?: string;
-  expires_at_unix_secs?: U64String;
+  operation_id?: string | null;
+  expires_at_unix_secs?: U64String | null;
 }
 
 export interface RgbUtxoRgbDto {
@@ -939,10 +1025,10 @@ export interface RgbUtxoRgbDto {
 
 export interface RgbUtxoSummaryDto {
   outpoint: string;
-  value_sats?: U64String;
-  confirmed_height?: number;
+  value_sats?: U64String | null;
+  confirmed_height?: number | null;
   reserved: boolean;
-  reserved_until_unix_secs?: U64String;
+  reserved_until_unix_secs?: U64String | null;
   assets?: RgbUtxoAssetAllocationDto[];
 }
 
@@ -978,15 +1064,15 @@ export interface RgbUtxosFundResponse {
   txid: string;
   status: string;
   outputs: RgbUtxosFundCreatedOutputDto[];
-  change?: RgbUtxosFundChangeDto;
+  change?: RgbUtxosFundChangeDto | null;
   fee_sats: U64String;
 }
 
 export interface RgbUtxosMergeRequest {
   contract_id: string;
   destination_utxo: string;
-  include_invoice_bound_utxos?: boolean;
-  fee_rate_sats_per_vb?: number;
+  include_invoice_bound_utxos?: boolean | null;
+  fee_rate_sats_per_vb?: number | null;
 }
 
 export interface RgbUtxosMergeResponse {
@@ -1002,7 +1088,7 @@ export interface RgbUtxosMergeResponse {
 export interface RgbUtxosMergeStatusEntryDto {
   txid: string;
   destination_utxo: string;
-  contract_id?: string;
+  contract_id?: string | null;
   status: string;
   confirmations: number;
   released: boolean;
@@ -1013,8 +1099,8 @@ export interface RgbUtxosMergeStatusResponse {
 }
 
 export interface RgbUtxosReleaseRequest {
-  reservation_id?: string;
-  outpoint?: string;
+  reservation_id?: string | null;
+  outpoint?: string | null;
 }
 
 export interface RgbUtxosReleaseResponse {
@@ -1022,8 +1108,8 @@ export interface RgbUtxosReleaseResponse {
 }
 
 export interface RgbUtxosReserveRequest {
-  outpoint?: string;
-  ttl_secs?: U64String;
+  outpoint?: string | null;
+  ttl_secs?: U64String | null;
 }
 
 export interface RgbUtxosReserveResponse {
@@ -1093,7 +1179,7 @@ export interface RgbUtxosTopUpResponse {
   status: string;
   old_outpoint: string;
   new_rgb_output: RgbUtxosTopUpCreatedOutputDto;
-  change?: RgbUtxosTopUpChangeDto;
+  change?: RgbUtxosTopUpChangeDto | null;
   fee_sats: U64String;
   consignment_key: string;
 }
@@ -1105,6 +1191,22 @@ export interface RgbUtxosTopUpRgbInputDto {
 export interface RgbUtxosTopUpRgbOutputDto {
   address: string;
   target_value_sats: U64String;
+}
+
+export interface RouteEdge {
+  node_id: string;
+  channel_scid: U64String;
+}
+
+export interface RoutingConstraints {
+  maker_to_taker: LegConstraints;
+  taker_to_maker: LegConstraints;
+  max_total_cltv_delta: number;
+}
+
+export interface SendAttempt {
+  plan_version: U64String;
+  status: AttemptStatus;
 }
 
 export interface SendResponse {
@@ -1137,8 +1239,10 @@ export interface StatusDto {
 }
 
 export interface SwapCreateMultihopOfferRequest {
-  rgb_path: SwapHopDto[];
-  btc_path: SwapHopDto[];
+  policy_hints?: DirectionalPolicy[];
+  constraints?: RoutingConstraints | null;
+  maker_to_taker: SwapHopDto[];
+  taker_to_maker: SwapHopDto[];
   contract_id: string;
   asset_amount: U64String;
   btc_amount_msat: U64String;
@@ -1159,15 +1263,30 @@ export interface SwapCreateOfferRequest {
 }
 
 export interface SwapExecuteRequest {
+  policy_hints?: DirectionalPolicy[];
   swap_string?: string;
-  payment_hash?: string;
+  execution_id?: string;
+  maker_to_taker?: SwapHopDto[];
+  taker_to_maker?: SwapHopDto[];
   force?: boolean;
 }
 
 export interface SwapExecuteResponse {
+  execution_id: string;
   ok: boolean;
   payment_hash: string;
   status: string;
+}
+
+export interface SwapExecution {
+  format_version: number;
+  policy_hints?: DirectionalPolicy[];
+  quote: SwapQuote;
+  maker_to_taker: RouteEdge[];
+  taker_to_maker: RouteEdge[];
+  selected_plan: U64String | null;
+  plans: ExecutionPlan[];
+  attempts: SendAttempt[];
 }
 
 export interface SwapHopDto {
@@ -1176,6 +1295,8 @@ export interface SwapHopDto {
 }
 
 export interface SwapInfoDto {
+  execution_id: string;
+  execution?: SwapExecution;
   payment_hash: string;
   role: string;
   status: string;
@@ -1193,9 +1314,28 @@ export interface SwapInfoDto {
 }
 
 export interface SwapOfferResponse {
+  execution_id: string;
   swap_string: string;
   payment_hash: string;
   info: SwapInfoDto;
+}
+
+export interface SwapQuote {
+  execution_id: string;
+  maker: string;
+  taker: string;
+  taker_outbound_channel_scid: U64String;
+  asset_id: number[];
+  asset_amount: U64String;
+  btc_amount_msat: U64String;
+  btc_carrier_amount_msat: U64String;
+  maker_gives_rgb: boolean;
+  created_at_unix_secs: U64String;
+  expiry_secs: number;
+  settlement_mode: SettlementMode;
+  maker_to_taker_fee_payer: FeePayer;
+  taker_to_maker_fee_payer: FeePayer;
+  constraints: RoutingConstraints;
 }
 
 export interface SwapStringRequest {
@@ -1215,13 +1355,13 @@ export interface WalletNewAddressResponse {
 export interface WalletSendAllRequest {
   address: string;
   retain_reserves: boolean;
-  fee_rate_sats_per_vb?: number;
+  fee_rate_sats_per_vb?: number | null;
 }
 
 export interface WalletSendRequest {
   address: string;
   amount_sats: U64String;
-  fee_rate_sats_per_vb?: number;
+  fee_rate_sats_per_vb?: number | null;
 }
 
 export interface WalletSendResponse {
@@ -1230,7 +1370,7 @@ export interface WalletSendResponse {
 
 export interface WalletUtxoConfirmationDto {
   status: WalletUtxoConfirmationStatusDto;
-  height?: number;
+  height?: number | null;
 }
 
 export interface WalletUtxoDto {
@@ -1243,14 +1383,14 @@ export interface WalletUtxoDto {
 export interface WalletUtxoLockDto {
   locked: boolean;
   kind: WalletUtxoLockKindDto;
-  operation_id?: string;
-  expires_at_unix_secs?: U64String;
+  operation_id?: string | null;
+  expires_at_unix_secs?: U64String | null;
 }
 
 export interface WalletUtxoLockStatusDto {
   operation_id: string;
   purpose: WalletUtxoLockPurposeDto;
-  expires_at_unix_secs?: U64String;
+  expires_at_unix_secs?: U64String | null;
 }
 
 export interface WalletUtxoOperationDto {
@@ -1275,21 +1415,23 @@ export interface WalletUtxosResponse {
   utxos: WalletUtxoDto[];
 }
 
+export type AttemptStatus = "Prepared" | "Submitted" | "SendRejected";
+
 export type ClosingChannelStatusDto = "negotiating" | "broadcasting" | "confirming" | "contested" | "sweeping";
 
 export type ClosingSourceDto = "coop" | "holder_force" | "counterparty_force" | "unknown";
 
 export type EventDto =
   | { type: "PaymentSuccessful"; data: {
-      payment_id?: string;
-      fee_paid_msat?: U64String;
+      payment_id?: string | null;
+      fee_paid_msat?: U64String | null;
     }; }
   | { type: "PaymentFailed"; data: {
-      payment_id?: string;
+      payment_id?: string | null;
       reason?: string;
     }; }
   | { type: "PaymentReceived"; data: {
-      payment_id?: string;
+      payment_id?: string | null;
       payment_hash: string;
       amount_msat: U64String;
       custom_records?: CustomTlvDto[];
@@ -1324,14 +1466,25 @@ export type EventDto =
     }; }
 ;
 
+export type FeePayer = "Maker";
+
+export type LegAsset =
+  | "Btc"
+  | { "Rgb": {
+    asset_id: number[];
+  } }
+;
+
+export type LegDirection = "MakerToTaker" | "TakerToMaker";
+
 export type MainStatusResponse =
   | StatusDto
   | LockedStatusDto
 ;
 
-export type RgbFundingUtxoPolicyDto = "SingleRgbAnchor" | "RgbAnchorWithBtcSupport" | "MergeRgbAnchorsWithBtcSupport";
+export type RgbFundingUtxoPolicyDto = "single-rgb-anchor" | "rgb-anchor-with-btc-support" | "merge-rgb-anchors-with-btc-support";
 
-export type RgbFundingUtxoRoleDto = "RgbState" | "FeeSupport";
+export type RgbFundingUtxoRoleDto = "rgb-state" | "fee-support";
 
 export type RgbSignMessageAlgorithmDto = "bitcoin_signed_message" | "ecdsa";
 
@@ -1342,6 +1495,8 @@ export type RgbSweepStatusDto = "parked" | "in_flight" | "done";
 export type RgbUtxoConfirmationStatusDto = "confirmed" | "mempool";
 
 export type RgbUtxoLockKindDto = "none" | "manual_reservation" | "operation";
+
+export type SettlementMode = "CircularHtlc";
 
 export type WalletUtxoAvailabilityDto = "blocked_by_policy" | "blocked_by_spend" | "locked" | "recovering" | "reserved" | "selectable" | "unknown";
 

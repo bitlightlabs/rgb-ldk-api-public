@@ -1,0 +1,12 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "baseUrl": "..",
+    "paths": {
+      "@bitlightlabs/rgbldk-node-client": ["packages/rgbldk-node-client/src/index.ts"],
+      "@bitlightlabs/rgbldk-node-api-types": ["packages/rgbldk-node-api-types/src/index.ts"]
+    }
+  },
+  "include": ["*.ts"]
+}

@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use super::serde_u64_decimal_string;
+use super::swap_plan::*;
 
 /// Request to create a single-hop swap offer (maker side).
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
@@ -39,16 +40,21 @@ pub struct SwapHopDto {
 
 /// Request to create a multi-hop swap offer (maker side).
 ///
-/// Unlike [`SwapCreateOfferRequest`], the caller supplies the full circular route explicitly:
-/// `rgb_path` (maker -> ... -> taker) and `btc_path` (taker -> ... -> maker). The first hop of
-/// `btc_path` is marked as the swap-intercept hop on execution. These names describe the
-/// historical route halves, not the channel type: with `maker_gives_rgb=false`, `rgb_path`
-/// carries the BTC counter-value and `btc_path` carries RGB. In a direct one-hop sell,
-/// `btc_path.channel_scid` must therefore identify the RGB channel.
+/// Supply both directed halves of the circular route. Asset direction follows `maker_gives_rgb`.
+/// The first return channel is bound as the taker's intercepted outgoing channel.
+/// `rgb_path` and `btc_path` remain input aliases for older clients.
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 pub struct SwapCreateMultihopOfferRequest {
-	pub rgb_path: Vec<SwapHopDto>,
-	pub btc_path: Vec<SwapHopDto>,
+	/// Directed policy snapshots for private remote channels absent from gossip.
+	#[serde(default)]
+	pub policy_hints: Vec<DirectionalPolicy>,
+	/// Fee caps and mandatory nodes, LSPs and channels. Omission fixes the supplied route with zero routing fees.
+	#[serde(default)]
+	pub constraints: Option<RoutingConstraints>,
+	#[serde(alias = "rgb_path")]
+	pub maker_to_taker: Vec<SwapHopDto>,
+	#[serde(alias = "btc_path")]
+	pub taker_to_maker: Vec<SwapHopDto>,
 	pub contract_id: String,
 	#[serde(with = "serde_u64_decimal_string")]
 	pub asset_amount: u64,
@@ -63,7 +69,8 @@ pub struct SwapCreateMultihopOfferRequest {
 /// Response to a successful offer creation (single- or multi-hop).
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 pub struct SwapOfferResponse {
-	/// Out-of-band offer string (`rgb-swap:v1:...` or `rgb-swap:v2:...`) to hand to the
+	pub execution_id: String,
+	/// Out-of-band offer string (`rgb-swap:v1:...` or `rgb-swap:v3:...`) to hand to the
 	/// counterparty (e.g. via QR code or chat).
 	pub swap_string: String,
 	/// The swap's primary key, hex-encoded.
@@ -73,14 +80,22 @@ pub struct SwapOfferResponse {
 }
 
 /// Request to execute a previously created offer (maker side). Provide either `swap_string`
-/// (required for multi-hop offers, and preferred in general) or `payment_hash` (single-hop only).
+/// or a stable `execution_id` (`payment_hash` is a compatibility alias), for either route type.
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 pub struct SwapExecuteRequest {
+	#[serde(default, skip_serializing_if = "Vec::is_empty")]
+	pub policy_hints: Vec<DirectionalPolicy>,
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub swap_string: Option<String>,
 	/// Hex-encoded 32-byte payment hash.
 	#[serde(default, skip_serializing_if = "Option::is_none")]
-	pub payment_hash: Option<String>,
+	#[serde(alias = "payment_hash")]
+	pub execution_id: Option<String>,
+	/// Optional replacement route within the accepted constraints. Both legs must be supplied.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub maker_to_taker: Option<Vec<SwapHopDto>>,
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub taker_to_maker: Option<Vec<SwapHopDto>>,
 	/// Skip the "taker has accepted" gate. By default execute refuses until a `SWAP_ACCEPT` has
 	/// advanced the swap to `Accepted`; set this when acceptance was coordinated out-of-band or the
 	/// taker runs an older node that does not send the message. Defaults to `false`.
@@ -96,6 +111,7 @@ pub struct SwapExecuteRequest {
 /// `"Failed"` (see `last_error` there for the reason).
 #[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
 pub struct SwapExecuteResponse {
+	pub execution_id: String,
 	/// True when the payment was accepted for sending. Not a settlement guarantee — see the type
 	/// docs.
 	pub ok: bool,
@@ -116,6 +132,11 @@ pub struct SwapStringRequest {
 /// A swap's full details, as returned by the create/accept/decode/list/get endpoints.
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize, ToSchema)]
 pub struct SwapInfoDto {
+	/// Stable execution identifier; accepted by execute and the swap lookup endpoint.
+	pub execution_id: String,
+	/// Bound quote, selected paths and all versioned execution plans, including policy snapshots.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub execution: Option<SwapExecution>,
 	/// Hex-encoded 32-byte payment hash — the swap's primary key.
 	pub payment_hash: String,
 	/// "Maker" or "Taker".
@@ -145,8 +166,7 @@ pub struct SwapInfoDto {
 	pub expiry_secs: u32,
 	#[serde(with = "serde_u64_decimal_string")]
 	pub created_at_unix_secs: u64,
-	/// True if this is a multi-hop swap. `POST /swap/execute` cannot execute these by
-	/// `payment_hash` alone — pass the original `swap_string` instead.
+	/// Whether the quote uses an explicitly supplied circular route.
 	pub is_multihop: bool,
 	/// Human-readable reason for the most recent failure (e.g. "RetriesExhausted"); `null` unless
 	/// the swap has failed. Lets a client show *why* a swap failed without scraping logs.

@@ -27,6 +27,7 @@ class Field:
     rust_ty: str
     optional: bool
     u64_string: bool
+    nullable: bool = False
 
 
 @dataclass
@@ -49,6 +50,7 @@ class Enum:
     serde_tag: str | None
     serde_content: str | None
     variants: list[Variant]
+    untagged: bool = False
 
 
 def main(argv: list[str]) -> int:
@@ -149,6 +151,21 @@ def sanitize_repo_reference(value: str) -> str:
 
 
 def parse_rust_dtos(lines: list[str]) -> tuple[list[Struct], list[Enum]]:
+    # Rustfmt keeps small struct variants on one line, e.g. Rgb { asset_id: Vec<u8> }.
+    expanded: list[str] = []
+
+    for line in lines:
+        inline = re.fullmatch(r"\s*(\w+)\s*\{\s*([^{}]+)\s*\},?\s*", line)
+
+        if inline:
+            expanded.append(f"{inline[1]} {{")
+            expanded.extend(field.strip() + "," for field in inline[2].split(",") if field.strip())
+            expanded.append("},")
+        else:
+            expanded.append(line)
+
+    lines = expanded
+
     structs: list[Struct] = []
     enums: list[Enum] = []
 
@@ -190,6 +207,7 @@ def parse_rust_dtos(lines: list[str]) -> tuple[list[Struct], list[Enum]]:
                             rust_ty=rust_ty,
                             optional=optional,
                             u64_string=u64_string,
+                            nullable=is_nullable_field(rust_ty, field_attrs),
                         )
                     )
                     field_attrs = []
@@ -204,6 +222,7 @@ def parse_rust_dtos(lines: list[str]) -> tuple[list[Struct], list[Enum]]:
             name = m.group(1)
             serde_tag, serde_content = parse_enum_serde_tag(attrs)
             serde_rename_all = parse_enum_serde_rename_all(attrs)
+            untagged = any(re.search(r"\buntagged\b", attr) for attr in attrs)
             i += 1
             variants: list[Variant] = []
             variant_attrs: list[str] = []
@@ -245,6 +264,7 @@ def parse_rust_dtos(lines: list[str]) -> tuple[list[Struct], list[Enum]]:
                                     rust_ty=rust_ty,
                                     optional=optional,
                                     u64_string=u64_string,
+                                    nullable=is_nullable_field(rust_ty, field_attrs),
                                 )
                             )
                             field_attrs = []
@@ -298,7 +318,13 @@ def parse_rust_dtos(lines: list[str]) -> tuple[list[Struct], list[Enum]]:
                 i += 1
 
             enums.append(
-                Enum(name=name, serde_tag=serde_tag, serde_content=serde_content, variants=variants)
+                Enum(
+                    name=name,
+                    serde_tag=serde_tag,
+                    serde_content=serde_content,
+                    variants=variants,
+                    untagged=untagged,
+                )
             )
             attrs = []
             i += 1
@@ -366,6 +392,8 @@ def variant_json_name(raw: str, attrs: list[str], rename_all: str | None) -> str
                 return m.group(1)
     if rename_all == "snake_case":
         return rust_variant_to_snake_case(raw)
+    if rename_all == "kebab-case":
+        return rust_variant_to_snake_case(raw).replace("_", "-")
     return raw
 
 
@@ -382,8 +410,7 @@ def field_json_name(raw: str, attrs: list[str]) -> str:
 
 def is_optional_field(rust_ty: str, attrs: list[str]) -> bool:
     rust_ty = rust_ty.strip()
-    if rust_ty.startswith("Option<"):
-        return True
+
     for a in attrs:
         if a.startswith("#[serde(") and "skip_serializing_if" in a:
             return True
@@ -391,11 +418,17 @@ def is_optional_field(rust_ty: str, attrs: list[str]) -> bool:
             return True
         if a == "#[serde(default)]":
             return True
-    return False
+
+    # A custom deserializer disables serde's implicit missing-Option default.
+    return rust_ty.startswith("Option<") and not any(
+        re.search(r"\bwith\s*=", attr) for attr in attrs
+    )
 
 
 def is_u64_decimal_string(attrs: list[str]) -> bool:
     for a in attrs:
+        if re.search(r'with\s*=\s*"decimal(?:_option|_vec)?"', a):
+            return True
         if "serde_u64_decimal_string" in a:
             return True
         if "serde_opt_u64_decimal_string" in a:
@@ -403,16 +436,23 @@ def is_u64_decimal_string(attrs: list[str]) -> bool:
     return False
 
 
+def is_nullable_field(rust_ty: str, attrs: list[str]) -> bool:
+    return rust_ty.startswith("Option<") and not any(
+        'skip_serializing_if = "Option::is_none"' in attr for attr in attrs
+    )
+
+
 def ts_type_for(field: Field) -> str:
     ty = field.rust_ty.replace(" ", "")
     if ty.startswith("Option<") and ty.endswith(">"):
         inner = ty[len("Option<") : -1]
         # Option + serde_opt_u64_decimal_string should map to U64String
-        return ts_type_for(Field(field.name, field.json_name, inner, False, field.u64_string))
+        value = ts_type_for(Field(field.name, field.json_name, inner, False, field.u64_string))
+        return f"{value} | null" if field.nullable else value
     if ty.startswith("Vec<") and ty.endswith(">"):
         inner = ty[len("Vec<") : -1]
         inner_ts = ts_type_for(Field(field.name, field.json_name, inner, False, field.u64_string))
-        return f"{inner_ts}[]"
+        return f"({inner_ts})[]" if " | " in inner_ts else f"{inner_ts}[]"
     if ty in ("String",):
         return "string"
     if ty in ("bool",):
@@ -432,7 +472,7 @@ def ts_type_for(field: Field) -> str:
 def render_ts_types(structs: list[Struct], enums: list[Enum]) -> str:
     out: list[str] = []
     out.append("// Generated. Do not edit.")
-    out.append("// Source: crates/rgbldk_http_dto/src/dto.rs")
+    out.append("// Source: crates/rgbldk_http_dto/src/dto/")
     out.append("// Run: `pnpm gen` at repo root.")
     out.append("")
     out.append("export type U64String = string;")
@@ -475,9 +515,7 @@ def render_ts_types(structs: list[Struct], enums: list[Enum]) -> str:
             out.append(";")
             out.append("")
         else:
-            # Untagged enums (or enums without tag/content):
-            # - If all variants are unit variants => string union
-            # - If any variant has fields/tuple payload => union of shapes (no discriminant in JSON)
+            # Serde's default is externally tagged. Only #[serde(untagged)] omits the wrapper.
             has_payload = any((len(v.fields) > 0) or (v.tuple_ty is not None) for v in e.variants)
             if not has_payload:
                 lit = " | ".join([f'\"{v.json_name}\"' for v in e.variants]) or "never"
@@ -488,11 +526,11 @@ def render_ts_types(structs: list[Struct], enums: list[Enum]) -> str:
             parts: list[str] = []
             for v in e.variants:
                 if v.tuple_ty is not None:
-                    parts.append(f"  | {ts_type_for(Field('value', 'value', v.tuple_ty, False, False))}")
+                    value = ts_type_for(Field('value', 'value', v.tuple_ty, False, False))
+                    parts.append(f"  | {value}" if e.untagged else f'  | {{ "{v.json_name}": {value} }}')
                     continue
                 if not v.fields:
-                    # Mixed unit+struct variants are rare; fall back to `unknown` for this variant.
-                    parts.append("  | unknown")
+                    parts.append("  | null" if e.untagged else f'  | "{v.json_name}"')
                     continue
                 data_lines: list[str] = []
                 for f in v.fields:
@@ -501,7 +539,8 @@ def render_ts_types(structs: list[Struct], enums: list[Enum]) -> str:
                         key = f'"{f.json_name}"'
                     opt = "?" if f.optional else ""
                     data_lines.append(f"    {key}{opt}: {ts_type_for(f)};")
-                parts.append("  | {\n" + "\n".join(data_lines) + "\n  }")
+                data = "{\n" + "\n".join(data_lines) + "\n  }"
+                parts.append(f"  | {data}" if e.untagged else f'  | {{ "{v.json_name}": {data} }}')
             out.append(f"export type {e.name} =")
             out.extend(parts)
             out.append(";")
@@ -516,6 +555,8 @@ def render_ts_client() -> str:
             [
                 "// Generated. Do not edit.",
                 "// Run: `pnpm gen` at repo root.",
+                "",
+                'import { HttpError } from "./http-error.js";',
                 "",
                 "export type TokenSource =",
                 "  | { kind: \"none\" }",
@@ -554,7 +595,11 @@ def render_ts_client() -> str:
                 "    const headers = await this.authHeader();",
                 "    const res = await this.fetchImpl(url, { method: \"GET\", headers });",
                 "    const text = await res.text();",
-                "    if (!res.ok) throw new Error(`HTTP ${res.status}: ${text}`);",
+                "",
+                "    if (!res.ok) {",
+                "      throw new HttpError(res.status, text);",
+                "    }",
+                "",
                 "    return JSON.parse(text) as T;",
                 "  }",
                 "",
@@ -566,7 +611,24 @@ def render_ts_client() -> str:
                 "    };",
                 "    const res = await this.fetchImpl(url, { method: \"POST\", headers, body: JSON.stringify(body) });",
                 "    const text = await res.text();",
-                "    if (!res.ok) throw new Error(`HTTP ${res.status}: ${text}`);",
+                "",
+                "    if (!res.ok) {",
+                "      throw new HttpError(res.status, text);",
+                "    }",
+                "",
+                "    return JSON.parse(text) as T;",
+                "  }",
+                "",
+                "  async deleteJson<T>(path: string): Promise<T> {",
+                '    const url = `${this.baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;',
+                "    const headers = await this.authHeader();",
+                '    const res = await this.fetchImpl(url, { method: "DELETE", headers });',
+                "    const text = await res.text();",
+                "",
+                "    if (!res.ok) {",
+                "      throw new HttpError(res.status, text);",
+                "    }",
+                "",
                 "    return JSON.parse(text) as T;",
                 "  }",
                 "}",
@@ -885,9 +947,7 @@ def schema_for_enum(e: Enum) -> dict:
             one_of.append(variant_schema)
         return {"oneOf": one_of}
 
-    # Untagged enums:
-    # - If all variants are unit variants => string enum
-    # - Else => oneOf union of the possible payload shapes
+    # Serde externally tagged enums wrap payloads in a single variant-name property.
     has_payload = any((len(v.fields) > 0) or (v.tuple_ty is not None) for v in e.variants)
     if not has_payload:
         return {"type": "string", "enum": [v.json_name for v in e.variants]}
@@ -895,7 +955,8 @@ def schema_for_enum(e: Enum) -> dict:
     one_of: list[dict] = []
     for v in e.variants:
         if v.tuple_ty is not None:
-            one_of.append(schema_ref_or_inline(v.tuple_ty))
+            payload = schema_for_field(Field("value", "value", v.tuple_ty, False, False))
+            one_of.append(payload if e.untagged else external_variant_schema(v.json_name, payload))
             continue
         if v.fields:
             data_props: dict[str, dict] = {}
@@ -907,18 +968,28 @@ def schema_for_enum(e: Enum) -> dict:
             data_schema: dict = {"type": "object", "properties": data_props}
             if data_required:
                 data_schema["required"] = sorted(data_required)
-            one_of.append(data_schema)
+            one_of.append(data_schema if e.untagged else external_variant_schema(v.json_name, data_schema))
             continue
-        one_of.append({"type": "string", "const": v.json_name})
+        one_of.append({"type": "null"} if e.untagged else {"type": "string", "const": v.json_name})
 
     return {"oneOf": one_of}
+
+
+def external_variant_schema(name: str, payload: dict) -> dict:
+    return {
+        "type": "object",
+        "properties": {name: payload},
+        "required": [name],
+        "additionalProperties": False,
+    }
 
 
 def schema_for_field(f: Field) -> dict:
     ty = f.rust_ty.replace(" ", "")
     if ty.startswith("Option<") and ty.endswith(">"):
         inner = ty[len("Option<") : -1]
-        return schema_for_field(Field(f.name, f.json_name, inner, False, f.u64_string))
+        value = schema_for_field(Field(f.name, f.json_name, inner, False, f.u64_string))
+        return {"anyOf": [value, {"type": "null"}]} if f.nullable else value
     if ty.startswith("Vec<") and ty.endswith(">"):
         inner = ty[len("Vec<") : -1]
         return {"type": "array", "items": schema_for_field(Field(f.name, f.json_name, inner, False, f.u64_string))}

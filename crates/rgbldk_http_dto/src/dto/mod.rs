@@ -118,3 +118,6 @@ mod tests {
 		assert!(req.blinding_utxo.is_none());
 	}
 }
+
+mod swap_plan;
+pub use swap_plan::*;

@@ -13,16 +13,41 @@ use super::*;
 
 // --- client side (this node buys a channel from its configured LSP) ---
 
-/// The LSP this node buys channels from (`GET`/`PUT /lsps1/lsp`).
+/// Adds an LSP, or updates the entry with the same pubkey (`POST /lsps`).
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-pub struct Lsps1LspConfigDto {
+pub struct LspAddRequest {
 	/// LSP node pubkey, hex-encoded.
 	pub pubkey: String,
 	/// LSP socket address, e.g. `203.0.113.5:9735`.
 	pub address: String,
-	/// Access token sent with orders, if the LSP requires one.
+	/// Access token sent to the LSP, if it requires one.
 	#[serde(default)]
 	pub token: Option<String>,
+	/// Accept 0conf channels from this LSP: they are usable before the funding
+	/// confirms, trusting the LSP not to double-spend it. Required for JIT channels.
+	pub trust_peer_0conf: bool,
+	/// Accept anchor channels from this LSP without keeping an on-chain reserve for
+	/// force-close fees (default 25,000 sats per channel). A force close then relies
+	/// on the LSP to get the transaction confirmed. Needed by clients with no on-chain BTC.
+	pub trust_peer_no_reserve: bool,
+}
+
+/// One LSP in this node's LSP list (`GET /lsps`).
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct LspDto {
+	pub pubkey: String,
+	pub address: String,
+	pub token: Option<String>,
+	pub trust_peer_0conf: bool,
+	pub trust_peer_no_reserve: bool,
+	/// LSPS protocol numbers from LSPS0 (`1` = LSPS1, `2` = LSPS2); `null` until a
+	/// probe succeeds. Such an LSP is probed again when it is used.
+	pub protocols: Option<Vec<u16>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct LspListResponse {
+	pub lsps: Vec<LspDto>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -81,7 +106,7 @@ pub struct Lsps1LspPricingDto {
 	pub min_fee_sat: Option<u64>,
 }
 
-/// The configured LSP's offering (`GET /lsps1/info`).
+/// One LSP's offering.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Lsps1InfoResponse {
 	pub supported_options: Lsps1SupportedOptionsDto,
@@ -94,8 +119,32 @@ pub struct Lsps1InfoResponse {
 	pub rgb: Option<Lsps1RgbOfferingDto>,
 }
 
+/// One LSP's answer in `GET /lsps1/info`: either `info` or `error` is set.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct Lsps1InfoEntryDto {
+	pub lsp_node_id: String,
+	pub info: Option<Lsps1InfoResponse>,
+	/// Same shape as an error response body.
+	#[schema(value_type = Option<Object>)]
+	pub error: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct Lsps1InfoListResponse {
+	pub lsps: Vec<Lsps1InfoEntryDto>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Lsps1InfoQuery {
+	/// Query only this LSP (hex pubkey); all LSPS1 LSPs when omitted.
+	#[serde(default)]
+	pub lsp_node_id: Option<String>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Lsps1OrderCreateRequest {
+	/// The LSP to order from (hex pubkey); must be in `GET /lsps`.
+	pub lsp_node_id: String,
 	/// Sats the LSP provides on its side (the inbound liquidity being bought).
 	#[serde(with = "serde_u64_decimal_string")]
 	pub lsp_balance_sat: u64,
@@ -110,6 +159,8 @@ pub struct Lsps1OrderCreateRequest {
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Lsps1RgbOrderCreateRequest {
+	/// The LSP to order from (hex pubkey); must be in `GET /lsps`.
+	pub lsp_node_id: String,
 	/// RGB contract id of the ordered asset.
 	pub asset_id: String,
 	/// Asset units the LSP provides on its side (leased inbound asset liquidity).
@@ -271,8 +322,6 @@ pub struct Lsps1ServiceBehaviorDto {
 	/// Confirmations before an onchain deposit counts as paid. 0 is raised to 1;
 	/// values above 6 have no practical effect (bLIP-51 forces acceptance at 6).
 	pub min_onchain_payment_confirmations: u16,
-	/// Channel-open retries before an order fails.
-	pub max_fulfill_retries: u32,
 	/// Cooperatively close leased channels once lease + grace expired.
 	pub auto_close_expired_channels: bool,
 	/// Blocks of grace before an expired lease is closed.
@@ -280,6 +329,15 @@ pub struct Lsps1ServiceBehaviorDto {
 	/// How long after payment expiry a late deposit is still auto-refunded.
 	#[serde(with = "serde_u64_decimal_string")]
 	pub late_deposit_refund_window_secs: u64,
+	/// Blocks an onchain-paid order keeps retrying the channel open while the client is
+	/// unreachable before giving up and refunding (bolt11 orders use the HTLC claim
+	/// deadline). Defaults to ~1 day if omitted.
+	#[serde(default = "default_onchain_open_timeout_blocks")]
+	pub onchain_open_timeout_blocks: u32,
+}
+
+fn default_onchain_open_timeout_blocks() -> u32 {
+	144
 }
 
 /// Runtime service config (`GET`/`PUT /lsps1/options`). Changes apply to new orders

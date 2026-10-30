@@ -1,0 +1,1028 @@
+[
+  {
+    "asset_amount": "100",
+    "btc_amount_msat": "5000",
+    "btc_carrier_amount_msat": "10000",
+    "channel_scid": "103",
+    "contract_id": "contract:fixture",
+    "counterparty_node_id": "023333333333333333333333333333333333333333333333333333333333333333",
+    "created_at_unix_secs": "1792454400",
+    "execution": {
+      "attempts": [
+        {
+          "plan_version": "1",
+          "status": "Submitted"
+        }
+      ],
+      "format_version": 1,
+      "maker_to_taker": [
+        {
+          "channel_scid": "9007199254740993",
+          "node_id": "032222222222222222222222222222222222222222222222222222222222222222"
+        },
+        {
+          "channel_scid": "102",
+          "node_id": "023333333333333333333333333333333333333333333333333333333333333333"
+        }
+      ],
+      "plans": [
+        {
+          "format_version": 1,
+          "maker_to_taker": {
+            "asset": {
+              "Rgb": {
+                "asset_id": [
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22
+                ]
+              }
+            },
+            "constraints": {
+              "fixed_route": null,
+              "max_fee_msat": "1000",
+              "required_channels": [],
+              "required_lsps": [
+                "032222222222222222222222222222222222222222222222222222222222222222"
+              ],
+              "required_nodes": [
+                "023333333333333333333333333333333333333333333333333333333333333333"
+              ]
+            },
+            "direction": "MakerToTaker",
+            "fee_msat": "110",
+            "fee_payer": "Maker",
+            "hops": [
+              {
+                "btc_input_msat": "10110",
+                "btc_output_msat": "10000",
+                "channel_scid": "9007199254740993",
+                "incoming_cltv_delta": 360,
+                "node_id": "032222222222222222222222222222222222222222222222222222222222222222",
+                "outgoing_cltv_delta": 288,
+                "policy": {
+                  "asset_id": [
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22
+                  ],
+                  "base_fee_msat": 100,
+                  "channel_scid": "9007199254740993",
+                  "cltv_expiry_delta": 72,
+                  "destination": "032222222222222222222222222222222222222222222222222222222222222222",
+                  "enabled": true,
+                  "fee_proportional_millionths": 1000,
+                  "htlc_maximum_msat": "1000000",
+                  "htlc_minimum_msat": "1",
+                  "last_update": null,
+                  "provenance": "fixture",
+                  "rgb_htlc_maximum": "1000000",
+                  "source": "021111111111111111111111111111111111111111111111111111111111111111"
+                },
+                "rgb_input": "100",
+                "rgb_output": "100",
+                "source": "021111111111111111111111111111111111111111111111111111111111111111"
+              },
+              {
+                "btc_input_msat": "10000",
+                "btc_output_msat": "15000",
+                "channel_scid": "102",
+                "incoming_cltv_delta": 288,
+                "node_id": "023333333333333333333333333333333333333333333333333333333333333333",
+                "outgoing_cltv_delta": 216,
+                "policy": {
+                  "asset_id": [
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22
+                  ],
+                  "base_fee_msat": 100,
+                  "channel_scid": "102",
+                  "cltv_expiry_delta": 72,
+                  "destination": "023333333333333333333333333333333333333333333333333333333333333333",
+                  "enabled": true,
+                  "fee_proportional_millionths": 1000,
+                  "htlc_maximum_msat": "1000000",
+                  "htlc_minimum_msat": "1",
+                  "last_update": null,
+                  "provenance": "fixture",
+                  "rgb_htlc_maximum": "1000000",
+                  "source": "032222222222222222222222222222222222222222222222222222222222222222"
+                },
+                "rgb_input": "100",
+                "rgb_output": null,
+                "source": "032222222222222222222222222222222222222222222222222222222222222222"
+              }
+            ]
+          },
+          "policy_snapshot_at_unix_secs": "1792454401",
+          "quote": {
+            "asset_amount": "100",
+            "asset_id": [
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22
+            ],
+            "btc_amount_msat": "5000",
+            "btc_carrier_amount_msat": "10000",
+            "constraints": {
+              "maker_to_taker": {
+                "fixed_route": null,
+                "max_fee_msat": "1000",
+                "required_channels": [],
+                "required_lsps": [
+                  "032222222222222222222222222222222222222222222222222222222222222222"
+                ],
+                "required_nodes": [
+                  "023333333333333333333333333333333333333333333333333333333333333333"
+                ]
+              },
+              "max_total_cltv_delta": 2016,
+              "taker_to_maker": {
+                "fixed_route": null,
+                "max_fee_msat": "1000",
+                "required_channels": [],
+                "required_lsps": [
+                  "032222222222222222222222222222222222222222222222222222222222222222"
+                ],
+                "required_nodes": [
+                  "021111111111111111111111111111111111111111111111111111111111111111"
+                ]
+              }
+            },
+            "created_at_unix_secs": "1792454400",
+            "execution_id": "abababababababababababababababababababababababababababababababab",
+            "expiry_secs": 3600,
+            "maker": "021111111111111111111111111111111111111111111111111111111111111111",
+            "maker_gives_rgb": true,
+            "maker_to_taker_fee_payer": "Maker",
+            "settlement_mode": "CircularHtlc",
+            "taker": "023333333333333333333333333333333333333333333333333333333333333333",
+            "taker_outbound_channel_scid": "103",
+            "taker_to_maker_fee_payer": "Maker"
+          },
+          "taker_to_maker": {
+            "asset": "Btc",
+            "constraints": {
+              "fixed_route": null,
+              "max_fee_msat": "1000",
+              "required_channels": [],
+              "required_lsps": [
+                "032222222222222222222222222222222222222222222222222222222222222222"
+              ],
+              "required_nodes": [
+                "021111111111111111111111111111111111111111111111111111111111111111"
+              ]
+            },
+            "direction": "TakerToMaker",
+            "fee_msat": "114",
+            "fee_payer": "Maker",
+            "hops": [
+              {
+                "btc_input_msat": "15000",
+                "btc_output_msat": "14886",
+                "channel_scid": "103",
+                "incoming_cltv_delta": 216,
+                "node_id": "032222222222222222222222222222222222222222222222222222222222222222",
+                "outgoing_cltv_delta": 144,
+                "policy": {
+                  "asset_id": [
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22
+                  ],
+                  "base_fee_msat": 100,
+                  "channel_scid": "103",
+                  "cltv_expiry_delta": 72,
+                  "destination": "032222222222222222222222222222222222222222222222222222222222222222",
+                  "enabled": true,
+                  "fee_proportional_millionths": 1000,
+                  "htlc_maximum_msat": "1000000",
+                  "htlc_minimum_msat": "1",
+                  "last_update": null,
+                  "provenance": "fixture",
+                  "rgb_htlc_maximum": "1000000",
+                  "source": "023333333333333333333333333333333333333333333333333333333333333333"
+                },
+                "rgb_input": null,
+                "rgb_output": null,
+                "source": "023333333333333333333333333333333333333333333333333333333333333333"
+              },
+              {
+                "btc_input_msat": "14886",
+                "btc_output_msat": null,
+                "channel_scid": "104",
+                "incoming_cltv_delta": 144,
+                "node_id": "021111111111111111111111111111111111111111111111111111111111111111",
+                "outgoing_cltv_delta": null,
+                "policy": {
+                  "asset_id": [
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22
+                  ],
+                  "base_fee_msat": 100,
+                  "channel_scid": "104",
+                  "cltv_expiry_delta": 72,
+                  "destination": "021111111111111111111111111111111111111111111111111111111111111111",
+                  "enabled": true,
+                  "fee_proportional_millionths": 1000,
+                  "htlc_maximum_msat": "1000000",
+                  "htlc_minimum_msat": "1",
+                  "last_update": null,
+                  "provenance": "fixture",
+                  "rgb_htlc_maximum": "1000000",
+                  "source": "032222222222222222222222222222222222222222222222222222222222222222"
+                },
+                "rgb_input": null,
+                "rgb_output": null,
+                "source": "032222222222222222222222222222222222222222222222222222222222222222"
+              }
+            ]
+          },
+          "version": "1"
+        }
+      ],
+      "policy_hints": [],
+      "quote": {
+        "asset_amount": "100",
+        "asset_id": [
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22
+        ],
+        "btc_amount_msat": "5000",
+        "btc_carrier_amount_msat": "10000",
+        "constraints": {
+          "maker_to_taker": {
+            "fixed_route": null,
+            "max_fee_msat": "1000",
+            "required_channels": [],
+            "required_lsps": [
+              "032222222222222222222222222222222222222222222222222222222222222222"
+            ],
+            "required_nodes": [
+              "023333333333333333333333333333333333333333333333333333333333333333"
+            ]
+          },
+          "max_total_cltv_delta": 2016,
+          "taker_to_maker": {
+            "fixed_route": null,
+            "max_fee_msat": "1000",
+            "required_channels": [],
+            "required_lsps": [
+              "032222222222222222222222222222222222222222222222222222222222222222"
+            ],
+            "required_nodes": [
+              "021111111111111111111111111111111111111111111111111111111111111111"
+            ]
+          }
+        },
+        "created_at_unix_secs": "1792454400",
+        "execution_id": "abababababababababababababababababababababababababababababababab",
+        "expiry_secs": 3600,
+        "maker": "021111111111111111111111111111111111111111111111111111111111111111",
+        "maker_gives_rgb": true,
+        "maker_to_taker_fee_payer": "Maker",
+        "settlement_mode": "CircularHtlc",
+        "taker": "023333333333333333333333333333333333333333333333333333333333333333",
+        "taker_outbound_channel_scid": "103",
+        "taker_to_maker_fee_payer": "Maker"
+      },
+      "selected_plan": "1",
+      "taker_to_maker": [
+        {
+          "channel_scid": "103",
+          "node_id": "032222222222222222222222222222222222222222222222222222222222222222"
+        },
+        {
+          "channel_scid": "104",
+          "node_id": "021111111111111111111111111111111111111111111111111111111111111111"
+        }
+      ]
+    },
+    "execution_id": "abababababababababababababababababababababababababababababababab",
+    "expiry_secs": 3600,
+    "is_multihop": true,
+    "maker_gives_rgb": true,
+    "payment_hash": "abababababababababababababababababababababababababababababababab",
+    "role": "Maker",
+    "status": "InFlight"
+  },
+  {
+    "asset_amount": "100",
+    "btc_amount_msat": "5000",
+    "btc_carrier_amount_msat": "10000",
+    "channel_scid": "103",
+    "contract_id": "contract:fixture",
+    "counterparty_node_id": "023333333333333333333333333333333333333333333333333333333333333333",
+    "created_at_unix_secs": "1792454400",
+    "execution": {
+      "attempts": [
+        {
+          "plan_version": "1",
+          "status": "Submitted"
+        }
+      ],
+      "format_version": 1,
+      "maker_to_taker": [
+        {
+          "channel_scid": "9007199254740993",
+          "node_id": "032222222222222222222222222222222222222222222222222222222222222222"
+        },
+        {
+          "channel_scid": "102",
+          "node_id": "023333333333333333333333333333333333333333333333333333333333333333"
+        }
+      ],
+      "plans": [
+        {
+          "format_version": 1,
+          "maker_to_taker": {
+            "asset": "Btc",
+            "constraints": {
+              "fixed_route": null,
+              "max_fee_msat": "1000",
+              "required_channels": [],
+              "required_lsps": [
+                "032222222222222222222222222222222222222222222222222222222222222222"
+              ],
+              "required_nodes": [
+                "023333333333333333333333333333333333333333333333333333333333333333"
+              ]
+            },
+            "direction": "MakerToTaker",
+            "fee_msat": "115",
+            "fee_payer": "Maker",
+            "hops": [
+              {
+                "btc_input_msat": "15115",
+                "btc_output_msat": "15000",
+                "channel_scid": "9007199254740993",
+                "incoming_cltv_delta": 360,
+                "node_id": "032222222222222222222222222222222222222222222222222222222222222222",
+                "outgoing_cltv_delta": 288,
+                "policy": {
+                  "asset_id": [
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22
+                  ],
+                  "base_fee_msat": 100,
+                  "channel_scid": "9007199254740993",
+                  "cltv_expiry_delta": 72,
+                  "destination": "032222222222222222222222222222222222222222222222222222222222222222",
+                  "enabled": true,
+                  "fee_proportional_millionths": 1000,
+                  "htlc_maximum_msat": "1000000",
+                  "htlc_minimum_msat": "1",
+                  "last_update": null,
+                  "provenance": "fixture",
+                  "rgb_htlc_maximum": "1000000",
+                  "source": "021111111111111111111111111111111111111111111111111111111111111111"
+                },
+                "rgb_input": null,
+                "rgb_output": null,
+                "source": "021111111111111111111111111111111111111111111111111111111111111111"
+              },
+              {
+                "btc_input_msat": "15000",
+                "btc_output_msat": "10000",
+                "channel_scid": "102",
+                "incoming_cltv_delta": 288,
+                "node_id": "023333333333333333333333333333333333333333333333333333333333333333",
+                "outgoing_cltv_delta": 216,
+                "policy": {
+                  "asset_id": [
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22
+                  ],
+                  "base_fee_msat": 100,
+                  "channel_scid": "102",
+                  "cltv_expiry_delta": 72,
+                  "destination": "023333333333333333333333333333333333333333333333333333333333333333",
+                  "enabled": true,
+                  "fee_proportional_millionths": 1000,
+                  "htlc_maximum_msat": "1000000",
+                  "htlc_minimum_msat": "1",
+                  "last_update": null,
+                  "provenance": "fixture",
+                  "rgb_htlc_maximum": "1000000",
+                  "source": "032222222222222222222222222222222222222222222222222222222222222222"
+                },
+                "rgb_input": null,
+                "rgb_output": "100",
+                "source": "032222222222222222222222222222222222222222222222222222222222222222"
+              }
+            ]
+          },
+          "policy_snapshot_at_unix_secs": "1792454401",
+          "quote": {
+            "asset_amount": "100",
+            "asset_id": [
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22,
+              22
+            ],
+            "btc_amount_msat": "5000",
+            "btc_carrier_amount_msat": "10000",
+            "constraints": {
+              "maker_to_taker": {
+                "fixed_route": null,
+                "max_fee_msat": "1000",
+                "required_channels": [],
+                "required_lsps": [
+                  "032222222222222222222222222222222222222222222222222222222222222222"
+                ],
+                "required_nodes": [
+                  "023333333333333333333333333333333333333333333333333333333333333333"
+                ]
+              },
+              "max_total_cltv_delta": 2016,
+              "taker_to_maker": {
+                "fixed_route": null,
+                "max_fee_msat": "1000",
+                "required_channels": [],
+                "required_lsps": [
+                  "032222222222222222222222222222222222222222222222222222222222222222"
+                ],
+                "required_nodes": [
+                  "021111111111111111111111111111111111111111111111111111111111111111"
+                ]
+              }
+            },
+            "created_at_unix_secs": "1792454400",
+            "execution_id": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+            "expiry_secs": 3600,
+            "maker": "021111111111111111111111111111111111111111111111111111111111111111",
+            "maker_gives_rgb": false,
+            "maker_to_taker_fee_payer": "Maker",
+            "settlement_mode": "CircularHtlc",
+            "taker": "023333333333333333333333333333333333333333333333333333333333333333",
+            "taker_outbound_channel_scid": "103",
+            "taker_to_maker_fee_payer": "Maker"
+          },
+          "taker_to_maker": {
+            "asset": {
+              "Rgb": {
+                "asset_id": [
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22,
+                  22
+                ]
+              }
+            },
+            "constraints": {
+              "fixed_route": null,
+              "max_fee_msat": "1000",
+              "required_channels": [],
+              "required_lsps": [
+                "032222222222222222222222222222222222222222222222222222222222222222"
+              ],
+              "required_nodes": [
+                "021111111111111111111111111111111111111111111111111111111111111111"
+              ]
+            },
+            "direction": "TakerToMaker",
+            "fee_msat": "109",
+            "fee_payer": "Maker",
+            "hops": [
+              {
+                "btc_input_msat": "10000",
+                "btc_output_msat": "9891",
+                "channel_scid": "103",
+                "incoming_cltv_delta": 216,
+                "node_id": "032222222222222222222222222222222222222222222222222222222222222222",
+                "outgoing_cltv_delta": 144,
+                "policy": {
+                  "asset_id": [
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22
+                  ],
+                  "base_fee_msat": 100,
+                  "channel_scid": "103",
+                  "cltv_expiry_delta": 72,
+                  "destination": "032222222222222222222222222222222222222222222222222222222222222222",
+                  "enabled": true,
+                  "fee_proportional_millionths": 1000,
+                  "htlc_maximum_msat": "1000000",
+                  "htlc_minimum_msat": "1",
+                  "last_update": null,
+                  "provenance": "fixture",
+                  "rgb_htlc_maximum": "1000000",
+                  "source": "023333333333333333333333333333333333333333333333333333333333333333"
+                },
+                "rgb_input": "100",
+                "rgb_output": "100",
+                "source": "023333333333333333333333333333333333333333333333333333333333333333"
+              },
+              {
+                "btc_input_msat": "9891",
+                "btc_output_msat": null,
+                "channel_scid": "104",
+                "incoming_cltv_delta": 144,
+                "node_id": "021111111111111111111111111111111111111111111111111111111111111111",
+                "outgoing_cltv_delta": null,
+                "policy": {
+                  "asset_id": [
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22,
+                    22
+                  ],
+                  "base_fee_msat": 100,
+                  "channel_scid": "104",
+                  "cltv_expiry_delta": 72,
+                  "destination": "021111111111111111111111111111111111111111111111111111111111111111",
+                  "enabled": true,
+                  "fee_proportional_millionths": 1000,
+                  "htlc_maximum_msat": "1000000",
+                  "htlc_minimum_msat": "1",
+                  "last_update": null,
+                  "provenance": "fixture",
+                  "rgb_htlc_maximum": "1000000",
+                  "source": "032222222222222222222222222222222222222222222222222222222222222222"
+                },
+                "rgb_input": "100",
+                "rgb_output": null,
+                "source": "032222222222222222222222222222222222222222222222222222222222222222"
+              }
+            ]
+          },
+          "version": "1"
+        }
+      ],
+      "policy_hints": [],
+      "quote": {
+        "asset_amount": "100",
+        "asset_id": [
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22
+        ],
+        "btc_amount_msat": "5000",
+        "btc_carrier_amount_msat": "10000",
+        "constraints": {
+          "maker_to_taker": {
+            "fixed_route": null,
+            "max_fee_msat": "1000",
+            "required_channels": [],
+            "required_lsps": [
+              "032222222222222222222222222222222222222222222222222222222222222222"
+            ],
+            "required_nodes": [
+              "023333333333333333333333333333333333333333333333333333333333333333"
+            ]
+          },
+          "max_total_cltv_delta": 2016,
+          "taker_to_maker": {
+            "fixed_route": null,
+            "max_fee_msat": "1000",
+            "required_channels": [],
+            "required_lsps": [
+              "032222222222222222222222222222222222222222222222222222222222222222"
+            ],
+            "required_nodes": [
+              "021111111111111111111111111111111111111111111111111111111111111111"
+            ]
+          }
+        },
+        "created_at_unix_secs": "1792454400",
+        "execution_id": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+        "expiry_secs": 3600,
+        "maker": "021111111111111111111111111111111111111111111111111111111111111111",
+        "maker_gives_rgb": false,
+        "maker_to_taker_fee_payer": "Maker",
+        "settlement_mode": "CircularHtlc",
+        "taker": "023333333333333333333333333333333333333333333333333333333333333333",
+        "taker_outbound_channel_scid": "103",
+        "taker_to_maker_fee_payer": "Maker"
+      },
+      "selected_plan": "1",
+      "taker_to_maker": [
+        {
+          "channel_scid": "103",
+          "node_id": "032222222222222222222222222222222222222222222222222222222222222222"
+        },
+        {
+          "channel_scid": "104",
+          "node_id": "021111111111111111111111111111111111111111111111111111111111111111"
+        }
+      ]
+    },
+    "execution_id": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+    "expiry_secs": 3600,
+    "is_multihop": true,
+    "maker_gives_rgb": false,
+    "payment_hash": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+    "role": "Maker",
+    "status": "InFlight"
+  }
+]

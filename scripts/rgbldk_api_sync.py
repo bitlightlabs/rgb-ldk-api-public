@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import re
 import shutil
@@ -24,6 +25,7 @@ class SourceInfo:
     node_package_version: str
     api_version: str
     generated_at_utc: str
+    schema_enrichments: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -170,6 +172,7 @@ class ExportOpenApiPass:
                 ["cargo", "run", "-p", "rgbldkd", "--bin", "rgbldkd", "--",
                  "openapi", "--output", str(output)],
                 cwd=self._node_repo,
+                timeout=1200,
             )
             content = output.read_text(encoding="utf-8")
         return OpenApiDocument(content, json.loads(content))
@@ -184,7 +187,11 @@ class StripDomainAdaptersPass:
             content = source.content
             if source.source_path.name == "swap.rs":
                 # The swap module's trailing adapter and tests belong to the node.
-                for marker in ("\nimpl From<crate::swap::SwapInfo>", "\nimpl From<rgb_ldk_node::SwapInfo>"):
+                for marker in (
+                    "\nimpl From<crate::swap::SwapInfo>",
+                    "\nimpl From<application::SwapView>",
+                    "\nimpl From<rgb_ldk_node::SwapInfo>",
+                ):
                     if marker in content:
                         content = content.split(marker, 1)[0]
                         break
@@ -195,11 +202,15 @@ class StripDomainAdaptersPass:
 
     @staticmethod
     def _strip_domain_from_impls(content: str) -> str:
-        """Remove `impl From<crate::…>` / `impl From<rgb_ldk_node::…>` adapters that
-        only compile inside rgb-ldk-node."""
+        """Remove `impl From<crate::…>`, `impl From<application::…>` and
+        `impl From<rgb_ldk_node::…>` adapters that only compile inside rgb-ldk-node."""
         out: list[str] = []
         i = 0
-        markers = ("\nimpl From<crate::", "\nimpl From<rgb_ldk_node::")
+        markers = (
+            "\nimpl From<crate::",
+            "\nimpl From<application::",
+            "\nimpl From<rgb_ldk_node::",
+        )
         while True:
             hits = [(m, content.find(m, i)) for m in markers]
             hits = [(m, p) for m, p in hits if p >= 0]
@@ -345,6 +356,161 @@ class WalletEnumsPass:
         missing = set(self._declarations) - self._seen
         if missing:
             raise RuntimeError(f"missing wallet enum reexports: {', '.join(sorted(missing))}")
+
+
+class SwapPlansPass:
+    """Mirror the upstream swap wire model, without its planning or domain implementation."""
+
+    SOURCE = Path("crates/application/src/swap_plan.rs")
+    PREFIX = "application::swap_plan::"
+
+    def __init__(self, node_repo: Path):
+        self._node_repo = node_repo
+
+    def run(
+        self, sources: tuple[DtoSource, ...], document: OpenApiDocument
+    ) -> tuple[tuple[DtoSource, ...], OpenApiDocument]:
+        if not any(self.PREFIX in source.content for source in sources):
+            return sources, document
+
+        wire_source = self._wire_source((self._node_repo / self.SOURCE).read_text(encoding="utf-8"))
+        outputs = []
+
+        for source in sources:
+            content = source.content
+
+            if self.PREFIX in content:
+                content = content.replace(self.PREFIX, "")
+                content = content.replace(
+                    "use super::serde_u64_decimal_string;",
+                    "use super::serde_u64_decimal_string;\nuse super::swap_plan::*;",
+                )
+                content = re.sub(
+                    r'^\s*#\[schema\(value_type = (?:Vec<Object>|Object)\)\]\n',
+                    "", content, flags=re.M,
+                )
+
+            if source.output_path == Path("src/dto/mod.rs"):
+                content += "\n\nmod swap_plan;\npub use swap_plan::*;"
+
+            outputs.append(replace(source, content=content))
+
+        outputs.append(DtoSource(self.SOURCE, Path("src/dto/swap_plan.rs"), wire_source))
+        return tuple(outputs), self._enrich_schema(document, wire_source, outputs)
+
+    @staticmethod
+    def _wire_source(source: str) -> str:
+        declarations = []
+        pattern = re.compile(r"(?m)^((?:(?:///[^\n]*|#\[[^\n]*\])\n)+)pub (?:struct|enum) \w+ \{")
+
+        for match in pattern.finditer(source):
+            if not re.search(r"\bSerialize\b", match[1]) or not re.search(r"\bDeserialize\b", match[1]):
+                continue
+
+            start = source.index("{", match.start())
+            depth = 1
+            end = start + 1
+
+            while end < len(source) and depth:
+                depth += (source[end] == "{") - (source[end] == "}")
+                end += 1
+
+            if depth:
+                raise RuntimeError("swap plans: unterminated wire declaration")
+
+            declaration = source[match.start():end]
+            declaration = re.sub(
+                r"#\[derive\(([^)]+)\)\]", r"#[derive(\1, utoipa::ToSchema)]", declaration
+            )
+            schema_types = {
+                "decimal": "String",
+                "decimal_option": "Option<String>",
+                "decimal_vec": "Vec<String>",
+            }
+
+            for module, schema_type in schema_types.items():
+                attribute = f'#[serde(with = "{module}")]'
+                declaration = declaration.replace(
+                    attribute, f"{attribute}\n\t#[schema(value_type = {schema_type})]"
+                )
+
+            declarations.append(declaration)
+
+        # Keep the exact numeric/string compatibility codecs from the pinned upstream source.
+        marker = "// Decimal strings preserve SCIDs"
+
+        if not declarations or marker not in source:
+            raise RuntimeError("swap plans: missing serializable declarations or decimal codecs")
+
+        codecs = source[source.index(marker):]
+
+        if "domain::" in codecs or "pub struct " in codecs:
+            raise RuntimeError("swap plans: unexpected implementation after decimal codecs")
+
+        return "\n\n".join([
+            "use serde::{Deserialize, Serialize};",
+            *declarations,
+            codecs.rstrip(),
+        ])
+
+    @staticmethod
+    def _enrich_schema(
+        document: OpenApiDocument, wire_source: str, sources: list[DtoSource]
+    ) -> OpenApiDocument:
+        # Reuse the same wire parser as the TS generator, keeping decimal strings and enum
+        # representation consistent. Preserve node-exported routes, metadata and other schemas.
+        spec = importlib.util.spec_from_file_location(
+            "rgbldk_api_codegen", ROOT / "scripts/rgb-ldk-api.py"
+        )
+        codegen = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = codegen
+        spec.loader.exec_module(codegen)
+        structs, enums = codegen.parse_rust_dtos(wire_source.splitlines())
+        data = json.loads(document.content)
+        schemas = data["components"]["schemas"]
+        names = {item.name for item in [*structs, *enums]}
+
+        for item in structs:
+            schemas[item.name] = codegen.schema_for_struct(item)
+
+        for item in enums:
+            schemas[item.name] = codegen.schema_for_enum(item)
+
+        for source in sources:
+            if source.output_path != Path("src/dto/swap.rs"):
+                continue
+
+            dto_structs, _ = codegen.parse_rust_dtos(source.content.splitlines())
+
+            for dto in dto_structs:
+                for field in dto.fields:
+                    if not names.intersection(re.findall(r"\w+", field.rust_ty)):
+                        continue
+
+                    properties = schemas[dto.name]["properties"]
+                    previous = properties[field.json_name]
+                    properties[field.json_name] = codegen.schema_for_field(field)
+
+                    if "description" in previous:
+                        properties[field.json_name]["description"] = previous["description"]
+
+        def validate_refs(value: object) -> None:
+            if isinstance(value, dict):
+                ref = value.get("$ref")
+
+                if ref and ref.removeprefix("#/components/schemas/") not in schemas:
+                    raise RuntimeError(f"swap plans: unresolved schema reference {ref}")
+
+                for child in value.values():
+                    validate_refs(child)
+            elif isinstance(value, list):
+                for child in value:
+                    validate_refs(child)
+
+        for name in names:
+            validate_refs(schemas[name])
+
+        return OpenApiDocument(json.dumps(data, indent=2, ensure_ascii=False) + "\n", data)
 
 
 class RenderArtifactsPass:
@@ -558,7 +724,13 @@ class ExportPipeline:
         document = ExportOpenApiPass(self._node_repo).run()
         dtos = StripDomainAdaptersPass().run(sources.dtos)
         dtos = WalletEnumsPass(document.data).run(dtos)
-        artifacts = RenderArtifactsPass().run(sources.info, document, dtos)
+        dtos, enriched = SwapPlansPass(self._node_repo).run(dtos, document)
+        info = sources.info
+
+        if enriched is not document:
+            info = replace(info, schema_enrichments=("application::swap_plan wire types",))
+
+        artifacts = RenderArtifactsPass().run(info, enriched, dtos)
         WriteArtifactsPass(output_dir.resolve()).run(artifacts)
 
 

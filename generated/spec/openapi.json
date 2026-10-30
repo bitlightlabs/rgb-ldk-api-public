@@ -980,24 +980,62 @@
         ]
       }
     },
-    "/lsps1/info": {
+    "/lsps": {
       "get": {
         "tags": [
           "lsps1"
         ],
-        "summary": "Get LSP offering",
-        "description": "Queries the configured LSP for its standard LSPS1 options and, when offered, its RGB asset roster with pricing. Requires the node to be configured with an LSPS1 LSP.",
-        "operationId": "info",
+        "summary": "List LSPs",
+        "description": "Lists the LSPs this node buys liquidity from (shared by LSPS1 and LSPS2), with their trust settings and the protocols they reported via LSPS0.",
+        "operationId": "lsps_list",
         "responses": {
           "200": {
-            "description": "LSP offering",
+            "description": "LSP list",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Lsps1InfoResponse"
+                  "$ref": "#/components/schemas/LspListResponse"
                 }
               }
             }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "lsps1"
+        ],
+        "summary": "Add or update an LSP",
+        "description": "Connects to the LSP and asks which protocols it supports (LSPS0). Only on success is the LSP saved; it survives restarts. Adding an existing pubkey updates its address, token and trust settings. 502 when the LSP cannot be reached or probed.",
+        "operationId": "lsps_add",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LspAddRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "LSP saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LspDto"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "LSP unreachable or LSPS0 probe failed"
           }
         },
         "security": [
@@ -1007,27 +1045,34 @@
         ]
       }
     },
-    "/lsps1/lsp": {
-      "get": {
+    "/lsps/{node_id}": {
+      "delete": {
         "tags": [
           "lsps1"
         ],
-        "summary": "Get configured LSP",
-        "description": "Returns the LSP this node currently buys channels from; 404 when none is configured.",
-        "operationId": "lsp_get",
+        "summary": "Remove an LSP",
+        "description": "Removes an LSP from the list. Refused with 409 while it has paid orders whose channel is not open yet.",
+        "operationId": "lsps_remove",
+        "parameters": [
+          {
+            "name": "node_id",
+            "in": "path",
+            "description": "LSP pubkey, hex-encoded.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Configured LSP",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Lsps1LspConfigDto"
-                }
-              }
-            }
+            "description": "LSP removed"
           },
           "404": {
-            "description": "No LSP configured"
+            "description": "Not in the LSP list"
+          },
+          "409": {
+            "description": "LSP has paid orders still pending"
           }
         },
         "security": [
@@ -1035,34 +1080,43 @@
             "bearer_auth": []
           }
         ]
-      },
-      "put": {
+      }
+    },
+    "/lsps1/info": {
+      "get": {
         "tags": [
           "lsps1"
         ],
-        "summary": "Set configured LSP",
-        "description": "Sets (or replaces) the LSP this node buys channels from. Persisted across restarts; takes effect for subsequent requests (the connection is made lazily). In-flight requests against the previous LSP time out. The configured LSP is trusted for 0-confirmation channels (same as configuring it at startup); a replaced LSP loses that trust.",
-        "operationId": "lsp_set",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/Lsps1LspConfigDto"
-              }
+        "summary": "Get LSP offerings",
+        "description": "Queries LSPS1 LSPs in parallel for their standard options and, when offered, their RGB asset roster with pricing. Without `lsp_node_id` every LSP supporting LSPS1 is asked; an LSP that fails or times out gets an `error` in its own entry and the response is still 200.",
+        "operationId": "info",
+        "parameters": [
+          {
+            "name": "lsp_node_id",
+            "in": "query",
+            "description": "Only query this LSP (hex pubkey).",
+            "required": false,
+            "schema": {
+              "type": "string"
             }
-          },
-          "required": true
-        },
+          }
+        ],
         "responses": {
           "200": {
-            "description": "LSP set",
+            "description": "One entry per LSP",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Lsps1LspConfigDto"
+                  "$ref": "#/components/schemas/Lsps1InfoListResponse"
                 }
               }
             }
+          },
+          "404": {
+            "description": "`lsp_node_id` is not in the LSP list"
+          },
+          "503": {
+            "description": "No LSPS1 LSP configured"
           }
         },
         "security": [
@@ -1140,7 +1194,7 @@
           "lsps1"
         ],
         "summary": "Order a BTC channel",
-        "description": "Places a plain BTC channel order with the configured LSP and returns the order with its payment options (bolt11 HOLD invoice, and an onchain deposit address when the LSP offers it). Pay one of them; the LSP opens the channel once the payment is in.",
+        "description": "Places a plain BTC channel order with the LSP given by `lsp_node_id` and returns the order with its payment options (bolt11 HOLD invoice, and an onchain deposit address when the LSP offers it). Pay one of them; the LSP opens the channel once the payment is in.",
         "operationId": "order_create",
         "requestBody": {
           "content": {
@@ -1177,7 +1231,7 @@
           "lsps1"
         ],
         "summary": "Check order status",
-        "description": "Queries the configured LSP for the current state of a previously placed order (BTC or RGB; RGB orders come back with their `rgb` section filled).",
+        "description": "Queries the LSP the order was placed with for its current state (BTC or RGB; RGB orders come back with their `rgb` section filled).",
         "operationId": "order_status",
         "parameters": [
           {
@@ -1342,7 +1396,7 @@
           "lsps1"
         ],
         "summary": "Order an RGB channel",
-        "description": "Places an RGB channel order with the configured LSP. The response includes the itemized RGB fee breakdown (onchain cost, BTC rent, asset rent, asset sale) on top of the standard payment options.",
+        "description": "Places an RGB channel order with the LSP given by `lsp_node_id`. The response includes the itemized RGB fee breakdown (onchain cost, BTC rent, asset rent, asset sale) on top of the standard payment options.",
         "operationId": "rgb_order_create",
         "requestBody": {
           "content": {
@@ -2009,7 +2063,7 @@
           "rgb-contracts"
         ],
         "summary": "Download consignment",
-        "description": "Returns a previously stored consignment by key. This is the follow-up download endpoint for `consignment_key` values returned by RGB export/send operations. The response body is binary and can be encoded as raw, gzip, or zip.",
+        "description": "Returns a stored consignment by key. The response body is binary and can be encoded as raw, gzip, or zip.",
         "operationId": "rgb_consignments_get",
         "parameters": [
           {
@@ -2150,7 +2204,7 @@
           "rgb-contracts"
         ],
         "summary": "Export RGB contract",
-        "description": "Exports a contract consignment for transfer or archival. By default it returns JSON containing a stored `consignment_key`; when `download=true` it streams the encoded bytes directly so they can be forwarded or saved immediately.",
+        "description": "Exports a contract consignment. By default it returns JSON with a consignment key; when `download=true` it returns the encoded consignment bytes directly.",
         "operationId": "rgb_contracts_export",
         "parameters": [
           {
@@ -3291,7 +3345,7 @@
           "swap"
         ],
         "summary": "Accept swap offer",
-        "description": "Taker accepts an out-of-band offer string, registering the intercept whitelist so the maker's circular payment can be forwarded once executed.\n\nNote: acceptance is currently local to the taker — the maker is NOT notified over the network, so the maker's own swap record stays `Offered` until it calls `/swap/execute`. Coordinate out-of-band: the taker must accept BEFORE the maker executes, otherwise the maker's forwarded HTLC is rejected (unknown payment hash) and the swap fails asynchronously.",
+        "description": "Taker accepts an out-of-band offer string, registering the intercept whitelist so the maker's circular payment can be forwarded once executed.\n\nAcceptance persists the bound quote and full route, then sends a best-effort acceptance notification to the maker. The maker must observe Accepted or coordinate acceptance out of band before using force.",
         "operationId": "accept",
         "requestBody": {
           "content": {
@@ -3365,7 +3419,7 @@
           "swap"
         ],
         "summary": "Execute swap",
-        "description": "Maker *initiates* the circular payment for a previously created offer. Accepts `swap_string` (preferred — required for multi-hop offers) or `payment_hash` (single-hop only — rejected with an error for multi-hop swaps, since the full path isn't stored under the payment hash alone).\n\n**A 200 response means the payment was initiated, NOT that the swap settled.** Settlement is asynchronous. The returned `status` is normally `InFlight`; poll `GET /swap/{payment_hash}` until it reaches `Settled` (success — channel balances have moved) or `Failed` (see `last_error` there).\n\nExecute is gated on acceptance: it refuses with `SwapNotAcceptedYet` until the taker's `/swap/accept` has reached this node over the network (the swap shows `Accepted`). Poll `GET /swap/{payment_hash}` for `Accepted` first, or pass `force: true` to bypass the gate (acceptance coordinated out-of-band, or an older taker that doesn't signal). Execute is also rejected up front if the taker lacks the channel BTC capacity to forward the BTC leg (`SwapInsufficientCounterpartyCapacity`) or the peer is offline.",
+        "description": "Maker *initiates* the circular payment for a previously created offer. Accepts the stable `execution_id` (or `payment_hash`) for both direct and multi-hop swaps; full paths, versioned plans and send attempts are persisted. `swap_string` remains supported. Optional `maker_to_taker` and `taker_to_maker` replacements must satisfy the accepted quote constraints. Re-executing after restart reconciles any prepared attempt with the payment engine before allowing another send.\n\n**A 200 response means the payment was initiated, NOT that the swap settled.** Settlement is asynchronous. The returned `status` is normally `InFlight`; poll `GET /swap/{payment_hash}` until it reaches `Settled` (success — channel balances have moved) or `Failed` (see `last_error` there).\n\nExecute is gated on acceptance: it refuses with `SwapNotAcceptedYet` until the taker's `/swap/accept` has reached this node over the network (the swap shows `Accepted`). Poll `GET /swap/{payment_hash}` for `Accepted` first, or pass `force: true` to bypass the gate (acceptance coordinated out-of-band, or an older taker that doesn't signal). Execute is also rejected up front if the taker lacks the channel BTC capacity to forward the BTC leg (`SwapInsufficientCounterpartyCapacity`) or the peer is offline.",
         "operationId": "execute",
         "requestBody": {
           "content": {
@@ -3469,7 +3523,7 @@
           "swap"
         ],
         "summary": "Create multi-hop swap offer",
-        "description": "Maker creates a multi-hop BTC<->RGB swap offer, providing the full circular route explicitly (rgb_path: maker -> ... -> taker; btc_path: taker -> ... -> maker). Path names are historical route halves, not channel types: with maker_gives_rgb=false, rgb_path carries BTC and btc_path carries RGB (btc_path.channel_scid must be RGB-capable on a direct sell).",
+        "description": "Create a quote with maker_to_taker and taker_to_maker routes (legacy rgb_path/btc_path aliases accepted). Bind the economic terms, circular HTLC settlement and routing constraints. The maker pays both leg fees; the return fee is deducted from the amount received by the maker. Supply constraints to authorize nonzero fees or route changes; omission binds the exact route with zero routing fees.",
         "operationId": "create_offer_multihop",
         "requestBody": {
           "content": {
@@ -3532,6 +3586,9 @@
           },
           "404": {
             "description": "Unknown swap"
+          },
+          "500": {
+            "description": "Corrupt or unsupported stored swap"
           }
         },
         "security": [
@@ -3568,6 +3625,39 @@
                 }
               }
             }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/swap/{payment_hash}/reconcile": {
+      "post": {
+        "tags": [
+          "swap"
+        ],
+        "summary": "Reconcile swap payment outcome without sending",
+        "operationId": "reconcile",
+        "parameters": [
+          {
+            "name": "payment_hash",
+            "in": "path",
+            "description": "Execution ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "NotRequired, OutcomeUnknown, Pending, Settled or Failed"
+          },
+          "500": {
+            "description": "Unreadable swap or persistence failure"
           }
         },
         "security": [
@@ -5333,6 +5423,97 @@
           }
         }
       },
+      "LspAddRequest": {
+        "type": "object",
+        "description": "Adds an LSP, or updates the entry with the same pubkey (`POST /lsps`).",
+        "required": [
+          "pubkey",
+          "address",
+          "trust_peer_0conf",
+          "trust_peer_no_reserve"
+        ],
+        "properties": {
+          "address": {
+            "type": "string",
+            "description": "LSP socket address, e.g. `203.0.113.5:9735`."
+          },
+          "pubkey": {
+            "type": "string",
+            "description": "LSP node pubkey, hex-encoded."
+          },
+          "token": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Access token sent to the LSP, if it requires one."
+          },
+          "trust_peer_0conf": {
+            "type": "boolean",
+            "description": "Accept 0conf channels from this LSP: they are usable before the funding\nconfirms, trusting the LSP not to double-spend it. Required for JIT channels."
+          },
+          "trust_peer_no_reserve": {
+            "type": "boolean",
+            "description": "Accept anchor channels from this LSP without keeping an on-chain reserve for\nforce-close fees (default 25,000 sats per channel). A force close then relies\non the LSP to get the transaction confirmed. Needed by clients with no on-chain BTC."
+          }
+        }
+      },
+      "LspDto": {
+        "type": "object",
+        "description": "One LSP in this node's LSP list (`GET /lsps`).",
+        "required": [
+          "pubkey",
+          "address",
+          "trust_peer_0conf",
+          "trust_peer_no_reserve"
+        ],
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "protocols": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            },
+            "description": "LSPS protocol numbers from LSPS0 (`1` = LSPS1, `2` = LSPS2); `null` until a\nprobe succeeds. Such an LSP is probed again when it is used."
+          },
+          "pubkey": {
+            "type": "string"
+          },
+          "token": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "trust_peer_0conf": {
+            "type": "boolean"
+          },
+          "trust_peer_no_reserve": {
+            "type": "boolean"
+          }
+        }
+      },
+      "LspListResponse": {
+        "type": "object",
+        "required": [
+          "lsps"
+        ],
+        "properties": {
+          "lsps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LspDto"
+            }
+          }
+        }
+      },
       "Lsps1AssetPricingDto": {
         "type": "object",
         "required": [
@@ -5440,9 +5621,52 @@
           }
         }
       },
+      "Lsps1InfoEntryDto": {
+        "type": "object",
+        "description": "One LSP's answer in `GET /lsps1/info`: either `info` or `error` is set.",
+        "required": [
+          "lsp_node_id"
+        ],
+        "properties": {
+          "error": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Same shape as an error response body."
+          },
+          "info": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Lsps1InfoResponse"
+              }
+            ]
+          },
+          "lsp_node_id": {
+            "type": "string"
+          }
+        }
+      },
+      "Lsps1InfoListResponse": {
+        "type": "object",
+        "required": [
+          "lsps"
+        ],
+        "properties": {
+          "lsps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Lsps1InfoEntryDto"
+            }
+          }
+        }
+      },
       "Lsps1InfoResponse": {
         "type": "object",
-        "description": "The configured LSP's offering (`GET /lsps1/info`).",
+        "description": "One LSP's offering.",
         "required": [
           "supported_options"
         ],
@@ -5471,31 +5695,6 @@
           },
           "supported_options": {
             "$ref": "#/components/schemas/Lsps1SupportedOptionsDto"
-          }
-        }
-      },
-      "Lsps1LspConfigDto": {
-        "type": "object",
-        "description": "The LSP this node buys channels from (`GET`/`PUT /lsps1/lsp`).",
-        "required": [
-          "pubkey",
-          "address"
-        ],
-        "properties": {
-          "address": {
-            "type": "string",
-            "description": "LSP socket address, e.g. `203.0.113.5:9735`."
-          },
-          "pubkey": {
-            "type": "string",
-            "description": "LSP node pubkey, hex-encoded."
-          },
-          "token": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Access token sent with orders, if the LSP requires one."
           }
         }
       },
@@ -5596,6 +5795,7 @@
       "Lsps1OrderCreateRequest": {
         "type": "object",
         "required": [
+          "lsp_node_id",
           "lsp_balance_sat",
           "channel_expiry_blocks"
         ],
@@ -5618,6 +5818,10 @@
             "type": "string",
             "pattern": "^[0-9]+$",
             "description": "Sats the LSP provides on its side (the inbound liquidity being bought)."
+          },
+          "lsp_node_id": {
+            "type": "string",
+            "description": "The LSP to order from (hex pubkey); must be in `GET /lsps`."
           }
         }
       },
@@ -5863,6 +6067,7 @@
       "Lsps1RgbOrderCreateRequest": {
         "type": "object",
         "required": [
+          "lsp_node_id",
           "asset_id",
           "lsp_asset_balance",
           "lsp_balance_sat",
@@ -5898,6 +6103,10 @@
           "lsp_balance_sat": {
             "type": "string",
             "pattern": "^[0-9]+$"
+          },
+          "lsp_node_id": {
+            "type": "string",
+            "description": "The LSP to order from (hex pubkey); must be in `GET /lsps`."
           }
         }
       },
@@ -5939,7 +6148,6 @@
         "required": [
           "bolt11_invoice_expiry_secs",
           "min_onchain_payment_confirmations",
-          "max_fulfill_retries",
           "auto_close_expired_channels",
           "channel_expiry_grace_blocks",
           "late_deposit_refund_window_secs"
@@ -5966,16 +6174,16 @@
             "pattern": "^[0-9]+$",
             "description": "How long after payment expiry a late deposit is still auto-refunded."
           },
-          "max_fulfill_retries": {
-            "type": "integer",
-            "format": "int32",
-            "description": "Channel-open retries before an order fails.",
-            "minimum": 0
-          },
           "min_onchain_payment_confirmations": {
             "type": "integer",
             "format": "int32",
             "description": "Confirmations before an onchain deposit counts as paid. 0 is raised to 1;\nvalues above 6 have no practical effect (bLIP-51 forces acceptance at 6).",
+            "minimum": 0
+          },
+          "onchain_open_timeout_blocks": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Blocks an onchain-paid order keeps retrying the channel open while the client is\nunreachable before giving up and refunding (bolt11 orders use the HTLC claim\ndeadline). Defaults to ~1 day if omitted.",
             "minimum": 0
           },
           "require_token": {
@@ -9062,10 +9270,10 @@
       },
       "SwapCreateMultihopOfferRequest": {
         "type": "object",
-        "description": "Request to create a multi-hop swap offer (maker side).\n\nUnlike [`SwapCreateOfferRequest`], the caller supplies the full circular route explicitly:\n`rgb_path` (maker -> ... -> taker) and `btc_path` (taker -> ... -> maker). The first hop of\n`btc_path` is marked as the swap-intercept hop on execution. These names describe the\nhistorical route halves, not the channel type: with `maker_gives_rgb=false`, `rgb_path`\ncarries the BTC counter-value and `btc_path` carries RGB. In a direct one-hop sell,\n`btc_path.channel_scid` must therefore identify the RGB channel.",
+        "description": "Request to create a multi-hop swap offer (maker side).\n\nSupply both directed halves of the circular route. Asset direction follows `maker_gives_rgb`.\nThe first return channel is bound as the taker's intercepted outgoing channel.\n`rgb_path` and `btc_path` remain input aliases for older clients.",
         "required": [
-          "rgb_path",
-          "btc_path",
+          "maker_to_taker",
+          "taker_to_maker",
           "contract_id",
           "asset_amount",
           "btc_amount_msat",
@@ -9086,11 +9294,16 @@
             "type": "string",
             "pattern": "^[0-9]+$"
           },
-          "btc_path": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/SwapHopDto"
-            }
+          "constraints": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RoutingConstraints"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Fee caps and mandatory nodes, LSPs and channels. Omission fixes the supplied route with zero routing fees."
           },
           "contract_id": {
             "type": "string"
@@ -9103,7 +9316,20 @@
           "maker_gives_rgb": {
             "type": "boolean"
           },
-          "rgb_path": {
+          "maker_to_taker": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SwapHopDto"
+            }
+          },
+          "policy_hints": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DirectionalPolicy"
+            },
+            "description": "Directed policy snapshots for private remote channels absent from gossip."
+          },
+          "taker_to_maker": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/SwapHopDto"
@@ -9163,8 +9389,15 @@
       },
       "SwapExecuteRequest": {
         "type": "object",
-        "description": "Request to execute a previously created offer (maker side). Provide either `swap_string`\n(required for multi-hop offers, and preferred in general) or `payment_hash` (single-hop only).",
+        "description": "Request to execute a previously created offer (maker side). Provide either `swap_string`\nor a stable `execution_id` (`payment_hash` is a compatibility alias), for either route type.",
         "properties": {
+          "execution_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Hex-encoded 32-byte payment hash."
+          },
           "force": {
             "type": [
               "boolean",
@@ -9172,18 +9405,36 @@
             ],
             "description": "Skip the \"taker has accepted\" gate. By default execute refuses until a `SWAP_ACCEPT` has\nadvanced the swap to `Accepted`; set this when acceptance was coordinated out-of-band or the\ntaker runs an older node that does not send the message. Defaults to `false`."
           },
-          "payment_hash": {
+          "maker_to_taker": {
             "type": [
-              "string",
+              "array",
               "null"
             ],
-            "description": "Hex-encoded 32-byte payment hash."
+            "items": {
+              "$ref": "#/components/schemas/SwapHopDto"
+            },
+            "description": "Optional replacement route within the accepted constraints. Both legs must be supplied."
+          },
+          "policy_hints": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DirectionalPolicy"
+            }
           },
           "swap_string": {
             "type": [
               "string",
               "null"
             ]
+          },
+          "taker_to_maker": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SwapHopDto"
+            }
           }
         }
       },
@@ -9191,11 +9442,15 @@
         "type": "object",
         "description": "Response to `POST /swap/execute`.\n\n**Important:** `ok: true` only means the circular payment was successfully *initiated*. It does\nNOT mean the swap has settled or that any channel balance has moved yet. Settlement is\nasynchronous — poll `GET /swap/{payment_hash}` until `status` reaches `\"Settled\"` (success) or\n`\"Failed\"` (see `last_error` there for the reason).",
         "required": [
+          "execution_id",
           "ok",
           "payment_hash",
           "status"
         ],
         "properties": {
+          "execution_id": {
+            "type": "string"
+          },
           "ok": {
             "type": "boolean",
             "description": "True when the payment was accepted for sending. Not a settlement guarantee — see the type\ndocs."
@@ -9232,6 +9487,7 @@
         "type": "object",
         "description": "A swap's full details, as returned by the create/accept/decode/list/get endpoints.",
         "required": [
+          "execution_id",
           "payment_hash",
           "role",
           "status",
@@ -9275,6 +9531,14 @@
             "type": "string",
             "pattern": "^[0-9]+$"
           },
+          "execution": {
+            "$ref": "#/components/schemas/SwapExecution",
+            "description": "Bound quote, selected paths and all versioned execution plans, including policy snapshots."
+          },
+          "execution_id": {
+            "type": "string",
+            "description": "Stable execution identifier; accepted by execute and the swap lookup endpoint."
+          },
           "expiry_secs": {
             "type": "integer",
             "format": "int32",
@@ -9282,7 +9546,7 @@
           },
           "is_multihop": {
             "type": "boolean",
-            "description": "True if this is a multi-hop swap. `POST /swap/execute` cannot execute these by\n`payment_hash` alone — pass the original `swap_string` instead."
+            "description": "Whether the quote uses an explicitly supplied circular route."
           },
           "last_error": {
             "type": [
@@ -9313,11 +9577,15 @@
         "type": "object",
         "description": "Response to a successful offer creation (single- or multi-hop).",
         "required": [
+          "execution_id",
           "swap_string",
           "payment_hash",
           "info"
         ],
         "properties": {
+          "execution_id": {
+            "type": "string"
+          },
           "info": {
             "$ref": "#/components/schemas/SwapInfoDto",
             "description": "The freshly created swap's details."
@@ -9328,7 +9596,7 @@
           },
           "swap_string": {
             "type": "string",
-            "description": "Out-of-band offer string (`rgb-swap:v1:...` or `rgb-swap:v2:...`) to hand to the\ncounterparty (e.g. via QR code or chat)."
+            "description": "Out-of-band offer string (`rgb-swap:v1:...` or `rgb-swap:v3:...`) to hand to the\ncounterparty (e.g. via QR code or chat)."
           }
         }
       },
@@ -9711,6 +9979,530 @@
             "description": "Ordinary BTC-account outpoints known to txoscope.\n\nRGB wallet outputs are intentionally excluded from this view."
           }
         }
+      },
+      "DirectionalPolicy": {
+        "type": "object",
+        "properties": {
+          "asset_id": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "type": "string"
+          },
+          "destination": {
+            "type": "string"
+          },
+          "channel_scid": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "base_fee_msat": {
+            "type": "integer"
+          },
+          "fee_proportional_millionths": {
+            "type": "integer"
+          },
+          "cltv_expiry_delta": {
+            "type": "integer"
+          },
+          "htlc_minimum_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "htlc_maximum_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "rgb_htlc_maximum": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "provenance": {
+            "type": "string"
+          },
+          "last_update": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "base_fee_msat",
+          "channel_scid",
+          "cltv_expiry_delta",
+          "destination",
+          "enabled",
+          "fee_proportional_millionths",
+          "htlc_maximum_msat",
+          "htlc_minimum_msat",
+          "provenance",
+          "rgb_htlc_maximum",
+          "source"
+        ]
+      },
+      "ExecutionPlan": {
+        "type": "object",
+        "properties": {
+          "format_version": {
+            "type": "integer"
+          },
+          "version": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "quote": {
+            "$ref": "#/components/schemas/SwapQuote"
+          },
+          "policy_snapshot_at_unix_secs": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "maker_to_taker": {
+            "$ref": "#/components/schemas/LegPlan"
+          },
+          "taker_to_maker": {
+            "$ref": "#/components/schemas/LegPlan"
+          }
+        },
+        "required": [
+          "format_version",
+          "maker_to_taker",
+          "policy_snapshot_at_unix_secs",
+          "quote",
+          "taker_to_maker",
+          "version"
+        ]
+      },
+      "HopPlan": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string"
+          },
+          "node_id": {
+            "type": "string"
+          },
+          "channel_scid": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "btc_input_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "btc_output_msat": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rgb_input": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "rgb_output": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "incoming_cltv_delta": {
+            "type": "integer"
+          },
+          "outgoing_cltv_delta": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "policy": {
+            "$ref": "#/components/schemas/DirectionalPolicy"
+          }
+        },
+        "required": [
+          "btc_input_msat",
+          "btc_output_msat",
+          "channel_scid",
+          "incoming_cltv_delta",
+          "node_id",
+          "policy",
+          "rgb_input",
+          "rgb_output",
+          "source"
+        ]
+      },
+      "LegConstraints": {
+        "type": "object",
+        "properties": {
+          "fixed_route": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/RouteEdge"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "required_nodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "required_channels": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[0-9]+$"
+            }
+          },
+          "required_lsps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "max_fee_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          }
+        },
+        "required": [
+          "max_fee_msat",
+          "required_channels",
+          "required_lsps",
+          "required_nodes"
+        ]
+      },
+      "LegPlan": {
+        "type": "object",
+        "properties": {
+          "direction": {
+            "$ref": "#/components/schemas/LegDirection"
+          },
+          "asset": {
+            "$ref": "#/components/schemas/LegAsset"
+          },
+          "fee_payer": {
+            "$ref": "#/components/schemas/FeePayer"
+          },
+          "constraints": {
+            "$ref": "#/components/schemas/LegConstraints"
+          },
+          "fee_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "hops": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HopPlan"
+            }
+          }
+        },
+        "required": [
+          "asset",
+          "constraints",
+          "direction",
+          "fee_msat",
+          "fee_payer",
+          "hops"
+        ]
+      },
+      "RouteEdge": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "string"
+          },
+          "channel_scid": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          }
+        },
+        "required": [
+          "channel_scid",
+          "node_id"
+        ]
+      },
+      "RoutingConstraints": {
+        "type": "object",
+        "properties": {
+          "maker_to_taker": {
+            "$ref": "#/components/schemas/LegConstraints"
+          },
+          "taker_to_maker": {
+            "$ref": "#/components/schemas/LegConstraints"
+          },
+          "max_total_cltv_delta": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "maker_to_taker",
+          "max_total_cltv_delta",
+          "taker_to_maker"
+        ]
+      },
+      "SendAttempt": {
+        "type": "object",
+        "properties": {
+          "plan_version": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AttemptStatus"
+          }
+        },
+        "required": [
+          "plan_version",
+          "status"
+        ]
+      },
+      "SwapExecution": {
+        "type": "object",
+        "properties": {
+          "format_version": {
+            "type": "integer"
+          },
+          "policy_hints": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DirectionalPolicy"
+            }
+          },
+          "quote": {
+            "$ref": "#/components/schemas/SwapQuote"
+          },
+          "maker_to_taker": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RouteEdge"
+            }
+          },
+          "taker_to_maker": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RouteEdge"
+            }
+          },
+          "selected_plan": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "plans": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExecutionPlan"
+            }
+          },
+          "attempts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SendAttempt"
+            }
+          }
+        },
+        "required": [
+          "attempts",
+          "format_version",
+          "maker_to_taker",
+          "plans",
+          "quote",
+          "selected_plan",
+          "taker_to_maker"
+        ]
+      },
+      "SwapQuote": {
+        "type": "object",
+        "properties": {
+          "execution_id": {
+            "type": "string"
+          },
+          "maker": {
+            "type": "string"
+          },
+          "taker": {
+            "type": "string"
+          },
+          "taker_outbound_channel_scid": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "asset_id": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "asset_amount": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "btc_amount_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "btc_carrier_amount_msat": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "maker_gives_rgb": {
+            "type": "boolean"
+          },
+          "created_at_unix_secs": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "expiry_secs": {
+            "type": "integer"
+          },
+          "settlement_mode": {
+            "$ref": "#/components/schemas/SettlementMode"
+          },
+          "maker_to_taker_fee_payer": {
+            "$ref": "#/components/schemas/FeePayer"
+          },
+          "taker_to_maker_fee_payer": {
+            "$ref": "#/components/schemas/FeePayer"
+          },
+          "constraints": {
+            "$ref": "#/components/schemas/RoutingConstraints"
+          }
+        },
+        "required": [
+          "asset_amount",
+          "asset_id",
+          "btc_amount_msat",
+          "btc_carrier_amount_msat",
+          "constraints",
+          "created_at_unix_secs",
+          "execution_id",
+          "expiry_secs",
+          "maker",
+          "maker_gives_rgb",
+          "maker_to_taker_fee_payer",
+          "settlement_mode",
+          "taker",
+          "taker_outbound_channel_scid",
+          "taker_to_maker_fee_payer"
+        ]
+      },
+      "AttemptStatus": {
+        "type": "string",
+        "enum": [
+          "Prepared",
+          "Submitted",
+          "SendRejected"
+        ]
+      },
+      "FeePayer": {
+        "type": "string",
+        "enum": [
+          "Maker"
+        ]
+      },
+      "LegAsset": {
+        "oneOf": [
+          {
+            "type": "string",
+            "const": "Btc"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "Rgb": {
+                "type": "object",
+                "properties": {
+                  "asset_id": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  }
+                },
+                "required": [
+                  "asset_id"
+                ]
+              }
+            },
+            "required": [
+              "Rgb"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "LegDirection": {
+        "type": "string",
+        "enum": [
+          "MakerToTaker",
+          "TakerToMaker"
+        ]
+      },
+      "SettlementMode": {
+        "type": "string",
+        "enum": [
+          "CircularHtlc"
+        ]
       }
     },
     "securitySchemes": {

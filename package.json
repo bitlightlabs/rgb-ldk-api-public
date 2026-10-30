@@ -4,7 +4,11 @@
   "packageManager": "pnpm@10.15.1",
   "scripts": {
     "gen": "python3 scripts/rgb-ldk-api.py gen",
-    "typecheck": "pnpm -r typecheck"
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm build && node --test tests/*.test.mjs",
+    "test:codegen": "python3 -m unittest discover -s tests -p 'test_*.py'",
+    "typecheck:examples": "pnpm exec tsc -p examples/tsconfig.json"
   },
   "devDependencies": {
     "typescript": "^5.4.0"

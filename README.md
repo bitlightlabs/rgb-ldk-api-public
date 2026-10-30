@@ -1,29 +1,55 @@
-# rgb-ldk-api (generated mirror repo)
+# rgb-ldk-api
 
-This repository is a permission-friendly mirror of `rgb-ldk-node` API artifacts plus generated clients.
+This repository copies the request and response definitions from `rgb-ldk-node`
+and generates Rust and TypeScript clients from them.
 
-Current workflow (manual, no CI/registries):
+TypeScript callers use `RgbLdkNodeClient.getJson`, `postJson`, and `deleteJson`
+with the generated request and response types, including for swaps.
 
-1) Sync generated artifacts from `rgb-ldk-node` into this repo:
+- [Swap frontend integration guide](docs/swap-frontend-guide.md): quote confirmation,
+  execution identifiers, routes, fees, recovery, errors, and migration.
+- [TypeScript swap examples](examples/swap.ts) and
+  [complete response examples used by tests](tests/fixtures/README.md).
+
+## Update the generated files
+
+Run these steps manually; the packages are not published to a package registry.
+
+1. Copy definitions and the OpenAPI document from the node repository:
+
+   ```bash
+   python3 scripts/rgbldk_api_sync.py sync --node-repo ~/work/rgb-ldk-node --git-commit
+   ```
+
+2. Generate types and clients from the copied Rust definitions:
+
+   ```bash
+   python3 scripts/rgb-ldk-api.py gen
+   ```
+
+3. Open `docs/openapi.html` to view the OpenAPI document. It reads
+   `generated/spec/openapi.json`.
+
+The synchronization step overwrites `generated/`, including the OpenAPI document.
+It defaults `--api-repo` to the current repository. With `--git-commit`, it stages
+both `generated/` and `crates/rgbldk_http_dto/` for the commit. The generation step
+overwrites `packages/*/src/generated.ts` and `crates/*/src/generated.rs`.
+
+Synchronization copies swap plan types from the same upstream commit and adds
+their complete OpenAPI field definitions. `generated/spec/source.json` records
+the source revision and these additions. Generation uses the copied OpenAPI
+document and removes local path details from `source.json`; this cleanup can
+also be run separately with `python3 scripts/rgb-ldk-api.py sanitize`.
+
+Unsigned 64-bit values serialized as decimal strings are represented by
+`U64String` in TypeScript to preserve their precision.
+
+## Run checks
 
 ```bash
-python3 scripts/rgbldk_api_sync.py sync --node-repo ~/work/rgb-ldk-node --git-commit
+pnpm test:codegen
+pnpm test
+pnpm typecheck
+pnpm typecheck:examples
+cargo test --workspace
 ```
-
-2) Generate DTO types + clients from the synced Rust DTO source:
-
-```bash
-python3 scripts/rgb-ldk-api.py gen
-```
-
-3) View the synced OpenAPI doc (Redoc):
-
-- open `docs/openapi.html` (it reads `generated/spec/openapi.json`)
-
-Notes:
-
-- `generated/` is overwritten by the sync step, including `generated/spec/openapi.json`.
-- `python3 scripts/rgbldk_api_sync.py sync` defaults `--api-repo` to the current repo, and stages both `generated/` and `crates/rgbldk_http_dto/` when `--git-commit` is used.
-- `packages/*/src/generated.ts` and `crates/*/src/generated.rs` are overwritten by the gen step.
-- `python3 scripts/rgb-ldk-api.py gen` no longer rebuilds OpenAPI; it consumes the synced spec and also sanitizes `generated/spec/source.json` (you can run `python3 scripts/rgb-ldk-api.py sanitize` standalone).
-- u64 values that are serialized as decimal strings in JSON are represented as `U64String` in TS.

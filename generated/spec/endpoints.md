@@ -192,25 +192,35 @@
 * **Description:** Returns the list of socket addresses currently advertised by the node.
 * **Response (200):** `ListeningAddressesResponse`
 
+### GET `/api/v1/lsps`
+
+* **Summary:** List LSPs
+* **Description:** Lists the LSPs this node buys liquidity from (shared by LSPS1 and LSPS2), with their trust settings and the protocols they reported via LSPS0.
+* **Response (200):** `LspListResponse`
+
+### POST `/api/v1/lsps`
+
+* **Summary:** Add or update an LSP
+* **Description:** Connects to the LSP and asks which protocols it supports (LSPS0). Only on success is the LSP saved; it survives restarts. Adding an existing pubkey updates its address, token and trust settings. 502 when the LSP cannot be reached or probed.
+* **Request Body:** `LspAddRequest`
+* **Response (200):** `LspDto`
+* **Response (502):** LSP unreachable or LSPS0 probe failed
+
+### DELETE `/api/v1/lsps/{node_id}`
+
+* **Summary:** Remove an LSP
+* **Description:** Removes an LSP from the list. Refused with 409 while it has paid orders whose channel is not open yet.
+* **Response (200):** LSP removed
+* **Response (404):** Not in the LSP list
+* **Response (409):** LSP has paid orders still pending
+
 ### GET `/api/v1/lsps1/info`
 
-* **Summary:** Get LSP offering
-* **Description:** Queries the configured LSP for its standard LSPS1 options and, when offered, its RGB asset roster with pricing. Requires the node to be configured with an LSPS1 LSP.
-* **Response (200):** `Lsps1InfoResponse`
-
-### GET `/api/v1/lsps1/lsp`
-
-* **Summary:** Get configured LSP
-* **Description:** Returns the LSP this node currently buys channels from; 404 when none is configured.
-* **Response (200):** `Lsps1LspConfigDto`
-* **Response (404):** No LSP configured
-
-### PUT `/api/v1/lsps1/lsp`
-
-* **Summary:** Set configured LSP
-* **Description:** Sets (or replaces) the LSP this node buys channels from. Persisted across restarts; takes effect for subsequent requests (the connection is made lazily). In-flight requests against the previous LSP time out. The configured LSP is trusted for 0-confirmation channels (same as configuring it at startup); a replaced LSP loses that trust.
-* **Request Body:** `Lsps1LspConfigDto`
-* **Response (200):** `Lsps1LspConfigDto`
+* **Summary:** Get LSP offerings
+* **Description:** Queries LSPS1 LSPs in parallel for their standard options and, when offered, their RGB asset roster with pricing. Without `lsp_node_id` every LSP supporting LSPS1 is asked; an LSP that fails or times out gets an `error` in its own entry and the response is still 200.
+* **Response (200):** `Lsps1InfoListResponse`
+* **Response (404):** `lsp_node_id` is not in the LSP list
+* **Response (503):** No LSPS1 LSP configured
 
 ### GET `/api/v1/lsps1/options`
 
@@ -228,14 +238,14 @@
 ### POST `/api/v1/lsps1/order`
 
 * **Summary:** Order a BTC channel
-* **Description:** Places a plain BTC channel order with the configured LSP and returns the order with its payment options (bolt11 HOLD invoice, and an onchain deposit address when the LSP offers it). Pay one of them; the LSP opens the channel once the payment is in.
+* **Description:** Places a plain BTC channel order with the LSP given by `lsp_node_id` and returns the order with its payment options (bolt11 HOLD invoice, and an onchain deposit address when the LSP offers it). Pay one of them; the LSP opens the channel once the payment is in.
 * **Request Body:** `Lsps1OrderCreateRequest`
 * **Response (200):** `Lsps1OrderResponse`
 
 ### GET `/api/v1/lsps1/order/{order_id}`
 
 * **Summary:** Check order status
-* **Description:** Queries the configured LSP for the current state of a previously placed order (BTC or RGB; RGB orders come back with their `rgb` section filled).
+* **Description:** Queries the LSP the order was placed with for its current state (BTC or RGB; RGB orders come back with their `rgb` section filled).
 * **Response (200):** `Lsps1OrderResponse`
 
 ### GET `/api/v1/lsps1/orders`
@@ -266,7 +276,7 @@
 ### POST `/api/v1/lsps1/rgb_order`
 
 * **Summary:** Order an RGB channel
-* **Description:** Places an RGB channel order with the configured LSP. The response includes the itemized RGB fee breakdown (onchain cost, BTC rent, asset rent, asset sale) on top of the standard payment options.
+* **Description:** Places an RGB channel order with the LSP given by `lsp_node_id`. The response includes the itemized RGB fee breakdown (onchain cost, BTC rent, asset rent, asset sale) on top of the standard payment options.
 * **Request Body:** `Lsps1RgbOrderCreateRequest`
 * **Response (200):** `Lsps1OrderResponse`
 
@@ -393,7 +403,7 @@
 ### GET `/api/v1/rgb/consignments/{consignment_key}`
 
 * **Summary:** Download consignment
-* **Description:** Returns a previously stored consignment by key. This is the follow-up download endpoint for `consignment_key` values returned by RGB export/send operations. The response body is binary and can be encoded as raw, gzip, or zip.
+* **Description:** Returns a stored consignment by key. The response body is binary and can be encoded as raw, gzip, or zip.
 * **Response (200):** `binary`
 
 ### GET `/api/v1/rgb/contract/{contract_id}/balance`
@@ -417,7 +427,7 @@
 ### POST `/api/v1/rgb/contracts/export`
 
 * **Summary:** Export RGB contract
-* **Description:** Exports a contract consignment for transfer or archival. By default it returns JSON containing a stored `consignment_key`; when `download=true` it streams the encoded bytes directly so they can be forwarded or saved immediately.
+* **Description:** Exports a contract consignment. By default it returns JSON with a consignment key; when `download=true` it returns the encoded consignment bytes directly.
 * **Request Body:** `RgbContractsExportRequest`
 * **Response (200):** `RgbContractsExportResponse`
 
@@ -619,7 +629,7 @@
 * **Summary:** Accept swap offer
 * **Description:** Taker accepts an out-of-band offer string, registering the intercept whitelist so the maker's circular payment can be forwarded once executed.
 
-Note: acceptance is currently local to the taker — the maker is NOT notified over the network, so the maker's own swap record stays `Offered` until it calls `/swap/execute`. Coordinate out-of-band: the taker must accept BEFORE the maker executes, otherwise the maker's forwarded HTLC is rejected (unknown payment hash) and the swap fails asynchronously.
+Acceptance persists the bound quote and full route, then sends a best-effort acceptance notification to the maker. The maker must observe Accepted or coordinate acceptance out of band before using force.
 * **Request Body:** `SwapStringRequest`
 * **Response (200):** `SwapInfoDto`
 
@@ -633,7 +643,7 @@ Note: acceptance is currently local to the taker — the maker is NOT notified o
 ### POST `/api/v1/swap/execute`
 
 * **Summary:** Execute swap
-* **Description:** Maker *initiates* the circular payment for a previously created offer. Accepts `swap_string` (preferred — required for multi-hop offers) or `payment_hash` (single-hop only — rejected with an error for multi-hop swaps, since the full path isn't stored under the payment hash alone).
+* **Description:** Maker *initiates* the circular payment for a previously created offer. Accepts the stable `execution_id` (or `payment_hash`) for both direct and multi-hop swaps; full paths, versioned plans and send attempts are persisted. `swap_string` remains supported. Optional `maker_to_taker` and `taker_to_maker` replacements must satisfy the accepted quote constraints. Re-executing after restart reconciles any prepared attempt with the payment engine before allowing another send.
 
 **A 200 response means the payment was initiated, NOT that the swap settled.** Settlement is asynchronous. The returned `status` is normally `InFlight`; poll `GET /swap/{payment_hash}` until it reaches `Settled` (success — channel balances have moved) or `Failed` (see `last_error` there).
 
@@ -657,7 +667,7 @@ Execute is gated on acceptance: it refuses with `SwapNotAcceptedYet` until the t
 ### POST `/api/v1/swap/offers/multihop`
 
 * **Summary:** Create multi-hop swap offer
-* **Description:** Maker creates a multi-hop BTC<->RGB swap offer, providing the full circular route explicitly (rgb_path: maker -> ... -> taker; btc_path: taker -> ... -> maker). Path names are historical route halves, not channel types: with maker_gives_rgb=false, rgb_path carries BTC and btc_path carries RGB (btc_path.channel_scid must be RGB-capable on a direct sell).
+* **Description:** Create a quote with maker_to_taker and taker_to_maker routes (legacy rgb_path/btc_path aliases accepted). Bind the economic terms, circular HTLC settlement and routing constraints. The maker pays both leg fees; the return fee is deducted from the amount received by the maker. Supply constraints to authorize nonzero fees or route changes; omission binds the exact route with zero routing fees.
 * **Request Body:** `SwapCreateMultihopOfferRequest`
 * **Response (200):** `SwapOfferResponse`
 
@@ -673,6 +683,13 @@ Execute is gated on acceptance: it refuses with `SwapNotAcceptedYet` until the t
 * **Description:** Returns the full details of a single swap by payment hash. **This is the source of truth for whether a swap actually completed** — poll it after `/swap/execute`: the swap succeeded only once `status` is `Settled` (channel balances have moved). If `status` is `Failed`, `last_error` carries the reason (e.g. `RetriesExhausted`). A swap stuck at `InFlight`/`Accepted` has not completed.
 * **Response (200):** `SwapInfoDto`
 * **Response (404):** Unknown swap
+* **Response (500):** Corrupt or unsupported stored swap
+
+### POST `/api/v1/swap/{payment_hash}/reconcile`
+
+* **Summary:** Reconcile swap payment outcome without sending
+* **Response (200):** NotRequired, OutcomeUnknown, Pending, Settled or Failed
+* **Response (500):** Unreadable swap or persistence failure
 
 ### GET `/api/v1/version`
 

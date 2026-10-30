@@ -1,6 +1,8 @@
 // Generated. Do not edit.
 // Run: `pnpm gen` at repo root.
 
+import { HttpError } from "./http-error.js";
+
 export type TokenSource =
   | { kind: "none" }
   | { kind: "fixed"; token: string }
@@ -38,7 +40,11 @@ export class RgbLdkNodeClient {
     const headers = await this.authHeader();
     const res = await this.fetchImpl(url, { method: "GET", headers });
     const text = await res.text();
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${text}`);
+
+    if (!res.ok) {
+      throw new HttpError(res.status, text);
+    }
+
     return JSON.parse(text) as T;
   }
 
@@ -50,7 +56,24 @@ export class RgbLdkNodeClient {
     };
     const res = await this.fetchImpl(url, { method: "POST", headers, body: JSON.stringify(body) });
     const text = await res.text();
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${text}`);
+
+    if (!res.ok) {
+      throw new HttpError(res.status, text);
+    }
+
+    return JSON.parse(text) as T;
+  }
+
+  async deleteJson<T>(path: string): Promise<T> {
+    const url = `${this.baseUrl}${path.startsWith("/") ? "" : "/"}${path}`;
+    const headers = await this.authHeader();
+    const res = await this.fetchImpl(url, { method: "DELETE", headers });
+    const text = await res.text();
+
+    if (!res.ok) {
+      throw new HttpError(res.status, text);
+    }
+
     return JSON.parse(text) as T;
   }
 }

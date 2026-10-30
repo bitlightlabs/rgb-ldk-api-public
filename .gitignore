@@ -4,4 +4,4 @@ packages/*/dist/
 packages/*/*.tsbuildinfo
 target/
 Cargo.lock
-.DS_Store
+__pycache__/
