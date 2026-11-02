@@ -5,7 +5,7 @@ import argparse
 import json
 import re
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field as dataclass_field
 from pathlib import Path
 
 
@@ -34,6 +34,8 @@ class Field:
 class Struct:
     name: str
     fields: list[Field]
+    # Types of #[serde(flatten)] fields: their fields sit at the same JSON level.
+    flatten: list[str] = dataclass_field(default_factory=list)
 
 
 @dataclass
@@ -184,6 +186,7 @@ def parse_rust_dtos(lines: list[str]) -> tuple[list[Struct], list[Enum]]:
             name = m.group(1)
             i += 1
             fields: list[Field] = []
+            flatten: list[str] = []
             field_attrs: list[str] = []
             while i < len(lines):
                 l = lines[i].strip()
@@ -194,7 +197,13 @@ def parse_rust_dtos(lines: list[str]) -> tuple[list[Struct], list[Enum]]:
                 if l.startswith("}"):
                     break
                 fm = re.match(r"pub\s+([A-Za-z0-9_#]+)\s*:\s*([^,]+),", l)
-                if fm:
+                if fm and is_flatten(field_attrs):
+                    rust_ty = fm.group(2).strip()
+                    if not re.fullmatch(r"[A-Za-z0-9_]+", rust_ty):
+                        raise SystemExit(f"{name}.{fm.group(1)}: unsupported #[serde(flatten)] type {rust_ty}")
+                    flatten.append(rust_ty)
+                    field_attrs = []
+                elif fm:
                     raw_name = fm.group(1)
                     rust_ty = fm.group(2).strip()
                     json_name = field_json_name(raw_name, field_attrs)
@@ -212,7 +221,7 @@ def parse_rust_dtos(lines: list[str]) -> tuple[list[Struct], list[Enum]]:
                     )
                     field_attrs = []
                 i += 1
-            structs.append(Struct(name=name, fields=fields))
+            structs.append(Struct(name=name, fields=fields, flatten=flatten))
             attrs = []
             i += 1
             continue
@@ -251,6 +260,8 @@ def parse_rust_dtos(lines: list[str]) -> tuple[list[Struct], list[Enum]]:
                         if vl.startswith("}"):
                             break
                         fm = re.match(r"([A-Za-z0-9_#]+)\s*:\s*([^,]+),", vl)
+                        if fm and is_flatten(field_attrs):
+                            raise SystemExit(f"{name}::{vname}: #[serde(flatten)] in enum variants is not supported")
                         if fm:
                             raw_name = fm.group(1)
                             rust_ty = fm.group(2).strip()
@@ -425,6 +436,10 @@ def is_optional_field(rust_ty: str, attrs: list[str]) -> bool:
     )
 
 
+def is_flatten(attrs: list[str]) -> bool:
+    return any(re.search(r"serde\s*\([^)]*\bflatten\b", a) for a in attrs)
+
+
 def is_u64_decimal_string(attrs: list[str]) -> bool:
     for a in attrs:
         if re.search(r'with\s*=\s*"decimal(?:_option|_vec)?"', a):
@@ -478,8 +493,13 @@ def render_ts_types(structs: list[Struct], enums: list[Enum]) -> str:
     out.append("export type U64String = string;")
     out.append("")
 
+    struct_names = {s.name for s in structs}
     for s in structs:
-        out.append(f"export interface {s.name} " + "{")
+        for base in s.flatten:
+            if base not in struct_names:
+                raise SystemExit(f"{s.name}: #[serde(flatten)] type {base} is not a known struct")
+        extends = f"extends {', '.join(s.flatten)} " if s.flatten else ""
+        out.append(f"export interface {s.name} {extends}" + "{")
         for f in s.fields:
             key = f.name
             # Preserve JSON name if it differs: use string literal key.
@@ -909,6 +929,8 @@ def schema_for_struct(s: Struct) -> dict:
     sch: dict = {"type": "object", "properties": props}
     if required:
         sch["required"] = sorted(required)
+    if s.flatten:
+        return {"allOf": [*({"$ref": f"#/components/schemas/{b}"} for b in s.flatten), sch]}
     return sch
 
 

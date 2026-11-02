@@ -615,9 +615,8 @@ export interface Lsps2OptionsDto {
   unpaid_channel_close_secs: U64String;
 }
 
-export interface Lsps2OptionsResponse {
+export interface Lsps2OptionsResponse extends Lsps2OptionsDto {
   advertise_service: boolean;
-  options: Lsps2OptionsDto;
 }
 
 export interface Lsps2QuoteRequest {
@@ -647,8 +646,7 @@ export interface Lsps2RgbFeeDto {
   asset_rent_sat: U64String;
 }
 
-export interface Lsps2RgbInvoiceRequest {
-  quote: Lsps2RgbQuoteRequest;
+export interface Lsps2RgbInvoiceRequest extends Lsps2RgbQuoteRequest {
   max_fee_sat: U64String;
   description?: string;
   expiry_secs: number;

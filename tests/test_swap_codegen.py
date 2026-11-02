@@ -67,6 +67,42 @@ class SwapCodegenTests(unittest.TestCase):
         self.assertEqual(schema["properties"]["output"]["anyOf"][1], {"type": "null"})
         self.assertEqual(schema["properties"]["channels"]["items"]["type"], "string")
 
+    def test_flatten_fields_share_the_json_level(self):
+        structs, _ = codegen.parse_rust_dtos([
+            "pub struct Inner {",
+            "pub fee_ppm: u32,",
+            "}",
+            "pub struct Outer {",
+            "pub advertise: bool,",
+            "#[serde(flatten)]",
+            "pub inner: Inner,",
+            "}",
+        ])
+        types = codegen.render_ts_types(structs, [])
+        self.assertIn("export interface Outer extends Inner {", types)
+        self.assertNotIn("inner:", types)
+        outer = next(s for s in structs if s.name == "Outer")
+        schema = codegen.schema_for_struct(outer)
+        self.assertEqual(schema["allOf"][0], {"$ref": "#/components/schemas/Inner"})
+        self.assertEqual(schema["allOf"][1]["required"], ["advertise"])
+
+    def test_unsupported_flatten_fails_loudly(self):
+        with self.assertRaises(SystemExit):
+            codegen.parse_rust_dtos([
+                "pub struct Outer {",
+                "#[serde(flatten)]",
+                "pub inner: Option<Inner>,",
+                "}",
+            ])
+        structs, _ = codegen.parse_rust_dtos([
+            "pub struct Outer {",
+            "#[serde(flatten)]",
+            "pub inner: Unknown,",
+            "}",
+        ])
+        with self.assertRaises(SystemExit):
+            codegen.render_ts_types(structs, [])
+
     def test_extraction_excludes_domain_behavior_and_retains_codecs(self):
         source = '''#[derive(Serialize, Deserialize)]
 pub struct Quote {
