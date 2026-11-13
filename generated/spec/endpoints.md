@@ -708,7 +708,7 @@ Execute is gated on acceptance: it refuses with `SwapNotAcceptedYet` until the t
 ### POST `/api/v1/swap/offers/multihop`
 
 * **Summary:** Create multi-hop swap offer
-* **Description:** Create a quote with maker_to_taker and taker_to_maker routes (legacy rgb_path/btc_path aliases accepted). Bind the economic terms, circular HTLC settlement and routing constraints. The maker pays both leg fees; the return fee is deducted from the amount received by the maker. Supply constraints to authorize nonzero fees or route changes; omission binds the exact route with zero routing fees.
+* **Description:** Create a quote with maker_to_taker and taker_to_maker routes (legacy rgb_path/btc_path aliases accepted). Bind the economic terms, circular HTLC settlement and routing constraints. The maker pays both leg fees; the return fee is deducted from the amount received by the maker. Supply constraints to authorize nonzero fees or route changes; omission binds the exact route with max_fee_msat = 0 on both legs. Fees are derived from directional channel base and proportional forwarding fees; 1000 msat is not a universal protocol minimum. Execution returns SwapFeeBudgetTooLow with the leg, provided_max_fee_msat and required_min_fee_msat when a budget is exceeded.
 * **Request Body:** `SwapCreateMultihopOfferRequest`
 * **Response (200):** `SwapOfferResponse`
 

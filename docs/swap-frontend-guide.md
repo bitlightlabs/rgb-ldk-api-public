@@ -556,11 +556,66 @@ query without creating a replacement swap.
 | `SwapCounterpartyOffline` | Check the other node's connection and channel readiness. |
 | `SwapInsufficientCapacity` | Check the maker's outbound channel capacity. |
 | `SwapInsufficientCounterpartyCapacity` | The taker cannot forward the quoted bitcoin amount. Check its bitcoin capacity; this does not establish a shortage of RGB units. |
-| `SwapInvalidRoute` | Check route direction, RGB support, policies, fees, carrier, constraints, and expiry intervals. |
+| `SwapFeeBudgetTooLow` | Read `details.leg` and the decimal-string budget and required fee. Create and accept a new quote to authorize a higher fee cap, or replan within the existing cap. |
+| `SwapRgbChannelRequired` | Select an RGB-capable channel for the RGB hop. |
+| `SwapAssetMismatch` | Select a channel carrying the quoted asset. |
+| `SwapChannelDisabled` | Select an enabled channel direction. |
+| `SwapRoutingPolicyMissing` | Refresh gossip or provide the missing remote policy hint. |
+| `SwapLocalChannelMissing` | Refresh local channel identifiers. |
+| `SwapHtlcAmountOutOfRange` | Adjust the BTC amount to the channel HTLC limits. |
+| `SwapRgbAmountExceedsLimit` | Reduce the asset amount or select another channel. |
+| `SwapCarrierAmountTooLow` | Increase the RGB carrier amount. |
+| `SwapChannelCltvInvalid` | Correct the zero-CLTV policy. |
+| `SwapCltvLimitExceeded` | Adjust the route or accepted CLTV limit. |
+| `SwapFixedRouteMismatch` | Restore the accepted fixed path. |
+| `SwapRequiredNodeMissing` | Restore mandatory nodes in their accepted order. |
+| `SwapRequiredChannelMissing` | Include each mandatory channel. |
+| `SwapRequiredLspMissing` | Include each mandatory LSP. |
+| `SwapRouteShapeInvalid` | Correct endpoints, hop order and channel identifiers. |
+| `SwapQuoteTermsInvalid` | Correct economic amounts and expiry. |
+| `SwapQuoteMismatch` | Supply the accepted quote. |
+| `SwapExecutionMissing` | Create and accept a fresh offer with a bound execution. |
+| `SwapPlanMissing` | Select an execution plan before sending. |
+| `SwapPlanMismatch` | Replan against the accepted quote and current policies. |
+| `SwapReplanningUnsupported` | Use a backend supporting replanning. |
+| `SwapAmountOverflow` | Reduce amounts or fees. |
+| `SwapOnionAmountTooLow` | Increase the carrier or select a lower-fee route. |
+| `SwapOnionEncodingMismatch` | Replan; report a persistent encoder/plan mismatch. |
 | `PaymentSendingFailed` | The send may have been rejected or its outcome may be unknown. Query the record and inspect the latest attempt. |
 | `PersistenceFailed` | Keep the identifier and query or recover. A failed save does not prove that resending is safe. |
 | `InvalidPaymentHash` or `InvalidAmount` | Check the identifier, state, quote validity period, and terms. These codes cover several validation failures. |
 | Status query returns 404 | Check the node identity, identifier, and whether the record was deleted locally. Do not automatically create another transaction. |
+
+Fee failures have this response shape:
+
+```json
+{
+  "error": "SwapFeeBudgetTooLow",
+  "code": "SwapFeeBudgetTooLow",
+  "message": "The fee budget for the taker_to_maker leg (999 msat) is below the required routing fee (1000 msat). Raise max_fee_msat to at least 1000.",
+  "details": {
+    "leg": "taker_to_maker",
+    "provided_max_fee_msat": "999",
+    "required_min_fee_msat": "1000"
+  }
+}
+```
+
+`leg` identifies the direction, not the asset: use `maker_gives_rgb` to identify
+which direction carries RGB. Keep fee values as decimal strings or use `BigInt`
+for arithmetic. The required fee comes from the selected route's directional
+base and proportional forwarding policies. The 1000 msat value in this example
+is route-specific. Omitted constraints authorize zero routing fees on both legs.
+Accepted fee caps are quote terms; raising one requires a new accepted quote.
+
+These codes require the node changes in
+[bitlightlabs/rgb-ldk-node#236](https://github.com/bitlightlabs/rgb-ldk-node/pull/236).
+Deploy the matching node revision when adopting this guide. Preserve unknown
+codes and the original message for servers exposing a different error surface.
+The TypeScript client preserves parsed JSON in `HttpError.body` and the exact
+response in `rawBody`; the Rust client preserves the response in
+`ClientError::NonSuccess { status, body }`. Neither client needs a closed error
+code enum to retain new diagnostics.
 
 Cancellation deletes the maker's local record. It does not notify the taker,
 withdraw a conditional payment, or issue a refund. It is available only for
@@ -661,3 +716,40 @@ null outputs, asset representations, legacy input aliases, request paths,
 authentication, and request failures without automatic resending. Client tests
 use simulated responses. Live Lightning and on-chain payment behavior is tested
 in the upstream node repository.
+
+## Structured validation diagnostics
+
+Specific validation errors carry a typed `details` object. Its `kind` identifies
+which values were observed at the failing check. The generated
+`SwapValidationErrorResponse` and `SwapFailureDetails` types describe this wire
+contract. Fee-budget failures retain their existing `leg` and fee fields.
+
+| `details.kind` | Diagnostic values |
+| --- | --- |
+| `channel_policy` | Leg, zero-based hop index, computed BTC/RGB amount, expected asset and the actual directional policy, including SCID, asset, BTC/RGB HTLC limits and CLTV delta. |
+| `channel_capacity` | SCID, peer, usability, available inbound/outbound BTC capacity, RGB limits and the required amounts. Null means the value was unavailable or that direction/asset was not required. |
+| `route_constraints` | Leg, actual route and accepted fixed route / required nodes, channels and LSPs. |
+| `route_binding` | Quote and both actual paths, carrier minimum, allowed CLTV range and maximum hop count. |
+| `cltv_limit` | Computed total CLTV, accepted maximum and exclusive protocol bound. |
+| `channel_lookup` | Leg, zero-based hop index, source, destination and missing SCID. |
+| `policy_count` / `policy_binding` | Expected versus actual policy count, or the edge/source and policy that disagree. |
+| `plan_selection` / `plan_comparison` | Expected and actual quote/version or execution plan. |
+| `arithmetic` / `forwarding_fee` | Operands and operation, or amount/base fee/proportional rate involved in overflow. |
+| `onion_hop` | Expected and reconstructed BTC/RGB amounts and CLTV at the failing hop. |
+
+64-bit amounts and SCIDs use decimal strings, including nested policy and quote fields.
+32-bit policy base fees, rates and CLTV deltas remain JSON numbers.
+Keep these strings or convert them with `BigInt`; avoid conversion through a
+JavaScript `number`. Diagnostic leg names use the existing `LegDirection` wire
+values (`MakerToTaker` and `TakerToMaker`); fee-budget details retain their
+existing snake-case names.
+
+For example, a capacity rejection can identify channel `9007199254740993`,
+`outbound_capacity_msat: "999"` and `required_outbound_msat: "1000"`, while a
+CLTV rejection can report `actual_total_cltv_delta: 327` and
+`max_total_cltv_delta: 200`. Callers can present the actual shortfall instead of
+asking users to inspect node logs.
+
+See [the typed diagnostic example](../examples/swap-diagnostics.ts) for narrowing by `details.kind`.
+
+`details` contains the innermost failing check. When callers add further structured observations, `context` retains them in caller-to-failure order. Both fields preserve the original values through error wrapping.

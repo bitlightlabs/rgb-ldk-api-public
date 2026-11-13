@@ -139,3 +139,47 @@ test("connection errors and plain-text server errors remain distinguishable", as
   );
   assert.equal(sends, 1);
 });
+
+for (const leg of ["maker_to_taker", "taker_to_maker"]) {
+  test(`fee rejection preserves ${leg} details and sends once`, async () => {
+    const body = {
+      error: "SwapFeeBudgetTooLow", code: "SwapFeeBudgetTooLow",
+      message: "The selected leg exceeds its accepted fee budget.",
+      details: { leg, provided_max_fee_msat: "999", required_min_fee_msat: "9007199254740993" },
+    };
+    const rawBody = JSON.stringify(body);
+    const { client, calls } = clientWith(() => new Response(rawBody, { status: 400 }));
+    await assert.rejects(client.postJson("/api/v1/swap/execute", { execution_id: id }), (error) => {
+      assert.ok(error instanceof HttpError);
+      assert.equal(error.status, 400);
+      assert.equal(error.rawBody, rawBody);
+      assert.deepEqual(error.body, body);
+      return true;
+    });
+    assert.equal(calls.length, 1);
+  });
+}
+
+test("concrete channel errors and future codes survive HTTP conversion", async () => {
+  for (const code of ["SwapRgbChannelRequired", "SwapAssetMismatch", "SwapRequiredChannelMissing", "FutureSwapError"]) {
+    const body = { error: code, code, message: "diagnostic from node" };
+    const { client } = clientWith(() => Response.json(body, { status: 400 }));
+    await assert.rejects(client.postJson("/api/v1/swap/execute", { execution_id: id }), (error) => {
+      assert.deepEqual(error.body, body);
+      return true;
+    });
+  }
+});
+
+test("validation diagnostics retain observed limits and precise channel identifiers", async () => {
+  const failures = JSON.parse(await readFile(new URL("./fixtures/swap-validation-errors.json", import.meta.url)));
+  for (const body of failures) {
+    const { client, calls } = clientWith(() => Response.json(body, { status: 400 }));
+    await assert.rejects(client.postJson("/api/v1/swap/execute", { execution_id: id }), (error) => {
+      assert.deepEqual(error.body.details, body.details);
+      assert.equal(error.body.code, body.code);
+      return true;
+    });
+    assert.equal(calls.length, 1);
+  }
+});

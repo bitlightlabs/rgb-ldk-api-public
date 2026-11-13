@@ -1450,6 +1450,14 @@ export interface SwapStringRequest {
   swap_string: string;
 }
 
+export interface SwapValidationErrorResponse {
+  error: string;
+  code: string;
+  message: string;
+  details: SwapFailureDetails;
+  context?: SwapFailureDetails[];
+}
+
 export interface VersionResponse {
   api_version: string;
   api_crate_version: string;
@@ -1605,6 +1613,103 @@ export type RgbUtxoConfirmationStatusDto = "confirmed" | "mempool";
 export type RgbUtxoLockKindDto = "none" | "manual_reservation" | "operation";
 
 export type SettlementMode = "CircularHtlc";
+
+export type SwapFailureDetails =
+  | { "kind": "format_version";
+      "actual_version": number;
+      "supported_version": number;
+    }
+  | { "kind": "quote_comparison";
+      "expected": SwapQuote;
+      "actual": SwapQuote;
+    }
+  | { "kind": "plan_comparison";
+      "expected": ExecutionPlan;
+      "actual": ExecutionPlan;
+    }
+  | { "kind": "plan_selection";
+      "expected_quote": SwapQuote;
+      "actual_quote": SwapQuote;
+      "expected_version": number;
+      "actual_version": U64String;
+    }
+  | { "kind": "policy_binding";
+      "hop_index": number;
+      "expected_source": string;
+      "expected_edge": RouteEdge;
+      "policy": DirectionalPolicy;
+    }
+  | { "kind": "forwarding_fee";
+      "amount_msat": U64String;
+      "base_fee_msat": number;
+      "fee_proportional_millionths": number;
+    }
+  | { "kind": "onion_hop";
+      "hop_index": number;
+      "channel_scid": U64String;
+      "expected_btc_msat": U64String;
+      "actual_btc_msat": U64String;
+      "expected_cltv_delta": number;
+      "actual_cltv_delta": number;
+      "expected_rgb_amount": U64String | null;
+      "actual_rgb_amount": U64String | null;
+    }
+  | { "kind": "channel_capacity";
+      "channel_scid": U64String;
+      "counterparty_node_id": string;
+      "is_usable": boolean;
+      "outbound_capacity_msat": U64String;
+      "inbound_capacity_msat": U64String;
+      "rgb_outbound_limit": U64String | null;
+      "rgb_inbound_limit": U64String | null;
+      "required_outbound_msat": U64String | null;
+      "required_inbound_msat": U64String | null;
+      "required_rgb_amount": U64String | null;
+    }
+  | { "kind": "channel_policy";
+      "leg": LegDirection;
+      "hop_index": number;
+      "btc_amount_msat": U64String;
+      "rgb_amount": U64String | null;
+      "expected_asset_id": number[];
+      "policy": DirectionalPolicy;
+    }
+  | { "kind": "route_constraints";
+      "leg": LegDirection;
+      "actual_route": RouteEdge[];
+      "required": LegConstraints;
+    }
+  | { "kind": "route_binding";
+      "minimum_carrier_msat": U64String;
+      "minimum_total_cltv_delta": number;
+      "maximum_total_cltv_delta": number;
+      "maximum_hops": number;
+      "quote": SwapQuote;
+      "maker_to_taker": RouteEdge[];
+      "taker_to_maker": RouteEdge[];
+    }
+  | { "kind": "cltv_limit";
+      "actual_total_cltv_delta": number;
+      "max_total_cltv_delta": number;
+      "protocol_max_exclusive": number;
+    }
+  | { "kind": "channel_lookup";
+      "leg": LegDirection;
+      "hop_index": number;
+      "source": string;
+      "destination": string;
+      "channel_scid": U64String;
+    }
+  | { "kind": "policy_count";
+      "expected": number;
+      "actual": number;
+    }
+  | { "kind": "arithmetic";
+      "operation": string;
+      "left": U64String;
+      "right": U64String;
+    }
+;
 
 export type WalletUtxoAvailabilityDto = "blocked_by_policy" | "blocked_by_spend" | "locked" | "recovering" | "reserved" | "selectable" | "unknown";
 

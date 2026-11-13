@@ -366,7 +366,7 @@ def consume_attr(lines: list[str], i: int) -> tuple[str, int]:
 
 def parse_enum_serde_tag(attrs: list[str]) -> tuple[str | None, str | None]:
     for a in attrs:
-        if a.startswith("#[serde(") and "tag" in a and "content" in a:
+        if a.startswith("#[serde(") and re.search(r"\btag\s*=", a):
             # #[serde(tag = "type", content = "data")]
             tag_m = re.search(r'tag\s*=\s*"([^"]+)"', a)
             content_m = re.search(r'content\s*=\s*"([^"]+)"', a)
@@ -511,7 +511,21 @@ def render_ts_types(structs: list[Struct], enums: list[Enum]) -> str:
         out.append("")
 
     for e in enums:
-        if e.serde_tag and e.serde_content:
+        if e.serde_tag and not e.serde_content:
+            out.append(f"export type {e.name} =")
+            for v in e.variants:
+                tag = f'{{ "{e.serde_tag}": "{v.json_name}"; }}'
+                if v.tuple_ty is not None:
+                    value = ts_type_for(Field("value", "value", v.tuple_ty, False, False))
+                    out.append(f"  | ({tag} & {value})")
+                    continue
+                out.append(f'  | {{ "{e.serde_tag}": "{v.json_name}";')
+                for f in v.fields:
+                    opt = "?" if f.optional else ""
+                    out.append(f'      "{f.json_name}"{opt}: {ts_type_for(f)};')
+                out.append("    }")
+            out.extend([";", ""])
+        elif e.serde_tag and e.serde_content:
             parts: list[str] = []
             for v in e.variants:
                 if v.tuple_ty is not None:
@@ -935,6 +949,20 @@ def schema_for_struct(s: Struct) -> dict:
 
 
 def schema_for_enum(e: Enum) -> dict:
+    if e.serde_tag and not e.serde_content:
+        variants = []
+        for v in e.variants:
+            props = {e.serde_tag: {"const": v.json_name}}
+            required = [e.serde_tag]
+            for f in v.fields:
+                props[f.json_name] = schema_for_field(f)
+                if not f.optional:
+                    required.append(f.json_name)
+            schema = {"type": "object", "properties": props, "required": required}
+            if v.tuple_ty is not None:
+                schema = {"allOf": [schema, schema_ref_or_inline(v.tuple_ty)]}
+            variants.append(schema)
+        return {"oneOf": variants}
     if e.serde_tag and e.serde_content:
         one_of: list[dict] = []
         for v in e.variants:

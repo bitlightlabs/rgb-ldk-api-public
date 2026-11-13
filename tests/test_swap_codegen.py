@@ -200,6 +200,38 @@ mod decimal {}
         self.assertIn("pub struct SwapInfoDto", stripped.content)
         self.assertNotIn("application::", stripped.content)
 
+    def test_diagnostics_dto_after_adapter_is_retained(self):
+        source = sync.DtoSource(
+            Path("crates/node-http/src/dto/swap.rs"), Path("src/dto/swap.rs"),
+            "pub struct SwapInfoDto {}\n"
+            "impl From<application::SwapView> for SwapInfoDto { fn from(_: application::SwapView) -> Self { todo!() } }\n"
+            "pub struct SwapValidationErrorResponse { pub code: String }\n"
+            "#[cfg(test)]\nmod tests { fn sample() {} }\n",
+        )
+        stripped, = sync.StripDomainAdaptersPass().run((source,))
+        self.assertIn("pub struct SwapValidationErrorResponse", stripped.content)
+        self.assertNotIn("application::", stripped.content)
+        self.assertNotIn("mod tests", stripped.content)
+
+    def test_internally_tagged_diagnostics_preserve_decimal_fields(self):
+        _, enums = codegen.parse_rust_dtos([
+            '#[derive(Serialize, Deserialize)]',
+            '#[serde(tag = "kind", rename_all = "snake_case")]',
+            'pub enum Detail {',
+            '    Capacity {',
+            '        #[serde(with = "decimal")]',
+            '        required_msat: u64,',
+            '    },',
+            '}',
+        ])
+        rendered = codegen.render_ts_types([], enums)
+        self.assertIn('"kind": "capacity"', rendered)
+        self.assertIn('"required_msat": U64String', rendered)
+        schema = codegen.schema_for_enum(enums[0])["oneOf"][0]
+        self.assertEqual(schema["properties"]["kind"], {"const": "capacity"})
+        self.assertEqual(schema["properties"]["required_msat"]["type"], "string")
+        self.assertIn("required_msat", schema["required"])
+
     def test_generation_is_reproducible(self):
         paths = [
             ROOT / "packages/rgbldk-node-api-types/src/generated.ts",

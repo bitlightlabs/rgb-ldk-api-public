@@ -5,3 +5,4 @@ packages/*/*.tsbuildinfo
 target/
 Cargo.lock
 __pycache__/
+.DS_Store

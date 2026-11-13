@@ -2,6 +2,149 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Diagnostic equality compares every captured value, including the failing hop and policy.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+#[non_exhaustive]
+pub enum SwapFailureDetails {
+	FormatVersion {
+		actual_version: u32,
+		supported_version: u32,
+	},
+	QuoteComparison {
+		expected: SwapQuote,
+		actual: SwapQuote,
+	},
+	PlanComparison {
+		expected: ExecutionPlan,
+		actual: ExecutionPlan,
+	},
+	PlanSelection {
+		expected_quote: SwapQuote,
+		actual_quote: SwapQuote,
+		expected_version: usize,
+		#[serde(with = "decimal")]
+	#[schema(value_type = String)]
+		actual_version: u64,
+	},
+	PolicyBinding {
+		hop_index: usize,
+		expected_source: String,
+		expected_edge: RouteEdge,
+		policy: DirectionalPolicy,
+	},
+	ForwardingFee {
+		#[serde(with = "decimal")]
+	#[schema(value_type = String)]
+		amount_msat: u64,
+		base_fee_msat: u32,
+		fee_proportional_millionths: u32,
+	},
+	OnionHop {
+		hop_index: usize,
+		#[serde(with = "decimal")]
+	#[schema(value_type = String)]
+		channel_scid: u64,
+		#[serde(with = "decimal")]
+	#[schema(value_type = String)]
+		expected_btc_msat: u64,
+		#[serde(with = "decimal")]
+	#[schema(value_type = String)]
+		actual_btc_msat: u64,
+		expected_cltv_delta: u32,
+		actual_cltv_delta: u32,
+		#[serde(with = "decimal_option")]
+	#[schema(value_type = Option<String>)]
+		expected_rgb_amount: Option<u64>,
+		#[serde(with = "decimal_option")]
+	#[schema(value_type = Option<String>)]
+		actual_rgb_amount: Option<u64>,
+	},
+	ChannelCapacity {
+		#[serde(with = "decimal")]
+	#[schema(value_type = String)]
+		channel_scid: u64,
+		counterparty_node_id: String,
+		is_usable: bool,
+		#[serde(with = "decimal")]
+	#[schema(value_type = String)]
+		outbound_capacity_msat: u64,
+		#[serde(with = "decimal")]
+	#[schema(value_type = String)]
+		inbound_capacity_msat: u64,
+		#[serde(with = "decimal_option")]
+	#[schema(value_type = Option<String>)]
+		rgb_outbound_limit: Option<u64>,
+		#[serde(with = "decimal_option")]
+	#[schema(value_type = Option<String>)]
+		rgb_inbound_limit: Option<u64>,
+		#[serde(with = "decimal_option")]
+	#[schema(value_type = Option<String>)]
+		required_outbound_msat: Option<u64>,
+		#[serde(with = "decimal_option")]
+	#[schema(value_type = Option<String>)]
+		required_inbound_msat: Option<u64>,
+		#[serde(with = "decimal_option")]
+	#[schema(value_type = Option<String>)]
+		required_rgb_amount: Option<u64>,
+	},
+	ChannelPolicy {
+		leg: LegDirection,
+		hop_index: usize,
+		#[serde(with = "decimal")]
+	#[schema(value_type = String)]
+		btc_amount_msat: u64,
+		#[serde(with = "decimal_option")]
+	#[schema(value_type = Option<String>)]
+		rgb_amount: Option<u64>,
+		expected_asset_id: Vec<u8>,
+		policy: DirectionalPolicy,
+	},
+	RouteConstraints {
+		leg: LegDirection,
+		actual_route: Vec<RouteEdge>,
+		required: LegConstraints,
+	},
+	RouteBinding {
+		#[serde(with = "decimal")]
+	#[schema(value_type = String)]
+		minimum_carrier_msat: u64,
+		minimum_total_cltv_delta: u32,
+		maximum_total_cltv_delta: u32,
+		maximum_hops: usize,
+		quote: SwapQuote,
+		maker_to_taker: Vec<RouteEdge>,
+		taker_to_maker: Vec<RouteEdge>,
+	},
+	CltvLimit {
+		actual_total_cltv_delta: u32,
+		max_total_cltv_delta: u32,
+		protocol_max_exclusive: u32,
+	},
+	ChannelLookup {
+		leg: LegDirection,
+		hop_index: usize,
+		source: String,
+		destination: String,
+		#[serde(with = "decimal")]
+	#[schema(value_type = String)]
+		channel_scid: u64,
+	},
+	PolicyCount {
+		expected: usize,
+		actual: usize,
+	},
+	Arithmetic {
+		operation: String,
+		#[serde(with = "decimal")]
+	#[schema(value_type = String)]
+		left: u64,
+		#[serde(with = "decimal")]
+	#[schema(value_type = String)]
+		right: u64,
+	},
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct RouteEdge {
 	pub node_id: String,
@@ -43,7 +186,7 @@ pub enum FeePayer {
 	Maker,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, utoipa::ToSchema)]
 pub enum LegDirection {
 	MakerToTaker,
 	TakerToMaker,
@@ -217,7 +360,7 @@ impl DecimalInput {
 	}
 }
 
-mod decimal {
+pub(crate) mod decimal {
 	use super::*;
 
 	pub fn serialize<S: serde::Serializer>(value: &u64, serializer: S) -> Result<S::Ok, S::Error> {
@@ -229,7 +372,7 @@ mod decimal {
 	}
 }
 
-mod decimal_option {
+pub(crate) mod decimal_option {
 	use super::*;
 
 	pub fn serialize<S: serde::Serializer>(v: &Option<u64>, s: S) -> Result<S::Ok, S::Error> {

@@ -173,3 +173,17 @@ pub struct SwapInfoDto {
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub last_error: Option<String>,
 }
+
+/// A swap validation failure carrying observations from the failing check.
+/// Fee-budget failures retain their existing fee-specific details object.
+#[derive(Debug, Clone, Deserialize, Serialize, ToSchema)]
+#[non_exhaustive]
+pub struct SwapValidationErrorResponse {
+	pub error: String,
+	pub code: String,
+	pub message: String,
+	pub details: SwapFailureDetails,
+	/// Outer validation observations, ordered from the caller toward the failure.
+	#[serde(default, skip_serializing_if = "Vec::is_empty")]
+	pub context: Vec<SwapFailureDetails>,
+}

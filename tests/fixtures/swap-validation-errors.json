@@ -1,0 +1,31 @@
+[
+  {
+    "error": "SwapInsufficientCapacity",
+    "code": "SwapInsufficientCapacity",
+    "message": "The local channel has insufficient outbound capacity for the swap.",
+    "details": {
+      "kind": "channel_capacity",
+      "channel_scid": "9007199254740993",
+      "counterparty_node_id": "peer",
+      "is_usable": true,
+      "outbound_capacity_msat": "999",
+      "inbound_capacity_msat": "2000",
+      "rgb_outbound_limit": "12",
+      "rgb_inbound_limit": null,
+      "required_outbound_msat": "1000",
+      "required_inbound_msat": null,
+      "required_rgb_amount": "13"
+    }
+  },
+  {
+    "error": "SwapCltvLimitExceeded",
+    "code": "SwapCltvLimitExceeded",
+    "message": "The planned CLTV exceeds the accepted or protocol limit.",
+    "details": {
+      "kind": "cltv_limit",
+      "actual_total_cltv_delta": 327,
+      "max_total_cltv_delta": 200,
+      "protocol_max_exclusive": 500000000
+    }
+  }
+]

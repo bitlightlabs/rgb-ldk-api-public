@@ -184,19 +184,9 @@ class StripDomainAdaptersPass:
     def run(self, sources: tuple[DtoSource, ...]) -> tuple[DtoSource, ...]:
         outputs = []
         for source in sources:
-            content = source.content
+            content = self._strip_domain_from_impls(source.content)
             if source.source_path.name == "swap.rs":
-                # The swap module's trailing adapter and tests belong to the node.
-                for marker in (
-                    "\nimpl From<crate::swap::SwapInfo>",
-                    "\nimpl From<application::SwapView>",
-                    "\nimpl From<rgb_ldk_node::SwapInfo>",
-                ):
-                    if marker in content:
-                        content = content.split(marker, 1)[0]
-                        break
-            else:
-                content = self._strip_domain_from_impls(content)
+                content = content.split("#[cfg(test)]", 1)[0]
             outputs.append(replace(source, content=content.rstrip()))
         return tuple(outputs)
 
@@ -373,14 +363,17 @@ class SwapPlansPass:
         if not any(self.PREFIX in source.content for source in sources):
             return sources, document
 
-        wire_source = self._wire_source((self._node_repo / self.SOURCE).read_text(encoding="utf-8"))
+        plan_source = (self._node_repo / self.SOURCE).read_text(encoding="utf-8")
+        diagnostics_path = self._node_repo / "crates/application/src/swap_diagnostics.rs"
+        diagnostics_source = diagnostics_path.read_text(encoding="utf-8") if diagnostics_path.exists() else ""
+        wire_source = self._wire_source(diagnostics_source + "\n" + plan_source)
         outputs = []
 
         for source in sources:
             content = source.content
 
-            if self.PREFIX in content:
-                content = content.replace(self.PREFIX, "")
+            if self.PREFIX in content or "application::swap_diagnostics::" in content:
+                content = content.replace(self.PREFIX, "").replace("application::swap_diagnostics::", "")
                 content = content.replace(
                     "use super::serde_u64_decimal_string;",
                     "use super::serde_u64_decimal_string;\nuse super::swap_plan::*;",
@@ -728,7 +721,10 @@ class ExportPipeline:
         info = sources.info
 
         if enriched is not document:
-            info = replace(info, schema_enrichments=("application::swap_plan wire types",))
+            enrichments = ["application::swap_plan wire types"]
+            if (self._node_repo / "crates/application/src/swap_diagnostics.rs").exists():
+                enrichments.append("application::swap_diagnostics wire types")
+            info = replace(info, schema_enrichments=tuple(enrichments))
 
         artifacts = RenderArtifactsPass().run(info, enriched, dtos)
         WriteArtifactsPass(output_dir.resolve()).run(artifacts)

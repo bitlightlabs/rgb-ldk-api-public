@@ -1,10 +1,11 @@
 {
   "api_version": "v1",
-  "generated_at_utc": "2026-10-30T08:49:29Z",
-  "node_commit": "5c97e220489f81a5728121355ce1624fdc4d036e",
+  "generated_at_utc": "2026-11-05T02:43:22Z",
+  "node_commit": "f6f2d3491c8b97cd3376c463fb0806b441fe5502",
   "node_package_version": "0.7.0-bitlight.7",
   "node_repo": "bitlightlabs/rgb-ldk-node",
   "schema_enrichments": [
-    "application::swap_plan wire types"
+    "application::swap_plan wire types",
+    "application::swap_diagnostics wire types"
   ]
 }

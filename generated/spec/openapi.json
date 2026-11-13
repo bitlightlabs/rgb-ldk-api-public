@@ -3733,7 +3733,7 @@
           "swap"
         ],
         "summary": "Create multi-hop swap offer",
-        "description": "Create a quote with maker_to_taker and taker_to_maker routes (legacy rgb_path/btc_path aliases accepted). Bind the economic terms, circular HTLC settlement and routing constraints. The maker pays both leg fees; the return fee is deducted from the amount received by the maker. Supply constraints to authorize nonzero fees or route changes; omission binds the exact route with zero routing fees.",
+        "description": "Create a quote with maker_to_taker and taker_to_maker routes (legacy rgb_path/btc_path aliases accepted). Bind the economic terms, circular HTLC settlement and routing constraints. The maker pays both leg fees; the return fee is deducted from the amount received by the maker. Supply constraints to authorize nonzero fees or route changes; omission binds the exact route with max_fee_msat = 0 on both legs. Fees are derived from directional channel base and proportional forwarding fees; 1000 msat is not a universal protocol minimum. Execution returns SwapFeeBudgetTooLow with the leg, provided_max_fee_msat and required_min_fee_msat when a budget is exceeded.",
         "operationId": "create_offer_multihop",
         "requestBody": {
           "content": {
@@ -10272,6 +10272,37 @@
           }
         }
       },
+      "SwapValidationErrorResponse": {
+        "type": "object",
+        "description": "A swap validation failure carrying observations from the failing check.\nFee-budget failures retain their existing fee-specific details object.",
+        "required": [
+          "error",
+          "code",
+          "message",
+          "details"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "context": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SwapFailureDetails"
+            },
+            "description": "Outer validation observations, ordered from the caller toward the failure."
+          },
+          "details": {
+            "$ref": "#/components/schemas/SwapFailureDetails"
+          },
+          "error": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
       "VersionResponse": {
         "type": "object",
         "description": "Version metadata.",
@@ -11162,6 +11193,520 @@
         "type": "string",
         "enum": [
           "CircularHtlc"
+        ]
+      },
+      "SwapFailureDetails": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "format_version"
+              },
+              "actual_version": {
+                "type": "integer"
+              },
+              "supported_version": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "kind",
+              "actual_version",
+              "supported_version"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "quote_comparison"
+              },
+              "expected": {
+                "$ref": "#/components/schemas/SwapQuote"
+              },
+              "actual": {
+                "$ref": "#/components/schemas/SwapQuote"
+              }
+            },
+            "required": [
+              "kind",
+              "expected",
+              "actual"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "plan_comparison"
+              },
+              "expected": {
+                "$ref": "#/components/schemas/ExecutionPlan"
+              },
+              "actual": {
+                "$ref": "#/components/schemas/ExecutionPlan"
+              }
+            },
+            "required": [
+              "kind",
+              "expected",
+              "actual"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "plan_selection"
+              },
+              "expected_quote": {
+                "$ref": "#/components/schemas/SwapQuote"
+              },
+              "actual_quote": {
+                "$ref": "#/components/schemas/SwapQuote"
+              },
+              "expected_version": {
+                "type": "integer"
+              },
+              "actual_version": {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              }
+            },
+            "required": [
+              "kind",
+              "expected_quote",
+              "actual_quote",
+              "expected_version",
+              "actual_version"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "policy_binding"
+              },
+              "hop_index": {
+                "type": "integer"
+              },
+              "expected_source": {
+                "type": "string"
+              },
+              "expected_edge": {
+                "$ref": "#/components/schemas/RouteEdge"
+              },
+              "policy": {
+                "$ref": "#/components/schemas/DirectionalPolicy"
+              }
+            },
+            "required": [
+              "kind",
+              "hop_index",
+              "expected_source",
+              "expected_edge",
+              "policy"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "forwarding_fee"
+              },
+              "amount_msat": {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              },
+              "base_fee_msat": {
+                "type": "integer"
+              },
+              "fee_proportional_millionths": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "kind",
+              "amount_msat",
+              "base_fee_msat",
+              "fee_proportional_millionths"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "onion_hop"
+              },
+              "hop_index": {
+                "type": "integer"
+              },
+              "channel_scid": {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              },
+              "expected_btc_msat": {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              },
+              "actual_btc_msat": {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              },
+              "expected_cltv_delta": {
+                "type": "integer"
+              },
+              "actual_cltv_delta": {
+                "type": "integer"
+              },
+              "expected_rgb_amount": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[0-9]+$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "actual_rgb_amount": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[0-9]+$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "hop_index",
+              "channel_scid",
+              "expected_btc_msat",
+              "actual_btc_msat",
+              "expected_cltv_delta",
+              "actual_cltv_delta",
+              "expected_rgb_amount",
+              "actual_rgb_amount"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "channel_capacity"
+              },
+              "channel_scid": {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              },
+              "counterparty_node_id": {
+                "type": "string"
+              },
+              "is_usable": {
+                "type": "boolean"
+              },
+              "outbound_capacity_msat": {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              },
+              "inbound_capacity_msat": {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              },
+              "rgb_outbound_limit": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[0-9]+$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "rgb_inbound_limit": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[0-9]+$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "required_outbound_msat": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[0-9]+$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "required_inbound_msat": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[0-9]+$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "required_rgb_amount": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[0-9]+$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "kind",
+              "channel_scid",
+              "counterparty_node_id",
+              "is_usable",
+              "outbound_capacity_msat",
+              "inbound_capacity_msat",
+              "rgb_outbound_limit",
+              "rgb_inbound_limit",
+              "required_outbound_msat",
+              "required_inbound_msat",
+              "required_rgb_amount"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "channel_policy"
+              },
+              "leg": {
+                "$ref": "#/components/schemas/LegDirection"
+              },
+              "hop_index": {
+                "type": "integer"
+              },
+              "btc_amount_msat": {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              },
+              "rgb_amount": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[0-9]+$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "expected_asset_id": {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                }
+              },
+              "policy": {
+                "$ref": "#/components/schemas/DirectionalPolicy"
+              }
+            },
+            "required": [
+              "kind",
+              "leg",
+              "hop_index",
+              "btc_amount_msat",
+              "rgb_amount",
+              "expected_asset_id",
+              "policy"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "route_constraints"
+              },
+              "leg": {
+                "$ref": "#/components/schemas/LegDirection"
+              },
+              "actual_route": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/RouteEdge"
+                }
+              },
+              "required": {
+                "$ref": "#/components/schemas/LegConstraints"
+              }
+            },
+            "required": [
+              "kind",
+              "leg",
+              "actual_route",
+              "required"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "route_binding"
+              },
+              "minimum_carrier_msat": {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              },
+              "minimum_total_cltv_delta": {
+                "type": "integer"
+              },
+              "maximum_total_cltv_delta": {
+                "type": "integer"
+              },
+              "maximum_hops": {
+                "type": "integer"
+              },
+              "quote": {
+                "$ref": "#/components/schemas/SwapQuote"
+              },
+              "maker_to_taker": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/RouteEdge"
+                }
+              },
+              "taker_to_maker": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/RouteEdge"
+                }
+              }
+            },
+            "required": [
+              "kind",
+              "minimum_carrier_msat",
+              "minimum_total_cltv_delta",
+              "maximum_total_cltv_delta",
+              "maximum_hops",
+              "quote",
+              "maker_to_taker",
+              "taker_to_maker"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "cltv_limit"
+              },
+              "actual_total_cltv_delta": {
+                "type": "integer"
+              },
+              "max_total_cltv_delta": {
+                "type": "integer"
+              },
+              "protocol_max_exclusive": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "kind",
+              "actual_total_cltv_delta",
+              "max_total_cltv_delta",
+              "protocol_max_exclusive"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "channel_lookup"
+              },
+              "leg": {
+                "$ref": "#/components/schemas/LegDirection"
+              },
+              "hop_index": {
+                "type": "integer"
+              },
+              "source": {
+                "type": "string"
+              },
+              "destination": {
+                "type": "string"
+              },
+              "channel_scid": {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              }
+            },
+            "required": [
+              "kind",
+              "leg",
+              "hop_index",
+              "source",
+              "destination",
+              "channel_scid"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "policy_count"
+              },
+              "expected": {
+                "type": "integer"
+              },
+              "actual": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "kind",
+              "expected",
+              "actual"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "const": "arithmetic"
+              },
+              "operation": {
+                "type": "string"
+              },
+              "left": {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              },
+              "right": {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              }
+            },
+            "required": [
+              "kind",
+              "operation",
+              "left",
+              "right"
+            ]
+          }
         ]
       }
     },
