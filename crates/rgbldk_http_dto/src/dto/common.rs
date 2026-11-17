@@ -457,6 +457,20 @@ pub struct PaymentDetailsDto {
 	/// Fee paid in millisatoshis, if known.
 	#[serde(default, with = "serde_opt_u64_decimal_string")]
 	pub fee_paid_msat: Option<u64>,
+	/// When this payment last changed (Unix seconds). For a `Succeeded` inbound payment this
+	/// is when it was received.
+	#[serde(default, with = "serde_u64_decimal_string")]
+	#[schema(value_type = String)]
+	pub updated_at_unix_secs: u64,
+	/// When the invoice of an inbound payment expires (Unix seconds). A `Pending` payment cannot be
+	/// paid after this time. Absent for outbound payments and payments without an invoice.
+	#[serde(
+		default,
+		with = "serde_opt_u64_decimal_string",
+		skip_serializing_if = "Option::is_none"
+	)]
+	#[schema(value_type = Option<String>)]
+	pub expires_at_unix_secs: Option<u64>,
 	/// Kind-specific details (when available).
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub kind_details: Option<serde_json::Value>,
@@ -685,7 +699,8 @@ pub struct ChannelDetailsExtendedDto {
 	/// RGB asset balance in this channel, if any.
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub rgb_balance: Option<RgbChannelBalanceDto>,
-	/// Present when this channel was bought from an LSP via LSPS1; `null` otherwise.
+	/// Set when this channel was bought from an LSP (LSPS1 order or LSPS2 JIT channel). `null`
+	/// otherwise.
 	#[serde(default)]
 	pub lsp: Option<ChannelLspLeaseDto>,
 }
@@ -698,11 +713,22 @@ pub struct ChannelLspLeaseDto {
 	pub pubkey: String,
 	/// LSP socket address at order time.
 	pub address: String,
-	/// bLIP-51 order id the channel was bought with.
-	pub order_id: String,
-	/// Chain height when the funding was observed (lease start).
+	/// `lsps1` (bought with an order) or `lsps2` (JIT channel).
+	pub protocol: String,
+	/// bLIP-51 order id the channel was bought with; `null` for a JIT channel.
+	pub order_id: Option<String>,
+	/// JIT channel: fee the LSP took from the first payment. `null` for a variable-amount invoice;
+	/// then see the payment's `counterparty_skimmed_fee_msat`.
+	#[serde(default, with = "serde_opt_u64_decimal_string")]
+	pub opening_fee_msat: Option<u64>,
+	/// JIT channel: the CLTV delta of the LSP's hop in the invoice.
+	#[serde(default)]
+	pub cltv_expiry_delta: Option<u32>,
+	/// Chain height when the lease started. LSPS1: when the funding was seen. JIT: when the payment
+	/// that opened the channel was received.
 	pub funded_at_height: u32,
-	/// Lease end as a chain height (`funded_at_height + channel_expiry_blocks`).
+	/// Chain height when the lease ends: `funded_at_height` plus `channel_expiry_blocks` (LSPS1) or
+	/// `min_lifetime` (JIT). The LSP may close the channel after this plus its grace period.
 	pub expires_at_height: u32,
 	/// Precise channel open time: Unix seconds when the funding was observed on
 	/// chain. Estimate the expiry date from this plus the block count to expiry.

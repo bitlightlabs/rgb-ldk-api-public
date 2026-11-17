@@ -199,7 +199,10 @@ export interface ChannelDetailsExtendedDto {
 export interface ChannelLspLeaseDto {
   pubkey: string;
   address: string;
-  order_id: string;
+  protocol: string;
+  order_id?: string | null;
+  opening_fee_msat?: U64String | null;
+  cltv_expiry_delta?: number | null;
   funded_at_height: number;
   expires_at_height: number;
   funded_at_unix_secs: U64String;
@@ -438,12 +441,22 @@ export interface Lsps1OptionsDto {
   service: Lsps1ServiceBehaviorDto;
 }
 
+export interface Lsps1OrderCancelRequest {
+  reason?: string | null;
+}
+
+export interface Lsps1OrderCancelSkippedDto {
+  order_id: string;
+  reason: string;
+}
+
 export interface Lsps1OrderCreateRequest {
   lsp_node_id: string;
   lsp_balance_sat: U64String;
   client_balance_sat?: U64String;
   channel_expiry_blocks: number;
   announce_channel?: boolean;
+  client_request_id?: string | null;
 }
 
 export interface Lsps1OrderParamsDto {
@@ -457,10 +470,21 @@ export interface Lsps1OrderParamsDto {
 
 export interface Lsps1OrderResponse {
   order_id: string;
+  client_request_id?: string;
   order: Lsps1OrderParamsDto;
   payment: Lsps1PaymentOptionsDto;
   channel?: Lsps1ChannelInfoDto | null;
   rgb?: Lsps1RgbOrderDetailsDto | null;
+}
+
+export interface Lsps1OrdersCancelRequest {
+  counterparty_node_id: string;
+  reason?: string | null;
+}
+
+export interface Lsps1OrdersCancelResponse {
+  cancelled: Lsps1ServiceOrderDto[];
+  skipped: Lsps1OrderCancelSkippedDto[];
 }
 
 export interface Lsps1PaymentOptionsDto {
@@ -510,6 +534,7 @@ export interface Lsps1RgbOrderCreateRequest {
   client_balance_sat?: U64String;
   channel_expiry_blocks: number;
   announce_channel?: boolean;
+  client_request_id?: string | null;
 }
 
 export interface Lsps1RgbOrderDetailsDto {
@@ -528,9 +553,14 @@ export interface Lsps1ServiceBehaviorDto {
   channel_expiry_grace_blocks: number;
   late_deposit_refund_window_secs: U64String;
   onchain_open_timeout_blocks?: number;
+  force_close_after_blocks?: number;
+  accept_new_orders: boolean;
+  max_unpaid_orders_per_peer?: number;
+  max_unpaid_orders_total?: number;
 }
 
 export interface Lsps1ServiceOrderDto {
+  counts_toward_unpaid_quota: boolean;
   order_id: string;
   counterparty_node_id: string;
   order_state: string;
@@ -552,6 +582,14 @@ export interface Lsps1ServiceOrderDto {
   funding_outpoint?: string | null;
   funded_at_height?: number | null;
   channel_closed_at_unix_secs?: U64String | null;
+  close_kind?: string | null;
+  close_attempts?: number;
+  last_close_error?: string | null;
+  first_close_attempt_at_unix_secs?: U64String | null;
+  next_close_attempt_at_unix_secs?: U64String | null;
+  failure_reason?: string | null;
+  cancelled_at_unix_secs?: U64String | null;
+  cancel_reason?: string | null;
   rgb?: Lsps1ServiceRgbOrderDto | null;
 }
 
@@ -599,9 +637,50 @@ export interface Lsps2InvoiceRequest {
 
 export interface Lsps2InvoiceResponse {
   invoice: string;
+  payment_hash: string;
+  amount_msat?: U64String;
+  fee_msat?: U64String;
+  fee_ppm?: U64String;
+  min_fee_msat?: U64String;
+  expires_at_unix_secs: U64String;
+  min_lifetime: number;
+}
+
+export interface Lsps2JitChannelDto {
+  counts_toward_unpaid_quota: boolean;
+  user_channel_id: string;
+  counterparty_node_id: string;
+  intercept_scid: U64String;
+  state: string;
+  channel_id?: string | null;
+  opened_at_unix_secs?: U64String | null;
+  valid_until_unix_secs: U64String;
+  min_lifetime: number;
+  amt_to_forward_msat?: U64String | null;
+  opening_fee_msat?: U64String | null;
+  fee_paid_at_unix_secs?: U64String | null;
+  rgb?: Lsps2JitRgbDto | null;
+  close_kind?: string | null;
+  channel_closed_at_unix_secs?: U64String | null;
+  close_attempts: number;
+  last_close_error?: string | null;
+  first_close_attempt_at_unix_secs?: U64String | null;
+  next_close_attempt_at_unix_secs?: U64String | null;
+}
+
+export interface Lsps2JitChannelsResponse {
+  channels: Lsps2JitChannelDto[];
+}
+
+export interface Lsps2JitRgbDto {
+  contract_id: string;
+  asset_amount: U64String;
+  lsp_asset_balance: U64String;
+  lsp_balance_sat: U64String;
 }
 
 export interface Lsps2OptionsDto {
+  accept_new_channels: boolean;
   require_token?: string | null;
   channel_opening_fee_ppm: number;
   channel_over_provisioning_ppm: number;
@@ -750,6 +829,8 @@ export interface PaymentDetailsDto {
   payment_hash?: string;
   htlc_locked: boolean;
   fee_paid_msat?: U64String | null;
+  updated_at_unix_secs?: U64String;
+  expires_at_unix_secs?: U64String;
   kind_details?: unknown;
 }
 

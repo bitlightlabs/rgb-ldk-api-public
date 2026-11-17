@@ -15,6 +15,7 @@ use super::*;
 
 /// Adds an LSP, or updates the entry with the same pubkey (`POST /lsps`).
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct LspAddRequest {
 	/// LSP node pubkey, hex-encoded.
 	pub pubkey: String,
@@ -51,6 +52,7 @@ pub struct LspListResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct Lsps1SupportedOptionsDto {
 	pub min_required_channel_confirmations: u16,
 	pub min_funding_confirms_within_blocks: u16,
@@ -142,22 +144,42 @@ pub struct Lsps1InfoQuery {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct Lsps1OrderCreateRequest {
 	/// The LSP to order from (hex pubkey); must be in `GET /lsps`.
 	pub lsp_node_id: String,
 	/// Sats the LSP provides on its side (the inbound liquidity being bought).
 	#[serde(with = "serde_u64_decimal_string")]
 	pub lsp_balance_sat: u64,
-	/// Sats pushed to this node's side (paid on top of the fee). Default 0.
+	/// Sats on this node's side of the new channel, paid on top of the fee. 0 when omitted. Must be
+	/// between the LSP's `min_initial_client_balance_sat` and `max_initial_client_balance_sat` (see
+	/// `supported_options`). So it can only be omitted when the LSP's minimum is 0.
 	#[serde(default, with = "serde_u64_decimal_string")]
 	pub client_balance_sat: u64,
 	/// Channel lease duration in blocks.
 	pub channel_expiry_blocks: u32,
 	#[serde(default)]
 	pub announce_channel: bool,
+	/// Optional id of this request, chosen by the caller. 1 to 64 printable ASCII characters. It
+	/// makes the request safe to repeat.
+	///
+	/// Same id, same parameters: returns the first order with its current state. No new order is
+	/// placed. A request that arrives while the first is still running waits for it.
+	///
+	/// Same id, different parameters: 409 `idempotency_key_reused`.
+	///
+	/// An earlier request with this id was sent and got no answer (timeout, restart): 409
+	/// `outcome_unknown`. The id is not sent again. Retry later, or use a new id to place a new
+	/// order.
+	///
+	/// The id is kept until one day after the order's payment window ended. It is returned with the
+	/// order. It is not sent to the LSP.
+	#[serde(default)]
+	pub client_request_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct Lsps1RgbOrderCreateRequest {
 	/// The LSP to order from (hex pubkey); must be in `GET /lsps`.
 	pub lsp_node_id: String,
@@ -166,16 +188,23 @@ pub struct Lsps1RgbOrderCreateRequest {
 	/// Asset units the LSP provides on its side (leased inbound asset liquidity).
 	#[serde(with = "serde_u64_decimal_string")]
 	pub lsp_asset_balance: u64,
-	/// Asset units pushed to this node's side (buy-out; LSPs may not offer it). Default 0.
+	/// Asset units on this node's side of the new channel. Buying assets with the channel is not
+	/// supported yet: omit it or send 0. Any other value is rejected.
 	#[serde(default, with = "serde_u64_decimal_string")]
 	pub client_asset_balance: u64,
 	#[serde(with = "serde_u64_decimal_string")]
 	pub lsp_balance_sat: u64,
+	/// Sats on this node's side of the new channel, paid on top of the fee. 0 when omitted. Must be
+	/// between the LSP's `min_initial_client_balance_sat` and `max_initial_client_balance_sat` (see
+	/// `supported_options`). So it can only be omitted when the LSP's minimum is 0.
 	#[serde(default, with = "serde_u64_decimal_string")]
 	pub client_balance_sat: u64,
 	pub channel_expiry_blocks: u32,
 	#[serde(default)]
 	pub announce_channel: bool,
+	/// Optional id of this request; same meaning as on `POST /lsps1/order`.
+	#[serde(default)]
+	pub client_request_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -265,6 +294,9 @@ pub struct Lsps1RgbOrderDetailsDto {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Lsps1OrderResponse {
 	pub order_id: String,
+	/// The `client_request_id` of the order. Present until one day after the payment window ended.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub client_request_id: Option<String>,
 	pub order: Lsps1OrderParamsDto,
 	pub payment: Lsps1PaymentOptionsDto,
 	pub channel: Option<Lsps1ChannelInfoDto>,
@@ -275,6 +307,7 @@ pub struct Lsps1OrderResponse {
 // --- operator side (this node *is* the LSP) ---
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct Lsps1AssetPricingDto {
 	pub asset_id: String,
 	pub ticker: String,
@@ -296,6 +329,7 @@ pub struct Lsps1AssetPricingDto {
 
 /// Fee parameters of this node's own LSPS1 service (operator side).
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct Lsps1PricingCoreDto {
 	pub btc_capacity_ppm_per_year: u32,
 	#[serde(with = "serde_u64_decimal_string")]
@@ -306,6 +340,7 @@ pub struct Lsps1PricingCoreDto {
 
 /// Operator pricing config (`GET`/`PUT /lsps1/pricing`).
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct Lsps1PricingDto {
 	pub pricing: Lsps1PricingCoreDto,
 	pub assets: Vec<Lsps1AssetPricingDto>,
@@ -313,6 +348,7 @@ pub struct Lsps1PricingDto {
 
 /// Service behavior knobs of this node's own LSPS1 service.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct Lsps1ServiceBehaviorDto {
 	/// Token clients must send with orders; `null` disables the check.
 	#[serde(default)]
@@ -334,6 +370,28 @@ pub struct Lsps1ServiceBehaviorDto {
 	/// deadline). Defaults to ~1 day if omitted.
 	#[serde(default = "default_onchain_open_timeout_blocks")]
 	pub onchain_open_timeout_blocks: u32,
+	/// A leased or JIT channel that is still open this many blocks after it was due to close is
+	/// force closed. This covers an offline client and a cooperative close that keeps failing. 0
+	/// (default) = off, otherwise at least 144. A force close costs this node the onchain fee and
+	/// locks its funds for the client's `to_self_delay`. The client's funds are not at risk.
+	#[serde(default)]
+	pub force_close_after_blocks: u32,
+	/// `false` pauses the service: `create_order` is refused with code 1. Existing orders are still
+	/// served.
+	pub accept_new_orders: bool,
+	/// Maximum unpaid orders per client. At least 1. Default 5.
+	#[serde(default = "default_max_unpaid_orders_per_peer")]
+	pub max_unpaid_orders_per_peer: u32,
+	/// Maximum unpaid orders of all clients together. At least 1. Default 100.
+	#[serde(default = "default_max_unpaid_orders_total")]
+	pub max_unpaid_orders_total: u32,
+}
+
+fn default_max_unpaid_orders_per_peer() -> u32 {
+	5
+}
+fn default_max_unpaid_orders_total() -> u32 {
+	100
 }
 
 fn default_onchain_open_timeout_blocks() -> u32 {
@@ -343,6 +401,7 @@ fn default_onchain_open_timeout_blocks() -> u32 {
 /// Runtime service config (`GET`/`PUT /lsps1/options`). Changes apply to new orders
 /// only; accepted orders keep the parameters they were created with.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
 pub struct Lsps1OptionsDto {
 	/// Order limits advertised via `lsps1.get_info` and enforced on `create_order`.
 	pub supported_options: Lsps1SupportedOptionsDto,
@@ -362,6 +421,9 @@ pub struct Lsps1ServiceRgbOrderDto {
 /// One served order in the LSPS1 fulfillment ledger (`GET /lsps1/orders`).
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Lsps1ServiceOrderDto {
+	/// Whether this order counts toward `max_unpaid_orders_per_peer` / `max_unpaid_orders_total`.
+	/// True while it is `created` and `expect_payment`.
+	pub counts_toward_unpaid_quota: bool,
 	pub order_id: String,
 	pub counterparty_node_id: String,
 	/// `created`, `completed`, or `failed`.
@@ -394,13 +456,69 @@ pub struct Lsps1ServiceOrderDto {
 	pub funding_outpoint: Option<String>,
 	/// Chain height when the funding tx was published (lease expiry baseline).
 	pub funded_at_height: Option<u32>,
-	/// Set once the expired lease was cooperatively closed.
+	/// Set when the expired lease was closed.
 	#[serde(default, with = "serde_opt_u64_decimal_string")]
 	pub channel_closed_at_unix_secs: Option<u64>,
+	/// How this node closed the channel: `cooperative`, or `force` (see
+	/// `force_close_after_blocks`).
+	#[serde(default)]
+	pub close_kind: Option<String>,
+	/// Failed cooperative close attempts since the lease was due. An offline client is not counted.
+	/// Kept in memory only, so reset by a restart.
+	#[serde(default)]
+	pub close_attempts: u32,
+	#[serde(default)]
+	pub last_close_error: Option<String>,
+	#[serde(default, with = "serde_opt_u64_decimal_string")]
+	pub first_close_attempt_at_unix_secs: Option<u64>,
+	/// When the next close attempt is made. The delay starts at 5 s and doubles up to one hour.
+	#[serde(default, with = "serde_opt_u64_decimal_string")]
+	pub next_close_attempt_at_unix_secs: Option<u64>,
+	/// On a failed order: `expired`, `cancelled`, `underpaid` or `fulfill_failed`.
+	#[serde(default)]
+	pub failure_reason: Option<String>,
+	#[serde(default, with = "serde_opt_u64_decimal_string")]
+	pub cancelled_at_unix_secs: Option<u64>,
+	/// The note given when the order was cancelled.
+	#[serde(default)]
+	pub cancel_reason: Option<String>,
 	pub rgb: Option<Lsps1ServiceRgbOrderDto>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Lsps1ServiceOrdersResponse {
 	pub orders: Vec<Lsps1ServiceOrderDto>,
+}
+
+/// Optional body of `POST /lsps1/orders/{order_id}/cancel`.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct Lsps1OrderCancelRequest {
+	/// Operator note stored with the order; at most 128 characters.
+	#[serde(default)]
+	pub reason: Option<String>,
+}
+
+/// `POST /lsps1/orders/cancel`: cancel all unpaid orders of one client.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(deny_unknown_fields)]
+pub struct Lsps1OrdersCancelRequest {
+	/// The client's node id (hex pubkey).
+	pub counterparty_node_id: String,
+	/// Operator note stored with each order; at most 128 characters.
+	#[serde(default)]
+	pub reason: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct Lsps1OrderCancelSkippedDto {
+	pub order_id: String,
+	pub reason: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct Lsps1OrdersCancelResponse {
+	pub cancelled: Vec<Lsps1ServiceOrderDto>,
+	/// Orders that were skipped, for example because a deposit was already seen.
+	pub skipped: Vec<Lsps1OrderCancelSkippedDto>,
 }

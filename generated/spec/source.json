@@ -1,7 +1,7 @@
 {
   "api_version": "v1",
-  "generated_at_utc": "2026-11-05T02:43:22Z",
-  "node_commit": "f6f2d3491c8b97cd3376c463fb0806b441fe5502",
+  "generated_at_utc": "2026-11-17T04:21:27Z",
+  "node_commit": "5688275a392eef3e0b27828a69eaad83b6197f6d",
   "node_package_version": "0.7.0-bitlight.7",
   "node_repo": "bitlightlabs/rgb-ldk-node",
   "schema_enrichments": [

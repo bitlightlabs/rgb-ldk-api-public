@@ -299,7 +299,7 @@ pub struct RgbLnInvoiceCreateRequest {
 	/// channel cannot safely host RGB.
 	///
 	/// When omitted, the server starts from the active RGB carrier default floor and, if needed,
-	/// raises the invoice carrier to satisfy inbound HTLC limits or the 354-sat non-dust holder
+	/// raises the invoice carrier to satisfy inbound HTLC limits or the 355-sat non-dust holder
 	/// reserve threshold so the receiver can host the incoming RGB without extra client-side logic.
 	///
 	/// A trimmed 1-sat carrier only remains valid when the selected receiving channel already holds
@@ -330,7 +330,7 @@ pub struct RgbLnInvoiceCreateForHashRequest {
 	/// channel cannot safely host RGB.
 	///
 	/// When omitted, the server starts from the active RGB carrier default floor and, if needed,
-	/// raises the invoice carrier to satisfy inbound HTLC limits or the 354-sat non-dust holder
+	/// raises the invoice carrier to satisfy inbound HTLC limits or the 355-sat non-dust holder
 	/// reserve threshold so the receiver can host the incoming RGB without extra client-side logic.
 	///
 	/// A trimmed 1-sat carrier only remains valid when the selected receiving channel already holds

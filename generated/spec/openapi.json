@@ -1194,7 +1194,7 @@
           "lsps1"
         ],
         "summary": "Order a BTC channel",
-        "description": "Places a plain BTC channel order with the LSP given by `lsp_node_id` and returns the order with its payment options (bolt11 HOLD invoice, and an onchain deposit address when the LSP offers it). Pay one of them; the LSP opens the channel once the payment is in.",
+        "description": "Places a plain BTC channel order with the LSP given by `lsp_node_id` and returns the order with its payment options (bolt11 HOLD invoice, and an onchain deposit address when the LSP offers it). Pay one of them; the LSP opens the channel once the payment is in. Pass a `client_request_id` to make retries safe: the same id with the same parameters returns the order placed first instead of a second one. Fails with 409 `idempotency_key_reused` when the id was used with other parameters, and with 409 `outcome_unknown` when an earlier request with the id went out and no answer came back. Without an id every call places a new order.",
         "operationId": "order_create",
         "requestBody": {
           "content": {
@@ -1290,6 +1290,43 @@
         ]
       }
     },
+    "/lsps1/orders/cancel": {
+      "post": {
+        "tags": [
+          "lsps1"
+        ],
+        "summary": "Cancel a client's unpaid orders",
+        "description": "Operator side: cancels every order of one client that is still awaiting payment, with the same effect as cancelling each one. Orders that cannot be cancelled (a deposit was already seen) are listed under `skipped`.",
+        "operationId": "service_orders_cancel",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Lsps1OrdersCancelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Cancelled and skipped orders",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lsps1OrdersCancelResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
     "/lsps1/orders/{order_id}": {
       "get": {
         "tags": [
@@ -1312,6 +1349,61 @@
         "responses": {
           "200": {
             "description": "Served order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lsps1ServiceOrderDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
+    "/lsps1/orders/{order_id}/cancel": {
+      "post": {
+        "tags": [
+          "lsps1"
+        ],
+        "summary": "Cancel an unpaid order",
+        "description": "Operator side: cancels an order of this node's LSPS1 service that is still awaiting payment. The order becomes `failed` with `failure_reason` `cancelled`, and the client sees it as failed the next time it checks. A lightning payment of the order's invoice that still arrives is failed back right away; an onchain deposit that arrives later is refunded like one to an expired order. The body is optional. Fails with 409 when the order is no longer awaiting payment or a deposit to its onchain address has been seen (confirmed or not), and with 404 for an unknown order.",
+        "operationId": "service_order_cancel",
+        "parameters": [
+          {
+            "name": "order_id",
+            "in": "path",
+            "description": "The bLIP-51 order id (UUID).",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Optional note",
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Lsps1OrderCancelRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The cancelled order",
             "content": {
               "application/json": {
                 "schema": {
@@ -1433,7 +1525,7 @@
           "lsps2"
         ],
         "summary": "Create a JIT channel invoice",
-        "description": "Buys a JIT channel from the LSP given by `lsp_node_id` and returns a BOLT11 invoice paying through it. The LSP opens the channel when the payment arrives and keeps its fee out of it.",
+        "description": "Buys a JIT channel from the LSP given by `lsp_node_id` and returns a BOLT11 invoice paying through it. The LSP opens the channel when the payment arrives and keeps its fee out of it. Errors match `/lsps2/rgb_invoice`: 400 `lsp_rejected` with the LSP's `code` and `message` (404 for code 101, 401 for 102; 202/203 when the amount is outside the LSP's range), 409 `fee_above_limit` when the fee is above `max_fee`, 409 `precondition_failed`, 503 `jit_service_disabled` when the LSP has paused JIT channels, 503 `lsp_unsupported`, 504 `lsp_timeout`.",
         "operationId": "invoice",
         "requestBody": {
           "content": {
@@ -1464,13 +1556,40 @@
         ]
       }
     },
+    "/lsps2/jit_channels": {
+      "get": {
+        "tags": [
+          "lsps2"
+        ],
+        "summary": "List JIT channels",
+        "description": "Operator side: the JIT channels of this node's own LSPS2 service. Lists every channel it opened, also after it was closed, plus the offers that were bought but not paid yet. Shows when a channel is due to be closed and how closing it is going. Fails with 503 when the node runs no LSPS2 service.",
+        "operationId": "jit_channels",
+        "responses": {
+          "200": {
+            "description": "JIT channels",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Lsps2JitChannelsResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer_auth": []
+          }
+        ]
+      }
+    },
     "/lsps2/options": {
       "get": {
         "tags": [
           "lsps2"
         ],
         "summary": "Get service options",
-        "description": "Returns the runtime options of this node's own LSPS2 service. Fails with 503 when the node runs no LSPS2 service.",
+        "description": "Returns the options in effect on this node's own LSPS2 service. Options set with `PUT` are persisted and win over the startup config file on every start; a warning is logged at startup for each file value they override. Fails with 503 when the node runs no LSPS2 service.",
         "operationId": "options_get",
         "responses": {
           "200": {
@@ -1495,7 +1614,7 @@
           "lsps2"
         ],
         "summary": "Update service options",
-        "description": "Validates, persists, and applies new runtime options (full replace); they replace the startup config from then on, also after a restart. Fee offers made afterwards use them; offers already given out keep their terms until they expire. `advertise_service` can only be set at startup.",
+        "description": "Validates, persists, and applies new runtime options (full replace); they replace the startup config from then on, also after a restart. Fee offers made afterwards use them; offers already given out keep their terms until they expire. Set `accept_new_channels` to `false` to pause the service: clients then get 503 `jit_service_disabled`. `advertise_service` is read from the startup config only and is not part of this body; sending it, or any other unknown field, fails with 400.",
         "operationId": "options_set",
         "requestBody": {
           "content": {
@@ -2686,7 +2805,7 @@
           "rgb-ln"
         ],
         "summary": "Create RGB Lightning invoice",
-        "description": "Creates an RGB-aware Lightning invoice using a contract id, asset amount, and optional BTC carrier amount. Explicit `btc_carrier_amount_msat` values are allowed down to 1 sat. If the field is omitted, the server starts from the active RGB carrier default floor and may auto-raise the invoice carrier to satisfy inbound HTLC limits or the 354-sat holder reserve threshold. A true 1-sat trimmed carrier still requires the selected receiving channel to already hold the non-dust holder reserve locally, otherwise the request is auto-raised or rejected with `HolderReserveTooLow`. The response returns the actual carrier embedded in the invoice.",
+        "description": "Creates an RGB-aware Lightning invoice using a contract id, asset amount, and optional BTC carrier amount. Explicit `btc_carrier_amount_msat` values are allowed down to 1 sat. If the field is omitted, the server starts from the active RGB carrier default floor and may auto-raise the invoice carrier to satisfy inbound HTLC limits or the 355-sat holder reserve threshold. A true 1-sat trimmed carrier still requires the selected receiving channel to already hold the non-dust holder reserve locally, otherwise the request is auto-raised or rejected with `HolderReserveTooLow`. The response returns the actual carrier embedded in the invoice.",
         "operationId": "rgb_ln_invoice_create",
         "requestBody": {
           "content": {
@@ -2723,7 +2842,7 @@
           "rgb-ln"
         ],
         "summary": "Create RGB hold invoice",
-        "description": "Creates an RGB-aware hold invoice bound to an explicit payment hash. Explicit `btc_carrier_amount_msat` values are allowed down to 1 sat. If the field is omitted, the server starts from the active RGB carrier default floor and may auto-raise the invoice carrier to satisfy inbound HTLC limits or the 354-sat holder reserve threshold. A true 1-sat trimmed carrier still requires the selected receiving channel to already hold the non-dust holder reserve locally, otherwise the request is auto-raised or rejected with `HolderReserveTooLow`. The response returns the actual carrier embedded in the invoice.",
+        "description": "Creates an RGB-aware hold invoice bound to an explicit payment hash. Explicit `btc_carrier_amount_msat` values are allowed down to 1 sat. If the field is omitted, the server starts from the active RGB carrier default floor and may auto-raise the invoice carrier to satisfy inbound HTLC limits or the 355-sat holder reserve threshold. A true 1-sat trimmed carrier still requires the selected receiving channel to already hold the non-dust holder reserve locally, otherwise the request is auto-raised or rejected with `HolderReserveTooLow`. The response returns the actual carrier embedded in the invoice.",
         "operationId": "rgb_ln_invoice_create_for_hash",
         "requestBody": {
           "content": {
@@ -4912,7 +5031,7 @@
               },
               {
                 "$ref": "#/components/schemas/ChannelLspLeaseDto",
-                "description": "Present when this channel was bought from an LSP via LSPS1; `null` otherwise."
+                "description": "Set when this channel was bought from an LSP (LSPS1 order or LSPS2 JIT channel). `null`\notherwise."
               }
             ]
           },
@@ -4973,7 +5092,7 @@
         "required": [
           "pubkey",
           "address",
-          "order_id",
+          "protocol",
           "funded_at_height",
           "expires_at_height",
           "funded_at_unix_secs",
@@ -4984,6 +5103,15 @@
             "type": "string",
             "description": "LSP socket address at order time."
           },
+          "cltv_expiry_delta": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "JIT channel: the CLTV delta of the LSP's hop in the invoice.",
+            "minimum": 0
+          },
           "created_at_unix_secs": {
             "type": "string",
             "pattern": "^[0-9]+$",
@@ -4992,13 +5120,13 @@
           "expires_at_height": {
             "type": "integer",
             "format": "int32",
-            "description": "Lease end as a chain height (`funded_at_height + channel_expiry_blocks`).",
+            "description": "Chain height when the lease ends: `funded_at_height` plus `channel_expiry_blocks` (LSPS1) or\n`min_lifetime` (JIT). The LSP may close the channel after this plus its grace period.",
             "minimum": 0
           },
           "funded_at_height": {
             "type": "integer",
             "format": "int32",
-            "description": "Chain height when the funding was observed (lease start).",
+            "description": "Chain height when the lease started. LSPS1: when the funding was seen. JIT: when the payment\nthat opened the channel was received.",
             "minimum": 0
           },
           "funded_at_unix_secs": {
@@ -5006,9 +5134,24 @@
             "pattern": "^[0-9]+$",
             "description": "Precise channel open time: Unix seconds when the funding was observed on\nchain. Estimate the expiry date from this plus the block count to expiry."
           },
+          "opening_fee_msat": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$",
+            "description": "JIT channel: fee the LSP took from the first payment. `null` for a variable-amount invoice;\nthen see the payment's `counterparty_skimmed_fee_msat`."
+          },
           "order_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "bLIP-51 order id the channel was bought with; `null` for a JIT channel."
+          },
+          "protocol": {
             "type": "string",
-            "description": "bLIP-51 order id the channel was bought with."
+            "description": "`lsps1` (bought with an order) or `lsps2` (JIT channel)."
           },
           "pubkey": {
             "type": "string",
@@ -5666,7 +5809,8 @@
             "type": "boolean",
             "description": "Accept anchor channels from this LSP without keeping an on-chain reserve for\nforce-close fees (default 25,000 sats per channel). A force close then relies\non the LSP to get the transaction confirmed. Needed by clients with no on-chain BTC."
           }
-        }
+        },
+        "additionalProperties": false
       },
       "LspDto": {
         "type": "object",
@@ -5776,7 +5920,8 @@
           "ticker": {
             "type": "string"
           }
-        }
+        },
+        "additionalProperties": false
       },
       "Lsps1Bolt11PaymentDto": {
         "type": "object",
@@ -6000,6 +6145,36 @@
             "$ref": "#/components/schemas/Lsps1SupportedOptionsDto",
             "description": "Order limits advertised via `lsps1.get_info` and enforced on `create_order`."
           }
+        },
+        "additionalProperties": false
+      },
+      "Lsps1OrderCancelRequest": {
+        "type": "object",
+        "description": "Optional body of `POST /lsps1/orders/{order_id}/cancel`.",
+        "properties": {
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Operator note stored with the order; at most 128 characters."
+          }
+        },
+        "additionalProperties": false
+      },
+      "Lsps1OrderCancelSkippedDto": {
+        "type": "object",
+        "required": [
+          "order_id",
+          "reason"
+        ],
+        "properties": {
+          "order_id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
         }
       },
       "Lsps1OrderCreateRequest": {
@@ -6022,7 +6197,14 @@
           "client_balance_sat": {
             "type": "string",
             "pattern": "^[0-9]+$",
-            "description": "Sats pushed to this node's side (paid on top of the fee). Default 0."
+            "description": "Sats on this node's side of the new channel, paid on top of the fee. 0 when omitted. Must be\nbetween the LSP's `min_initial_client_balance_sat` and `max_initial_client_balance_sat` (see\n`supported_options`). So it can only be omitted when the LSP's minimum is 0."
+          },
+          "client_request_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional id of this request, chosen by the caller. 1 to 64 printable ASCII characters. It\nmakes the request safe to repeat.\n\nSame id, same parameters: returns the first order with its current state. No new order is\nplaced. A request that arrives while the first is still running waits for it.\n\nSame id, different parameters: 409 `idempotency_key_reused`.\n\nAn earlier request with this id was sent and got no answer (timeout, restart): 409\n`outcome_unknown`. The id is not sent again. Retry later, or use a new id to place a new\norder.\n\nThe id is kept until one day after the order's payment window ended. It is returned with the\norder. It is not sent to the LSP."
           },
           "lsp_balance_sat": {
             "type": "string",
@@ -6033,7 +6215,8 @@
             "type": "string",
             "description": "The LSP to order from (hex pubkey); must be in `GET /lsps`."
           }
-        }
+        },
+        "additionalProperties": false
       },
       "Lsps1OrderParamsDto": {
         "type": "object",
@@ -6093,6 +6276,13 @@
               }
             ]
           },
+          "client_request_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The `client_request_id` of the order. Present until one day after the payment window ended."
+          },
           "order": {
             "$ref": "#/components/schemas/Lsps1OrderParamsDto"
           },
@@ -6112,6 +6302,49 @@
                 "description": "RGB section; `null` for plain BTC orders."
               }
             ]
+          }
+        }
+      },
+      "Lsps1OrdersCancelRequest": {
+        "type": "object",
+        "description": "`POST /lsps1/orders/cancel`: cancel all unpaid orders of one client.",
+        "required": [
+          "counterparty_node_id"
+        ],
+        "properties": {
+          "counterparty_node_id": {
+            "type": "string",
+            "description": "The client's node id (hex pubkey)."
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Operator note stored with each order; at most 128 characters."
+          }
+        },
+        "additionalProperties": false
+      },
+      "Lsps1OrdersCancelResponse": {
+        "type": "object",
+        "required": [
+          "cancelled",
+          "skipped"
+        ],
+        "properties": {
+          "cancelled": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Lsps1ServiceOrderDto"
+            }
+          },
+          "skipped": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Lsps1OrderCancelSkippedDto"
+            },
+            "description": "Orders that were skipped, for example because a deposit was already seen."
           }
         }
       },
@@ -6162,7 +6395,8 @@
             "type": "string",
             "pattern": "^[0-9]+$"
           }
-        }
+        },
+        "additionalProperties": false
       },
       "Lsps1PricingDto": {
         "type": "object",
@@ -6181,7 +6415,8 @@
           "pricing": {
             "$ref": "#/components/schemas/Lsps1PricingCoreDto"
           }
-        }
+        },
+        "additionalProperties": false
       },
       "Lsps1RgbAssetOfferDto": {
         "type": "object",
@@ -6299,11 +6534,19 @@
           "client_asset_balance": {
             "type": "string",
             "pattern": "^[0-9]+$",
-            "description": "Asset units pushed to this node's side (buy-out; LSPs may not offer it). Default 0."
+            "description": "Asset units on this node's side of the new channel. Buying assets with the channel is not\nsupported yet: omit it or send 0. Any other value is rejected."
           },
           "client_balance_sat": {
             "type": "string",
-            "pattern": "^[0-9]+$"
+            "pattern": "^[0-9]+$",
+            "description": "Sats on this node's side of the new channel, paid on top of the fee. 0 when omitted. Must be\nbetween the LSP's `min_initial_client_balance_sat` and `max_initial_client_balance_sat` (see\n`supported_options`). So it can only be omitted when the LSP's minimum is 0."
+          },
+          "client_request_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional id of this request; same meaning as on `POST /lsps1/order`."
           },
           "lsp_asset_balance": {
             "type": "string",
@@ -6318,7 +6561,8 @@
             "type": "string",
             "description": "The LSP to order from (hex pubkey); must be in `GET /lsps`."
           }
-        }
+        },
+        "additionalProperties": false
       },
       "Lsps1RgbOrderDetailsDto": {
         "type": "object",
@@ -6360,9 +6604,14 @@
           "min_onchain_payment_confirmations",
           "auto_close_expired_channels",
           "channel_expiry_grace_blocks",
-          "late_deposit_refund_window_secs"
+          "late_deposit_refund_window_secs",
+          "accept_new_orders"
         ],
         "properties": {
+          "accept_new_orders": {
+            "type": "boolean",
+            "description": "`false` pauses the service: `create_order` is refused with code 1. Existing orders are still\nserved."
+          },
           "auto_close_expired_channels": {
             "type": "boolean",
             "description": "Cooperatively close leased channels once lease + grace expired."
@@ -6379,10 +6628,28 @@
             "description": "Blocks of grace before an expired lease is closed.",
             "minimum": 0
           },
+          "force_close_after_blocks": {
+            "type": "integer",
+            "format": "int32",
+            "description": "A leased or JIT channel that is still open this many blocks after it was due to close is\nforce closed. This covers an offline client and a cooperative close that keeps failing. 0\n(default) = off, otherwise at least 144. A force close costs this node the onchain fee and\nlocks its funds for the client's `to_self_delay`. The client's funds are not at risk.",
+            "minimum": 0
+          },
           "late_deposit_refund_window_secs": {
             "type": "string",
             "pattern": "^[0-9]+$",
             "description": "How long after payment expiry a late deposit is still auto-refunded."
+          },
+          "max_unpaid_orders_per_peer": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Maximum unpaid orders per client. At least 1. Default 5.",
+            "minimum": 0
+          },
+          "max_unpaid_orders_total": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Maximum unpaid orders of all clients together. At least 1. Default 100.",
+            "minimum": 0
           },
           "min_onchain_payment_confirmations": {
             "type": "integer",
@@ -6403,12 +6670,14 @@
             ],
             "description": "Token clients must send with orders; `null` disables the check."
           }
-        }
+        },
+        "additionalProperties": false
       },
       "Lsps1ServiceOrderDto": {
         "type": "object",
         "description": "One served order in the LSPS1 fulfillment ledger (`GET /lsps1/orders`).",
         "required": [
+          "counts_toward_unpaid_quota",
           "order_id",
           "counterparty_node_id",
           "order_state",
@@ -6427,13 +6696,27 @@
           "announce_channel": {
             "type": "boolean"
           },
+          "cancel_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The note given when the order was cancelled."
+          },
+          "cancelled_at_unix_secs": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$"
+          },
           "channel_closed_at_unix_secs": {
             "type": [
               "string",
               "null"
             ],
             "pattern": "^[0-9]+$",
-            "description": "Set once the expired lease was cooperatively closed."
+            "description": "Set when the expired lease was closed."
           },
           "channel_expiry_blocks": {
             "type": "integer",
@@ -6444,15 +6727,46 @@
             "type": "string",
             "pattern": "^[0-9]+$"
           },
+          "close_attempts": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Failed cooperative close attempts since the lease was due. An offline client is not counted.\nKept in memory only, so reset by a restart.",
+            "minimum": 0
+          },
+          "close_kind": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "How this node closed the channel: `cooperative`, or `force` (see\n`force_close_after_blocks`)."
+          },
           "counterparty_node_id": {
             "type": "string"
+          },
+          "counts_toward_unpaid_quota": {
+            "type": "boolean",
+            "description": "Whether this order counts toward `max_unpaid_orders_per_peer` / `max_unpaid_orders_total`.\nTrue while it is `created` and `expect_payment`."
           },
           "created_at_unix_secs": {
             "type": "string",
             "pattern": "^[0-9]+$"
           },
+          "failure_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "On a failed order: `expired`, `cancelled`, `underpaid` or `fulfill_failed`."
+          },
           "fee_total_sat": {
             "type": "string",
+            "pattern": "^[0-9]+$"
+          },
+          "first_close_attempt_at_unix_secs": {
+            "type": [
+              "string",
+              "null"
+            ],
             "pattern": "^[0-9]+$"
           },
           "fulfill_retry_count": {
@@ -6476,9 +6790,23 @@
             ],
             "description": "`txid:vout` of the channel funding output, once published."
           },
+          "last_close_error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "lsp_balance_sat": {
             "type": "string",
             "pattern": "^[0-9]+$"
+          },
+          "next_close_attempt_at_unix_secs": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$",
+            "description": "When the next close attempt is made. The delay starts at 5 s and doubles up to one hour."
           },
           "onchain_address": {
             "type": [
@@ -6639,7 +6967,8 @@
           "supports_zero_channel_reserve": {
             "type": "boolean"
           }
-        }
+        },
+        "additionalProperties": false
       },
       "Lsps2FeeOfferDto": {
         "type": "object",
@@ -6696,7 +7025,7 @@
               "string",
               "null"
             ],
-            "description": "Invoice amount; omit for a variable-amount invoice."
+            "description": "Invoice amount. Omit it to get an invoice without an amount."
           },
           "description": {
             "type": "string"
@@ -6714,25 +7043,229 @@
               "string",
               "null"
             ],
-            "description": "Fixed amount: the most the LSP may take in total. Variable amount: the most it may\ntake in ppm of the payment."
+            "description": "The most the LSP may take as its fee. Invoice with an amount: a total in msat. Invoice\nwithout an amount: ppm of the payment."
           }
-        }
+        },
+        "additionalProperties": false
       },
       "Lsps2InvoiceResponse": {
         "type": "object",
         "required": [
-          "invoice"
+          "invoice",
+          "payment_hash",
+          "expires_at_unix_secs",
+          "min_lifetime"
         ],
         "properties": {
+          "amount_msat": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Amount the payer pays. Absent if the invoice has no amount."
+          },
+          "expires_at_unix_secs": {
+            "type": "string"
+          },
+          "fee_msat": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Set when the invoice has an amount. The fee the LSP takes from the payment."
+          },
+          "fee_ppm": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Set when the invoice has no amount. The LSP takes this share (ppm) of the payment as its\nfee. The fee is never below `min_fee_msat`."
+          },
           "invoice": {
+            "type": "string"
+          },
+          "min_fee_msat": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "min_lifetime": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Number of blocks the LSP keeps the channel open.",
+            "minimum": 0
+          },
+          "payment_hash": {
+            "type": "string"
+          }
+        }
+      },
+      "Lsps2JitChannelDto": {
+        "type": "object",
+        "description": "One JIT channel of this node's LSPS2 service (`GET /lsps2/jit_channels`).",
+        "required": [
+          "counts_toward_unpaid_quota",
+          "user_channel_id",
+          "counterparty_node_id",
+          "intercept_scid",
+          "state",
+          "valid_until_unix_secs",
+          "min_lifetime",
+          "close_attempts"
+        ],
+        "properties": {
+          "amt_to_forward_msat": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "channel_closed_at_unix_secs": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "channel_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "close_attempts": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Number of failed cooperative close attempts since the channel was due. Attempts while\nthe client is offline are not counted. A restart resets the count.",
+            "minimum": 0
+          },
+          "close_kind": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "How this node closed the channel: `cooperative` or `force`. `force` happens after\n`force_close_after_blocks`."
+          },
+          "counterparty_node_id": {
+            "type": "string"
+          },
+          "counts_toward_unpaid_quota": {
+            "type": "boolean",
+            "description": "Whether this channel counts toward `max_unpaid_channels_per_peer` and\n`max_unpaid_channels_total`. True while it is opening or open and its fee is not paid."
+          },
+          "fee_paid_at_unix_secs": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "first_close_attempt_at_unix_secs": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "intercept_scid": {
+            "type": "string"
+          },
+          "last_close_error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "min_lifetime": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Number of blocks the channel stays open after the fee is paid. The channel is closed when\nits funding has more confirmations than `min_lifetime + channel_expiry_grace_blocks`.",
+            "minimum": 0
+          },
+          "next_close_attempt_at_unix_secs": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "opened_at_unix_secs": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "When the first payment arrived. The channel open starts at that moment."
+          },
+          "opening_fee_msat": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Opening fee collected so far."
+          },
+          "rgb": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Lsps2JitRgbDto"
+              }
+            ]
+          },
+          "state": {
+            "type": "string",
+            "description": "One of `awaiting_payment`, `opening`, `awaiting_fee`, `fee_paid`, `closed`.\n`awaiting_payment`: bought, no payment has arrived. `awaiting_fee`: open, fee not paid."
+          },
+          "user_channel_id": {
+            "type": "string"
+          },
+          "valid_until_unix_secs": {
+            "type": "string",
+            "description": "When the offer the client bought expires. A channel with an unpaid fee is closed\n`unpaid_channel_close_secs` after this time."
+          }
+        }
+      },
+      "Lsps2JitChannelsResponse": {
+        "type": "object",
+        "required": [
+          "channels"
+        ],
+        "properties": {
+          "channels": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Lsps2JitChannelDto"
+            }
+          }
+        }
+      },
+      "Lsps2JitRgbDto": {
+        "type": "object",
+        "description": "Terms an RGB JIT channel was sold with.",
+        "required": [
+          "contract_id",
+          "asset_amount",
+          "lsp_asset_balance",
+          "lsp_balance_sat"
+        ],
+        "properties": {
+          "asset_amount": {
+            "type": "string"
+          },
+          "contract_id": {
+            "type": "string"
+          },
+          "lsp_asset_balance": {
+            "type": "string"
+          },
+          "lsp_balance_sat": {
             "type": "string"
           }
         }
       },
       "Lsps2OptionsDto": {
         "type": "object",
-        "description": "Runtime options of this node's LSPS2 service (`PUT /lsps2/options`, full replace).\nChanges apply to fee offers made afterwards; offers already given out keep their terms\nuntil they expire.",
+        "description": "Runtime options of this node's LSPS2 service. `PUT /lsps2/options` replaces all of them.\nA change applies to fee offers made after it. Offers already given out keep their terms\nuntil they expire.",
         "required": [
+          "accept_new_channels",
           "channel_opening_fee_ppm",
           "channel_over_provisioning_ppm",
           "min_channel_opening_fee_msat",
@@ -6745,6 +7278,10 @@
           "unpaid_channel_close_secs"
         ],
         "properties": {
+          "accept_new_channels": {
+            "type": "boolean",
+            "description": "`false` pauses the service. Clients get no fee offers and cannot buy. Channels already\nbought can still be paid for until their offer expires. Open channels are not affected."
+          },
           "channel_opening_fee_ppm": {
             "type": "integer",
             "format": "int32",
@@ -6753,7 +7290,7 @@
           "channel_over_provisioning_ppm": {
             "type": "integer",
             "format": "int32",
-            "description": "Extra channel capacity on top of the forwarded amount, in ppm.",
+            "description": "Channel capacity added on top of the forwarded amount, in ppm of that amount.",
             "minimum": 0
           },
           "max_client_to_self_delay": {
@@ -6767,19 +7304,19 @@
           "max_unpaid_channels_per_peer": {
             "type": "integer",
             "format": "int32",
-            "description": "Channels whose opening fee is still outstanding one client may have at once.",
+            "description": "Most channels one client may have with an unpaid opening fee. Minimum 1.",
             "minimum": 0
           },
           "max_unpaid_channels_total": {
             "type": "integer",
             "format": "int32",
-            "description": "Channels whose opening fee is still outstanding all clients may have at once.",
+            "description": "Most channels all clients together may have with an unpaid opening fee. Minimum 1.\nTo stop selling JIT channels, set `accept_new_channels` to `false`.",
             "minimum": 0
           },
           "min_channel_lifetime": {
             "type": "integer",
             "format": "int32",
-            "description": "Blocks the LSP keeps a paid channel open after confirmation.",
+            "description": "Number of blocks the LSP keeps a paid channel open after its funding confirms.",
             "minimum": 0
           },
           "min_channel_opening_fee_msat": {
@@ -6793,13 +7330,14 @@
               "string",
               "null"
             ],
-            "description": "Token clients must send; `null` or empty accepts any client."
+            "description": "Token clients must send. `null` or empty: any client is accepted."
           },
           "unpaid_channel_close_secs": {
             "type": "string",
-            "description": "Seconds after the offer expired when a channel whose fee is still outstanding is closed."
+            "description": "A channel with an unpaid fee is closed this many seconds after its offer expired."
           }
-        }
+        },
+        "additionalProperties": false
       },
       "Lsps2OptionsResponse": {
         "allOf": [
@@ -6814,7 +7352,7 @@
             "properties": {
               "advertise_service": {
                 "type": "boolean",
-                "description": "Set at startup only."
+                "description": "Fixed at startup. `PUT` does not accept this field."
               }
             }
           }
@@ -6833,13 +7371,14 @@
               "string",
               "null"
             ],
-            "description": "Payment amount to price, if any."
+            "description": "Payment amount to compute the fee for. Optional."
           },
           "lsp_node_id": {
             "type": "string",
-            "description": "LSP node pubkey, hex-encoded; must be in the LSP list."
+            "description": "Hex-encoded node pubkey of the LSP. The LSP must be in the LSP list."
           }
-        }
+        },
+        "additionalProperties": false
       },
       "Lsps2QuoteResponse": {
         "type": "object",
@@ -6852,7 +7391,7 @@
               "string",
               "null"
             ],
-            "description": "Fee of the cheapest offer covering `amount_msat`; `null` without an amount or when\nno offer covers it."
+            "description": "Fee of the cheapest offer that covers `amount_msat`. `null` if the request has no amount\nor no offer covers it."
           },
           "offers": {
             "type": "array",
@@ -6946,7 +7485,7 @@
               },
               "max_fee_sat": {
                 "type": "string",
-                "description": "No invoice is created if the LSP's fee is above this."
+                "description": "Highest fee to accept. If the LSP asks for more, no invoice is created."
               }
             }
           }
@@ -6966,7 +7505,7 @@
         "properties": {
           "amount_msat": {
             "type": "string",
-            "description": "What the payer pays: the carrier plus the fee."
+            "description": "Amount the payer pays: carrier plus fee."
           },
           "expires_at_unix_secs": {
             "type": "string"
@@ -7049,23 +7588,24 @@
               "string",
               "null"
             ],
-            "description": "BTC carrier of the payment, excluding the fee; at least 354000 (the holder reserve\nof the new channel). Defaults to 354000."
+            "description": "BTC sent along with the asset payment, without the fee. Minimum and default: 355000.\nThe received asset sits on this node's output in the new channel. With less than 355 sat\non it, that output is dropped as dust when the channel closes."
           },
           "contract_id": {
             "type": "string"
           },
           "lsp_asset_balance": {
             "type": "string",
-            "description": "Asset amount the LSP puts into the channel; at least `asset_amount`. What is left\nafter the first payment stays as inbound asset capacity for later payments."
+            "description": "Asset amount the LSP puts into the channel. Must be at least `asset_amount`.\nThe first payment moves `asset_amount` to this node. The rest stays on the LSP's side.\nThis node can receive the rest in later payments."
           },
           "lsp_balance_sat": {
             "type": "string",
-            "description": "BTC capacity the LSP puts into the channel."
+            "description": "BTC the LSP holds on its side of the new channel."
           },
           "lsp_node_id": {
             "type": "string"
           }
-        }
+        },
+        "additionalProperties": false
       },
       "Lsps2RgbQuoteResponse": {
         "type": "object",
@@ -7078,7 +7618,7 @@
         "properties": {
           "estimated_fee": {
             "$ref": "#/components/schemas/Lsps2RgbFeeDto",
-            "description": "The fee the LSP would charge now, estimated locally; the actual fee is set by\n`POST /lsps2/rgb_invoice`."
+            "description": "Fee the LSP would charge now. This node computes it from the offering. The LSP sets the\nactual fee in `POST /lsps2/rgb_invoice`."
           },
           "max_btc_carrier_amount_msat": {
             "type": "string"
@@ -7346,6 +7886,14 @@
             "type": "string",
             "description": "Direction, either Inbound or Outbound."
           },
+          "expires_at_unix_secs": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "When the invoice of an inbound payment expires (Unix seconds). A `Pending` payment cannot be\npaid after this time. Absent for outbound payments and payments without an invoice.",
+            "pattern": "^[0-9]+$"
+          },
           "fee_paid_msat": {
             "type": [
               "string",
@@ -7379,6 +7927,11 @@
           "status": {
             "type": "string",
             "description": "Status, one of Pending, Succeeded, Failed."
+          },
+          "updated_at_unix_secs": {
+            "type": "string",
+            "description": "When this payment last changed (Unix seconds). For a `Succeeded` inbound payment this\nis when it was received.",
+            "pattern": "^[0-9]+$"
           }
         }
       },
@@ -8296,7 +8849,7 @@
               "null"
             ],
             "pattern": "^[0-9]+$",
-            "description": "Optional BTC carrier amount in msat embedded into the BOLT11 invoice.\n\nExplicit values are allowed down to the hard 1-sat minimum. They are still checked against\nthe receiver's current channel safety constraints and may be raised or rejected if the\nchannel cannot safely host RGB.\n\nWhen omitted, the server starts from the active RGB carrier default floor and, if needed,\nraises the invoice carrier to satisfy inbound HTLC limits or the 354-sat non-dust holder\nreserve threshold so the receiver can host the incoming RGB without extra client-side logic.\n\nA trimmed 1-sat carrier only remains valid when the selected receiving channel already holds\na non-dust BTC holder reserve locally. Otherwise the server auto-raises the carrier or\nrejects the request with `HolderReserveTooLow`."
+            "description": "Optional BTC carrier amount in msat embedded into the BOLT11 invoice.\n\nExplicit values are allowed down to the hard 1-sat minimum. They are still checked against\nthe receiver's current channel safety constraints and may be raised or rejected if the\nchannel cannot safely host RGB.\n\nWhen omitted, the server starts from the active RGB carrier default floor and, if needed,\nraises the invoice carrier to satisfy inbound HTLC limits or the 355-sat non-dust holder\nreserve threshold so the receiver can host the incoming RGB without extra client-side logic.\n\nA trimmed 1-sat carrier only remains valid when the selected receiving channel already holds\na non-dust BTC holder reserve locally. Otherwise the server auto-raises the carrier or\nrejects the request with `HolderReserveTooLow`."
           },
           "contract_id": {
             "type": "string",
@@ -8340,7 +8893,7 @@
               "null"
             ],
             "pattern": "^[0-9]+$",
-            "description": "Optional BTC carrier amount in msat embedded into the BOLT11 invoice.\n\nExplicit values are allowed down to the hard 1-sat minimum. They are still checked against\nthe receiver's current channel safety constraints and may be raised or rejected if the\nchannel cannot safely host RGB.\n\nWhen omitted, the server starts from the active RGB carrier default floor and, if needed,\nraises the invoice carrier to satisfy inbound HTLC limits or the 354-sat non-dust holder\nreserve threshold so the receiver can host the incoming RGB without extra client-side logic.\n\nA trimmed 1-sat carrier only remains valid when the selected receiving channel already holds\na non-dust BTC holder reserve locally. Otherwise the server auto-raises the carrier or\nrejects the request with `HolderReserveTooLow`."
+            "description": "Optional BTC carrier amount in msat embedded into the BOLT11 invoice.\n\nExplicit values are allowed down to the hard 1-sat minimum. They are still checked against\nthe receiver's current channel safety constraints and may be raised or rejected if the\nchannel cannot safely host RGB.\n\nWhen omitted, the server starts from the active RGB carrier default floor and, if needed,\nraises the invoice carrier to satisfy inbound HTLC limits or the 355-sat non-dust holder\nreserve threshold so the receiver can host the incoming RGB without extra client-side logic.\n\nA trimmed 1-sat carrier only remains valid when the selected receiving channel already holds\na non-dust BTC holder reserve locally. Otherwise the server auto-raises the carrier or\nrejects the request with `HolderReserveTooLow`."
           },
           "contract_id": {
             "type": "string",

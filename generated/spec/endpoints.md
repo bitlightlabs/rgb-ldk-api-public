@@ -238,7 +238,7 @@
 ### POST `/api/v1/lsps1/order`
 
 * **Summary:** Order a BTC channel
-* **Description:** Places a plain BTC channel order with the LSP given by `lsp_node_id` and returns the order with its payment options (bolt11 HOLD invoice, and an onchain deposit address when the LSP offers it). Pay one of them; the LSP opens the channel once the payment is in.
+* **Description:** Places a plain BTC channel order with the LSP given by `lsp_node_id` and returns the order with its payment options (bolt11 HOLD invoice, and an onchain deposit address when the LSP offers it). Pay one of them; the LSP opens the channel once the payment is in. Pass a `client_request_id` to make retries safe: the same id with the same parameters returns the order placed first instead of a second one. Fails with 409 `idempotency_key_reused` when the id was used with other parameters, and with 409 `outcome_unknown` when an earlier request with the id went out and no answer came back. Without an id every call places a new order.
 * **Request Body:** `Lsps1OrderCreateRequest`
 * **Response (200):** `Lsps1OrderResponse`
 
@@ -254,10 +254,23 @@
 * **Description:** Returns every order in this node's LSPS1 fulfillment ledger (operator view), including payment, funding, and refund state.
 * **Response (200):** `Lsps1ServiceOrdersResponse`
 
+### POST `/api/v1/lsps1/orders/cancel`
+
+* **Summary:** Cancel a client's unpaid orders
+* **Description:** Operator side: cancels every order of one client that is still awaiting payment, with the same effect as cancelling each one. Orders that cannot be cancelled (a deposit was already seen) are listed under `skipped`.
+* **Request Body:** `Lsps1OrdersCancelRequest`
+* **Response (200):** `Lsps1OrdersCancelResponse`
+
 ### GET `/api/v1/lsps1/orders/{order_id}`
 
 * **Summary:** Get a served order
 * **Description:** Returns one order from this node's LSPS1 fulfillment ledger (operator view).
+* **Response (200):** `Lsps1ServiceOrderDto`
+
+### POST `/api/v1/lsps1/orders/{order_id}/cancel`
+
+* **Summary:** Cancel an unpaid order
+* **Description:** Operator side: cancels an order of this node's LSPS1 service that is still awaiting payment. The order becomes `failed` with `failure_reason` `cancelled`, and the client sees it as failed the next time it checks. A lightning payment of the order's invoice that still arrives is failed back right away; an onchain deposit that arrives later is refunded like one to an expired order. The body is optional. Fails with 409 when the order is no longer awaiting payment or a deposit to its onchain address has been seen (confirmed or not), and with 404 for an unknown order.
 * **Response (200):** `Lsps1ServiceOrderDto`
 
 ### GET `/api/v1/lsps1/pricing`
@@ -283,20 +296,26 @@
 ### POST `/api/v1/lsps2/invoice`
 
 * **Summary:** Create a JIT channel invoice
-* **Description:** Buys a JIT channel from the LSP given by `lsp_node_id` and returns a BOLT11 invoice paying through it. The LSP opens the channel when the payment arrives and keeps its fee out of it.
+* **Description:** Buys a JIT channel from the LSP given by `lsp_node_id` and returns a BOLT11 invoice paying through it. The LSP opens the channel when the payment arrives and keeps its fee out of it. Errors match `/lsps2/rgb_invoice`: 400 `lsp_rejected` with the LSP's `code` and `message` (404 for code 101, 401 for 102; 202/203 when the amount is outside the LSP's range), 409 `fee_above_limit` when the fee is above `max_fee`, 409 `precondition_failed`, 503 `jit_service_disabled` when the LSP has paused JIT channels, 503 `lsp_unsupported`, 504 `lsp_timeout`.
 * **Request Body:** `Lsps2InvoiceRequest`
 * **Response (200):** `Lsps2InvoiceResponse`
+
+### GET `/api/v1/lsps2/jit_channels`
+
+* **Summary:** List JIT channels
+* **Description:** Operator side: the JIT channels of this node's own LSPS2 service. Lists every channel it opened, also after it was closed, plus the offers that were bought but not paid yet. Shows when a channel is due to be closed and how closing it is going. Fails with 503 when the node runs no LSPS2 service.
+* **Response (200):** `Lsps2JitChannelsResponse`
 
 ### GET `/api/v1/lsps2/options`
 
 * **Summary:** Get service options
-* **Description:** Returns the runtime options of this node's own LSPS2 service. Fails with 503 when the node runs no LSPS2 service.
+* **Description:** Returns the options in effect on this node's own LSPS2 service. Options set with `PUT` are persisted and win over the startup config file on every start; a warning is logged at startup for each file value they override. Fails with 503 when the node runs no LSPS2 service.
 * **Response (200):** `Lsps2OptionsResponse`
 
 ### PUT `/api/v1/lsps2/options`
 
 * **Summary:** Update service options
-* **Description:** Validates, persists, and applies new runtime options (full replace); they replace the startup config from then on, also after a restart. Fee offers made afterwards use them; offers already given out keep their terms until they expire. `advertise_service` can only be set at startup.
+* **Description:** Validates, persists, and applies new runtime options (full replace); they replace the startup config from then on, also after a restart. Fee offers made afterwards use them; offers already given out keep their terms until they expire. Set `accept_new_channels` to `false` to pause the service: clients then get 503 `jit_service_disabled`. `advertise_service` is read from the startup config only and is not part of this body; sending it, or any other unknown field, fails with 400.
 * **Request Body:** `Lsps2OptionsDto`
 * **Response (200):** `Lsps2OptionsResponse`
 
@@ -508,14 +527,14 @@
 ### POST `/api/v1/rgb/ln/invoice/create`
 
 * **Summary:** Create RGB Lightning invoice
-* **Description:** Creates an RGB-aware Lightning invoice using a contract id, asset amount, and optional BTC carrier amount. Explicit `btc_carrier_amount_msat` values are allowed down to 1 sat. If the field is omitted, the server starts from the active RGB carrier default floor and may auto-raise the invoice carrier to satisfy inbound HTLC limits or the 354-sat holder reserve threshold. A true 1-sat trimmed carrier still requires the selected receiving channel to already hold the non-dust holder reserve locally, otherwise the request is auto-raised or rejected with `HolderReserveTooLow`. The response returns the actual carrier embedded in the invoice.
+* **Description:** Creates an RGB-aware Lightning invoice using a contract id, asset amount, and optional BTC carrier amount. Explicit `btc_carrier_amount_msat` values are allowed down to 1 sat. If the field is omitted, the server starts from the active RGB carrier default floor and may auto-raise the invoice carrier to satisfy inbound HTLC limits or the 355-sat holder reserve threshold. A true 1-sat trimmed carrier still requires the selected receiving channel to already hold the non-dust holder reserve locally, otherwise the request is auto-raised or rejected with `HolderReserveTooLow`. The response returns the actual carrier embedded in the invoice.
 * **Request Body:** `RgbLnInvoiceCreateRequest`
 * **Response (200):** `RgbLnInvoiceResponse`
 
 ### POST `/api/v1/rgb/ln/invoice/create_for_hash`
 
 * **Summary:** Create RGB hold invoice
-* **Description:** Creates an RGB-aware hold invoice bound to an explicit payment hash. Explicit `btc_carrier_amount_msat` values are allowed down to 1 sat. If the field is omitted, the server starts from the active RGB carrier default floor and may auto-raise the invoice carrier to satisfy inbound HTLC limits or the 354-sat holder reserve threshold. A true 1-sat trimmed carrier still requires the selected receiving channel to already hold the non-dust holder reserve locally, otherwise the request is auto-raised or rejected with `HolderReserveTooLow`. The response returns the actual carrier embedded in the invoice.
+* **Description:** Creates an RGB-aware hold invoice bound to an explicit payment hash. Explicit `btc_carrier_amount_msat` values are allowed down to 1 sat. If the field is omitted, the server starts from the active RGB carrier default floor and may auto-raise the invoice carrier to satisfy inbound HTLC limits or the 355-sat holder reserve threshold. A true 1-sat trimmed carrier still requires the selected receiving channel to already hold the non-dust holder reserve locally, otherwise the request is auto-raised or rejected with `HolderReserveTooLow`. The response returns the actual carrier embedded in the invoice.
 * **Request Body:** `RgbLnInvoiceCreateForHashRequest`
 * **Response (200):** `RgbLnInvoiceResponse`
 
